@@ -34,6 +34,8 @@ class Candidat(db.Model):
     date_signature_agrement = db.Column(db.String(100)) 
     ref_lettre_candidat = db.Column(db.String(100))     
     titre_signataire = db.Column(db.String(150), default="Le Directeur") 
+    rc = db.Column(db.String(100))               # <-- NOUVEAU
+    compte_bancaire = db.Column(db.String(200))  # <-- NOUVEAU
 
 class Cotation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -99,3 +101,40 @@ class ProcesVerbal(db.Model):
     entreprise = db.Column(db.String(200)) # L'entreprise déclarée moins disante
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
     form_data = db.Column(db.Text) # Pour stocker toutes les infos du formulaire en JSON
+
+
+class LettreInvitation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    immatriculation = db.Column(db.String(100)) # Ex: S_DAGE_483
+    objet_marche = db.Column(db.Text)
+    date_creation = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Ce champ va stocker TOUTES les données du formulaire sous forme de texte (JSON)
+    # Y compris la liste des prestataires choisis, les heures de dépôt, etc.
+    form_data = db.Column(db.Text)
+
+
+class Contrat(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # LIAISON AVEC LA TABLE CANDIDAT
+    candidat_id = db.Column(db.Integer, db.ForeignKey('candidat.id'), nullable=False)
+    candidat = db.relationship('Candidat', backref='contrats')
+
+    # INFORMATIONS DU MARCHÉ
+    objet_marche = db.Column(db.Text, nullable=False)
+    gestion_annee = db.Column(db.String(10), default="2025")
+    montant_chiffres = db.Column(db.String(50))
+    montant_lettres = db.Column(db.Text)
+    
+    # INFORMATIONS BUDGÉTAIRES
+    financement = db.Column(db.String(200), default="Budget de Fonctionnement")
+    imputation = db.Column(db.Text)
+    programme = db.Column(db.String(50))
+    comptable_assignataire = db.Column(db.String(200), default="Payeur Général du Trésor (PGT)")
+    
+    # INFOS DE L'ENTREPRISE (au moment de la signature)
+    rc_candidat = db.Column(db.String(100))
+    compte_bancaire = db.Column(db.String(200))
+    
+    date_creation = db.Column(db.DateTime, default=datetime.utcnow)

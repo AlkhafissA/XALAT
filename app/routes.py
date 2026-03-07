@@ -3,9 +3,9 @@ import json
 from flask import send_file, make_response, abort
 import io
 from app.models import Bordereau 
-from app.models import LettreNotification
+from app.models import LettreNotification, LettreInvitation, Contrat
 from app.models import Candidat, LettreNotification, ProcesVerbal
-from app.utils import generer_pdf_bordereau
+from app.utils import generer_pdf_bordereau, generer_pdf_contrat
 from app.utils import generer_pdf_pv_attribution
 from io import BytesIO
 from num2words import num2words
@@ -974,3 +974,183 @@ def supprimer_pv(id):
     
     # 4. On redirige vers la page de la liste
     return redirect(url_for('main.liste_pv'))
+
+
+@main.route('/creer_lettre_invitation', methods=['GET', 'POST'])
+def creer_lettre_invitation():
+    # Remplace par l'endroit où se trouvent tes modèles
+    from app.models import Candidat, LettreInvitation 
+    from app import db
+    
+    if request.method == 'POST':
+        # 1. On récupère les informations générales du formulaire
+        immatriculation = request.form.get('immatriculation')
+        objet_marche = request.form.get('objet_marche')
+        num_ordre = request.form.get('num_ordre', '')
+        ref_service = request.form.get('ref_service', '')
+        date_lettre = request.form.get('date_lettre', '')
+        signataire = request.form.get('signataire', '')
+        date_heure_limite = request.form.get('date_heure_limite')
+        adresse_depot = request.form.get('adresse_depot')
+        lieu_ouverture = request.form.get('lieu_ouverture')
+        direction_nom = request.form.get('direction_nom', "Direction de l'Administration Générale et de l'Equipement")
+
+        # 2. On récupère la liste des prestataires cochés
+        prestataires_ids = request.form.getlist('prestataires_ids')
+        prestataires_selectionnes = []
+
+        # Pour chaque entreprise cochée, on va chercher ses infos en base 
+        # ET le fameux RC saisi par l'agent à l'écran
+        for p_id in prestataires_ids:
+            candidat = Candidat.query.get(p_id)
+            if candidat:
+                # La magie opère ici : on récupère rc_1, rc_5, etc.
+                rc_saisi = request.form.get(f'rc_{p_id}', 'Non renseigné')
+                compte = request.form.get(f'compte_bancaire_{candidat.id}', '')
+
+                # Ajoute cette ligne pour vérifier ce que le serveur reçoit :
+                print(f"==== TEST COMPTE BANCAIRE pour l'ID {candidat} : '{compte}' ====")
+                
+                prestataires_selectionnes.append({
+                    'nom': candidat.nom_entreprise,
+                    'adresse': candidat.adresse,
+                    'telephone': candidat.telephone,
+                    'ninea': candidat.ninea,
+                    'rc': rc_saisi,
+                    'compte': compte  # <-- Tu l'ajoutes à ton dictionnaire
+                })
+
+        # 3. On emballe tout ça dans un beau dictionnaire
+        form_data_dict = {
+            'immatriculation': immatriculation,
+            'objet_marche': objet_marche,
+            'num_ordre': num_ordre,
+            'ref_service': ref_service,
+            'date_lettre': date_lettre,
+            'signataire': signataire,
+            'date_heure_limite': date_heure_limite,
+            'adresse_depot': adresse_depot,
+            'lieu_ouverture': lieu_ouverture,
+            'direction_nom': direction_nom,  # <--- N'oublie pas cette ligne !
+            'prestataires': prestataires_selectionnes
+        }
+
+        # 4. On sauvegarde en base de données (pour garder une trace)
+        nouvelle_lettre = LettreInvitation(
+            immatriculation=immatriculation,
+            objet_marche=objet_marche,
+            form_data=json.dumps(form_data_dict) # On transforme le dico en texte JSON
+        )
+        db.session.add(nouvelle_lettre)
+        db.session.commit()
+
+        # 5. On envoie tout au PDF !
+        from app.utils import generer_pdf_lettre_invitation
+        pdf_path = generer_pdf_lettre_invitation(form_data_dict)
+
+        return send_file(pdf_path, as_attachment=False)
+
+    # Si on est en GET (affichage simple de la page)
+    candidats = Candidat.query.all()
+    return render_template('creer_lettre_invitation.html', candidats=candidats)
+
+
+
+@main.route('/creer_contrat', methods=['GET', 'POST'])
+def creer_contrat():
+    candidats = Candidat.query.all()
+    marches = LettreInvitation.query.all()
+
+    if request.method == 'POST':
+        # 1. Le Prestataire
+        candidat_id = request.form.get('candidat_id')
+        candidat_gagnant = Candidat.query.get(candidat_id)
+        
+        # 2. Le Marché
+        marche_id = request.form.get('marche_id')
+        marche_choisi = LettreInvitation.query.get(marche_id)
+        
+        # 3. Les autres infos du formulaire
+        gestion_annee = request.form.get('gestion_annee', '2025')
+        montant = request.form.get('montant')
+        montant_lettres = request.form.get('montant_lettres', '') 
+        financement = request.form.get('financement', 'Budget de Fonctionnement')
+        imputation = request.form.get('imputation')
+        programme = request.form.get('programme')
+        comptable = request.form.get('comptable', 'Payeur Général du Trésor (PGT)')
+        vocable = request.form.get('vocable', 'Prestataire')
+        
+        # --- NOUVEAUX CHAMPS AJOUTÉS ---
+        numero = request.form.get('numero')
+        ref_service = request.form.get('ref_service')
+        date_lettre = request.form.get('date_lettre')
+        # -------------------------------
+
+        # 4. EXTRACTION DU JSON DE LA LETTRE
+        lettre_data = {}
+        if marche_choisi and marche_choisi.form_data:
+            try:
+                lettre_data = json.loads(marche_choisi.form_data)
+            except:
+                pass
+
+        # =========================================================
+        # LA VRAIE MAGIE EST ICI : ON FOUILLE DANS LE TIROIR
+        # =========================================================
+        rc_final = '........................'
+        compte_final = '...................................'
+
+        # On récupère la liste de tous les prestataires invités dans la lettre
+        prestataires_lettre = lettre_data.get('prestataires', [])
+        
+        # On cherche l'entreprise gagnante dans cette liste
+        for p in prestataires_lettre:
+            if p.get('nom') == candidat_gagnant.nom_entreprise:
+                # On a trouvé l'entreprise ! On extrait son RC et sa Banque
+                if p.get('rc') and p.get('rc') != 'Non renseigné':
+                    rc_final = p.get('rc')
+                if p.get('compte'):
+                    compte_final = p.get('compte')
+                break # On arrête de chercher puisqu'on l'a trouvée
+
+        # =========================================================
+
+        # 5. PRÉPARATION DU DICTIONNAIRE
+        data_contrat = {
+            'titulaire': candidat_gagnant.nom_entreprise or '........................',
+            'ninea': candidat_gagnant.ninea or '........................',
+            
+            # --- ON UTILISE NOS VARIABLES EXTRAITES DU TIROIR ---
+            'rc': rc_final,                       
+            'compte_bancaire': compte_final, 
+            
+            # --- L'ADRESSE ET LE TÉLÉPHONE VIENNENT DU CANDIDAT ---
+            'adresse_candidat': getattr(candidat_gagnant, 'adresse', '........................'),    
+            'tel_candidat': getattr(candidat_gagnant, 'telephone', '..........'),      
+            # --------------------------------------------------------------------------------------
+
+            'objet_marche': marche_choisi.objet_marche or '........................',      
+            'gestion_annee': gestion_annee,
+            'montant': montant,
+            'montant_lettres': montant_lettres,
+            'financement': financement,
+            'imputation': imputation,
+            'programme': programme,
+            'comptable': comptable,
+            'vocable': vocable,
+            
+            # --- NOS NOUVELLES DONNÉES POUR LA PAGE 2 ---
+            'numero': numero,
+            'ref_service': ref_service,
+            'date_lettre': date_lettre
+            # --------------------------------------------
+        }
+
+        # 1. On génère le fichier PDF
+        chemin_pdf = generer_pdf_contrat(data_contrat)
+        
+        # 2. On l'envoie directement en téléchargement
+        nom_fichier = f"Contrat_{candidat_gagnant.nom_entreprise.replace(' ', '_')}.pdf"
+        return send_file(chemin_pdf, as_attachment=True, download_name=nom_fichier)
+
+    return render_template('formulaire_contrat.html', candidats=candidats, marches=marches)

@@ -150,23 +150,25 @@
             </div>
 
             <div class="col-xl-4 col-md-6">
-                <div class="card card-stat p-4 text-center" data-bs-toggle="modal" data-bs-target="#modalCahier">
-                    <div class="d-flex flex-column align-items-center">
-                        <div class="stat-icon bg-success bg-opacity-10 text-success">📚</div>
-                        <h5 class="fw-bold text-dark">Cahier de Charges</h5>
-                        <p class="text-muted small mb-0">Créer un nouveau cahier des charges</p>
+                <a href="{{ url_for('main.creer_contrat') }}" class="text-decoration-none">
+                    <div class="card card-stat p-4 text-center shadow-sm" style="transition: transform 0.2s;">
+                        <div class="d-flex flex-column align-items-center">
+                            <div class="stat-icon bg-success bg-opacity-10 text-success mb-2" style="font-size: 2rem;">✍🏽</div>
+                            <h5 class="fw-bold text-dark">Projet de Contrat</h5>
+                            <p class="text-muted small mb-0">Créer un nouveau contrat final</p>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <div class="col-xl-4 col-md-6">
-                <div class="card card-stat p-4 text-center" data-bs-toggle="modal" data-bs-target="#modalInvitation">
+                <a href="{{ url_for('main.creer_lettre_invitation') }}" class="card card-stat p-4 text-center text-decoration-none text-dark">
                     <div class="d-flex flex-column align-items-center">
                         <div class="stat-icon bg-warning bg-opacity-10 text-warning">📩</div>
                         <h5 class="fw-bold text-dark">Lettre d’Invitation</h5>
-                        <p class="text-muted small mb-0">Inviter un prestataire à soumissionner</p>
+                        <p class="text-muted small mb-0">Inviter des prestataires à soumissionner</p>
                     </div>
-                </div>
+                </a>
             </div>
 
             <div class="col-xl-4 col-md-6">

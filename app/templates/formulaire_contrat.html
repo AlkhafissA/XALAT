@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Créer Contrat - MCAT</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #003366; 
+            --secondary-bg: #E3E8EE; 
+            --border-color: #D0D7DE; 
+        }
+
+        body {
+            background-color: var(--secondary-bg);
+            font-family: 'Poppins', sans-serif;
+            min-height: 100vh;
+            color: #344767;
+            padding-bottom: 50px;
+        }
+        
+        .navbar {
+            background-color: var(--primary-color);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 15px 0;
+        }
+        .navbar-brand { font-weight: 700; letter-spacing: 1px; font-size: 1.2rem; }
+        .nav-link { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; padding: 10px 15px !important; border-radius: 8px; transition: all 0.3s; color: rgba(255,255,255,0.8) !important; }
+        .nav-link:hover { color: white !important; background-color: rgba(255,255,255,0.1); transform: translateY(-2px); }
+        .nav-link.active { background-color: rgba(255,255,255,0.2); color: white !important; }
+
+        .form-card {
+            background: white;
+            border-radius: 16px; 
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 30px;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.tableau_de_bord') }}">
+                <span style="font-size: 1.5rem; margin-right: 10px;">🏛️</span>
+                <div style="line-height: 1;">
+                    <div>MCAT</div>
+                    <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7;">PORTAIL ADMIN</div>
+                </div>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}">AGRÉMENTS</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('main.liste_cotations') }}">COTATIONS</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('main.drps') }}">DRPS</a></li>
+                </ul>
+            </div>
+
+            <div class="d-flex align-items-center">
+                <a href="{{ url_for('main.logout') }}" class="btn btn-outline-light btn-sm rounded-pill px-3">Déconnexion</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 mb-5">
+        <div class="form-card">
+            <h2 class="fw-bold text-dark mb-4">Créer un Projet de Contrat</h2>
+            <hr>
+            
+            <form method="POST" action="{{ url_for('main.creer_contrat') }}">
+
+            <h5 class="mt-4 text-primary fw-bold">1. Références et Dates</h5>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label small fw-bold text-muted">Numéro</label>
+                        <input type="text" name="numero" class="form-control border-primary" placeholder="ex: 00123">
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label small fw-bold text-muted">Réf. Service</label>
+                        <input type="text" name="ref_service" class="form-control border-primary" value="MTA/SG/DAGE/ges">
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label small fw-bold text-muted">Date de la lettre</label>
+                        <input type="text" name="date_lettre" class="form-control border-primary" placeholder="ex: 12 février 2026">
+                    </div>
+                </div>
+
+                <h5 class="mt-4 text-primary fw-bold">2. Sélection du Marché & Titulaire</h5>
+                <div class="row">                    <div class="col-md-6 mb-3">
+                        <label class="form-label small fw-bold text-muted">Sélectionner le Prestataire (Titulaire)</label>
+                        <select name="candidat_id" class="form-select border-primary" required>
+                            <option value="">-- Choisir une entreprise --</option>
+                            {% for c in candidats %}
+                                <option value="{{ c.id }}">{{ c.nom_entreprise }} (NINEA: {{ c.ninea }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-success" style="font-size: 0.75rem;">RC et Compte Bancaire récupérés automatiquement</small>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label small fw-bold text-muted">Sélectionner le Marché (Objet)</label>
+                        <select name="marche_id" class="form-select border-primary" required>
+                            <option value="">-- Choisir un marché (Lettre d'invitation) --</option>
+                            {% for m in marches %}
+                                <option value="{{ m.id }}">{{ m.immatriculation }} - {{ m.objet_marche[:50] }}...</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label small fw-bold text-muted">Désigné sous le vocable (Page 2) :</label>
+                        <select name="vocable" class="form-select border-primary" required>
+                            <option value="Prestataire" selected>Prestataire</option>
+                            <option value="Fournisseur">Fournisseur</option>
+                            <option value="Consultant">Consultant</option>
+                            <option value="Entrepreneur">Entrepreneur</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h5 class="mt-4 text-primary fw-bold">2. Informations Financières & Budgétaires</h5>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label small fw-bold text-muted">Année de Gestion</label>
+                        <input type="text" name="gestion_annee" class="form-control" value="2025" required>
+                    </div>
+                    
+                    <div class="col-md-8 mb-3">
+                        <label class="form-label small fw-bold text-muted">Montant du marché (en chiffres TTC)</label>
+                        <input type="text" id="montantInput" name="montant" class="form-control border-danger" placeholder="Ex: 14898680 (sans espaces)" required>
+                    </div>
+                    
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label small fw-bold text-muted">Montant du marché (en lettres) - <span class="text-success">Généré automatiquement</span></label>
+                        <input type="text" id="montantLettresInput" name="montant_lettres" class="form-control bg-light text-primary fw-bold border-success" placeholder="Le montant en lettres apparaîtra ici..." readonly required>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label small fw-bold text-muted">Financement</label>
+                        <input type="text" name="financement" class="form-control" value="Budget de Fonctionnement" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label small fw-bold text-muted">Comptable assignataire</label>
+                        <input type="text" name="comptable" class="form-control" value="Payeur Général du Trésor (PGT)" required>
+                    </div>
+
+                    <div class="col-md-8 mb-3">
+                        <label class="form-label small fw-bold text-muted">Imputation budgétaire (Chapitre / Art / Para / Ligne)</label>
+                        <input type="text" name="imputation" class="form-control" placeholder="Ex: Chapitre 12100570110 Art 61 Paragraphe 4 Ligne 6" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label small fw-bold text-muted">Programme</label>
+                        <input type="text" name="programme" class="form-control" placeholder="Ex: 1579" required>
+                    </div>
+                </div>
+
+                <div class="text-end mt-4 border-top pt-4">
+                    <a href="{{ url_for('main.drps') }}" class="btn btn-secondary px-4 me-2">Annuler</a>
+                    <button type="submit" class="btn btn-primary px-5 fw-bold">Enregistrer et Générer le Contrat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const montantInput = document.getElementById('montantInput');
+            const montantLettresInput = document.getElementById('montantLettresInput');
+
+            // Fonction de conversion
+            function numberToWords(number) {
+                let n = parseInt(number.toString().replace(/[\s\D]/g, ''), 10);
+                if (isNaN(n)) return '';
+                if (n === 0) return 'zéro';
+
+                const units = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
+                const tens = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante-dix', 'quatre-vingt', 'quatre-vingt-dix'];
+
+                function convertLess1000(num) {
+                    let res = '';
+                    let c = Math.floor(num / 100);
+                    let rest = num % 100;
+                    if (c > 0) {
+                        if (c === 1) res += 'cent ';
+                        else res += units[c] + ' cent ';
+                    }
+                    if (rest > 0) {
+                        if (rest < 20) {
+                            res += units[rest] + ' ';
+                        } else {
+                            let d = Math.floor(rest / 10);
+                            let u = rest % 10;
+                            if (d === 7 || d === 9) {
+                                res += tens[d - 1] + '-' + units[10 + u] + ' ';
+                            } else {
+                                res += tens[d] + (u === 1 && d !== 8 ? ' et ' : (u > 0 ? '-' : ' '));
+                                if (u > 0 && !(u === 1 && d !== 8)) res += units[u] + ' ';
+                                else if (u === 1 && d !== 8) res += 'un ';
+                            }
+                        }
+                    }
+                    return res;
+                }
+
+                let result = '';
+                let billions = Math.floor(n / 1000000000);
+                n %= 1000000000;
+                let millions = Math.floor(n / 1000000);
+                n %= 1000000;
+                let thousands = Math.floor(n / 1000);
+                n %= 1000;
+
+                if (billions > 0) {
+                    result += convertLess1000(billions) + (billions > 1 ? 'milliards ' : 'milliard ');
+                }
+                if (millions > 0) {
+                    result += convertLess1000(millions) + (millions > 1 ? 'millions ' : 'million ');
+                }
+                if (thousands > 0) {
+                    if (thousands === 1) result += 'mille ';
+                    else result += convertLess1000(thousands) + 'mille ';
+                }
+                if (n > 0) {
+                    result += convertLess1000(n);
+                }
+
+                return result.trim();
+            }
+
+            // Écouteur d'événement sur le champ "Montant"
+            montantInput.addEventListener('input', function(e) {
+                // On formate avec des espaces pour faciliter la lecture des chiffres
+                let rawValue = this.value.replace(/\s/g, ''); 
+                if(!isNaN(rawValue) && rawValue !== "") {
+                    // On convertit en lettres
+                    let enLettres = numberToWords(rawValue);
+                    montantLettresInput.value = enLettres;
+                } else {
+                    montantLettresInput.value = '';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import os
 import io
+from flask import send_file
 from fpdf import FPDF
 from flask import current_app
 from reportlab.lib import colors
@@ -1007,3 +1008,666 @@ def generer_pdf_pv_attribution(buffer, data):
         buffer.write(pdf_val.encode('latin-1'))
     else:
         buffer.write(pdf_val)
+
+
+import os
+from flask import current_app
+from fpdf import FPDF
+
+def clean_text(text):
+    if text is None:
+        return ""
+    return str(text).replace('’', "'").encode('latin-1', 'ignore').decode('latin-1')
+
+def dessiner_en_tete(pdf, data):
+    # Variables dynamiques
+    direction_nom = data.get('direction_nom', "Direction de l'Administration Générale et de l'Equipement")
+    num_ordre = data.get('numero_lettre', '200')
+    ref_service = data.get('ref_service', 'MCAT/SG/DAGE/ms')
+    date_lettre = data.get('date_lettre', '15 mars 2015')
+    signataire = data.get('signataire', 'Le Directeur')
+
+    # =========================================================
+    # 🛠️ RÉGLAGES MANUELS DES POSITIONS (Gérer la gauche/droite)
+    # =========================================================
+    # BLOC GAUCHE
+    POS_X_DRAPEAU = 36        # Diminue pour pousser le drapeau à gauche (ex: 20)
+    POS_X_TEXTES_GAUCHE = 4  # Diminue pour pousser tout le bloc (République, MCAT...) à gauche
+
+    # BLOC DROITE
+    POS_X_NUMERO = 120        # Augmente pour pousser "N° 200..." vers la droite
+    POS_X_DATE = 125          # Augmente pour pousser "Dakar, le..." vers la droite
+    POS_X_SIGNATAIRE = 110    # Position de "Le Directeur," (actuellement vers la droite)
+    # =========================================================
+
+    # --- 1. DESSIN GRAPHIQUE GAUCHE ---
+    y_flag_top = 10; w_band_top = 8; h_flag_top = 14 
+    
+    # Drapeau
+    pdf.set_fill_color(0, 140, 60); pdf.rect(POS_X_DRAPEAU, y_flag_top, w_band_top, h_flag_top, 'F')
+    pdf.set_fill_color(255, 215, 0); pdf.rect(POS_X_DRAPEAU + w_band_top, y_flag_top, w_band_top, h_flag_top, 'F')
+    
+    # L'Étoile
+    decalage_y_etoile = 6
+    pdf.set_xy(POS_X_DRAPEAU + w_band_top, y_flag_top + decalage_y_etoile) 
+    pdf.set_text_color(0, 140, 60)
+    pdf.set_font("Arial", '', 22) 
+    pdf.cell(w_band_top, 5, "*", align='C') 
+    
+    pdf.set_fill_color(230, 30, 30); pdf.rect(POS_X_DRAPEAU + (w_band_top*2), y_flag_top, w_band_top, h_flag_top, 'F')
+    
+    # République et Ministère
+    y_start_text = y_flag_top + h_flag_top + 5 
+    
+    # ON FORCE LA POSITION X ICI
+    pdf.set_xy(POS_X_TEXTES_GAUCHE, y_start_text)
+    pdf.set_text_color(0, 0, 0); pdf.set_font("Times", 'B', 14)
+    pdf.cell(90, 6, txt=clean_text("République du Sénégal"), ln=1, align='C')
+    
+    pdf.set_x(POS_X_TEXTES_GAUCHE) # On force X à nouveau
+    pdf.set_font("Times", 'I', 11)
+    pdf.cell(90, 6, txt="Un Peuple - Un But - Une Foi", ln=1, align='C')
+    
+    pdf.ln(2)
+    pdf.set_x(POS_X_TEXTES_GAUCHE)
+    pdf.set_font("Arial", 'B', 8); pdf.set_text_color(0, 100, 0)
+    pdf.multi_cell(90, 4, txt=clean_text("MINISTÈRE DE LA CULTURE, DE\nL'ARTISANAT ET DU TOURISME"), align='C')
+    
+    # Barre tricolore
+    y_barre = pdf.get_y() + 1; w_barre_total = 44; w_segment = w_barre_total / 3; h_barre = 1.5
+    # On aligne la petite barre sous les textes
+    x_barre_start = POS_X_TEXTES_GAUCHE + 23 
+    pdf.set_fill_color(0, 140, 60); pdf.rect(x_barre_start, y_barre, w_segment, h_barre, 'F')
+    pdf.set_fill_color(255, 215, 0); pdf.rect(x_barre_start + w_segment, y_barre, w_segment, h_barre, 'F')
+    pdf.set_xy(x_barre_start + w_segment, y_barre - 0.5); pdf.set_font("Arial", '', 10); pdf.set_text_color(0, 140, 60) 
+    pdf.cell(w_segment, 4, "*", align='C'); pdf.set_fill_color(230, 30, 30); pdf.rect(x_barre_start + (w_segment*2), y_barre, w_segment, h_barre, 'F')                                                                              
+    
+    # MCAT Logo texte
+    pdf.set_xy(POS_X_TEXTES_GAUCHE, y_barre + 3)
+    pdf.set_font("Arial", 'B', 30); pdf.set_text_color(0, 100, 0)
+    pdf.cell(90, 12, txt="MCAT", ln=1, align='C')
+    
+    # Direction sous le MCAT
+    pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", 'B', 9) 
+    direction_affichee = clean_text(direction_nom).replace("Administration g", "Administration\ng").replace("Administration G", "Administration\nG")
+    pdf.set_x(POS_X_TEXTES_GAUCHE + 5) 
+    pdf.multi_cell(80, 5, txt=direction_affichee, align='C')
+
+    # --- 2. RÉFÉRENCES ET DATE ---
+    # N° de référence
+    pdf.set_xy(POS_X_NUMERO, y_start_text + 5)
+    texte_num = clean_text(f"N° {num_ordre}  ")
+    pdf.set_font("Arial", '', 11); pdf.set_text_color(0, 0, 0)
+    largeur_num = pdf.get_string_width(texte_num) 
+    pdf.cell(largeur_num, 5, txt=texte_num)
+    
+    # Réf Service (reste accroché à côté du numéro)
+    pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", 'B', 11)
+    pdf.cell(0, 5, txt=clean_text(ref_service), ln=1)
+    
+    # Date (alignée via les paramètres)
+    pdf.ln(10) # Saute quelques lignes
+    pdf.set_x(POS_X_DATE) # On force X
+    pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", 'B', 11)
+    pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_lettre}"), ln=1)
+    
+    # Signataire
+    pdf.ln(25) # On descend un peu plus
+    pdf.set_x(POS_X_SIGNATAIRE) # On force X
+    pdf.set_font("Arial", 'B', 16); pdf.set_text_color(0, 0, 0) 
+    pdf.cell(50, 6, txt=clean_text(f"{signataire},"), align='C', ln=1)
+
+    # Petit saut final pour ne pas que le reste du document colle
+    pdf.ln(10)
+
+def generer_pdf_lettre_invitation(data):
+    pdf = FPDF()
+    
+    immatriculation = data.get('immatriculation', '')
+    objet_marche = data.get('objet_marche', '')
+    date_heure = data.get('date_heure_limite', '')
+    adresse_depot = data.get('adresse_depot', '')
+    lieu_ouverture = data.get('lieu_ouverture', '')
+    prestataires = data.get('prestataires', [])
+
+    # =========================================================
+    # SECTION 1 : LA LETTRE D'INVITATION
+    # =========================================================
+    pdf.add_page()
+    # 🛠️ MODIFICATION ICI : Marges à 20mm (2cm) Gauche, Haut, Droite
+    pdf.set_margins(20, 20, 20)
+    
+    dessiner_en_tete(pdf, data) 
+    
+    # Titre
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 8, txt=clean_text("Lettre d'invitation"), ln=True, align='C')
+    pdf.ln(5)
+    
+    # Objet
+    pdf.set_font("Arial", 'BU', 11)
+    pdf.cell(15, 6, txt="Objet : ", ln=0)
+    pdf.set_font("Arial", '', 11)
+    texte_objet = f"Demande de renseignements et de prix (DRP) relative à {objet_marche}"
+    pdf.multi_cell(0, 6, txt=clean_text(texte_objet))
+    pdf.ln(5)
+    
+    # Salutations
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(0, 6, txt="Messieurs,", ln=True)
+    pdf.ln(3)
+    
+    # Corps de la lettre
+    pdf.set_font("Arial", '', 11)
+    texte_intro = f"Il est prévu dans le cadre du marché cité en objet de procéder à {objet_marche} pour le compte de la Direction de l'Administration Générale et de l'Equipement."
+    pdf.multi_cell(0, 6, txt=clean_text(texte_intro))
+    pdf.ln(2)
+    
+    pdf.write(6, clean_text("A cet effet, vous trouverez, ci-joint, le bordereau descriptif quantitatif des prestations que je vous demande de bien vouloir chiffrer et me le retourner au plus tard le "))
+    pdf.set_font("Arial", 'B', 11); pdf.set_text_color(255, 0, 0)
+    pdf.write(6, clean_text(f"{date_heure} "))
+    pdf.set_font("Arial", '', 11); pdf.set_text_color(0, 0, 0)
+    pdf.write(6, clean_text(f"sous enveloppe cachetée adressée à {adresse_depot}, avec les mentions suivantes :\n"))
+    
+    # Mentions
+    pdf.set_font("Arial", '', 11)
+    pdf.cell(15) 
+    pdf.write(6, clean_text("« Demande de Renseignements et de Prix n° "))
+    pdf.set_font("Arial", 'B', 11); pdf.set_text_color(255, 0, 0)
+    pdf.write(6, clean_text(f"{immatriculation}"))
+    pdf.set_font("Arial", '', 11); pdf.set_text_color(0, 0, 0)
+    pdf.write(6, clean_text(" »\n"))
+    pdf.cell(15); pdf.cell(0, 6, txt=clean_text("« A n'ouvrir qu'en séance d'ouverture de plis »."), ln=True)
+    pdf.ln(4)
+    
+    pdf.write(6, clean_text(f"Les offres seront ouvertes en présence des représentants des candidats présents à l'adresse ci-après : "))
+    pdf.set_font("Arial", 'B', 11)
+    pdf.write(6, clean_text(f"{lieu_ouverture}. Les offres remises en retard ne seront pas acceptées.\n"))
+    pdf.ln(4)
+    
+    pdf.set_font("Arial", '', 11)
+    pdf.multi_cell(0, 6, txt=clean_text("Votre offre devra être chiffrée en toutes taxes comprises (TTC) et accompagnée des formulaires joints en annexe à la DRP. Les fournitures devront être livrées à compter de la réception du bon de commande."))
+    pdf.ln(4)
+    pdf.multi_cell(0, 6, txt=clean_text("Les offres sont valables pour une période de trente (30) jours."))
+    pdf.ln(4)
+    pdf.multi_cell(0, 6, txt=clean_text("La présente lettre a été adressée aux candidats présélectionnés, dont les noms figurent ci-après :"))
+    pdf.ln(4)
+    
+    # =========================================================
+    # TABLEAU PAGE 1 (Ajusté pour 170mm de large)
+    # =========================================================
+    pdf.set_font("Arial", 'B', 10)
+    # 🛠️ AJUSTEMENT : 55 + 115 = 170mm au total
+    col1_w = 55; col2_w = 115; x_start = pdf.get_x()
+    
+    if pdf.get_y() > 240:
+        pdf.add_page()
+        
+    pdf.cell(col1_w, 8, "PRESTATAIRES", border=1, align='C')
+    pdf.cell(col2_w, 8, "ADRESSES", border=1, align='C', ln=True)
+    
+    for p in prestataires:
+        if pdf.get_y() > 250:
+            pdf.add_page()
+            pdf.set_font("Arial", 'B', 10)
+            pdf.cell(col1_w, 8, "PRESTATAIRES", border=1, align='C')
+            pdf.cell(col2_w, 8, "ADRESSES", border=1, align='C', ln=True)
+
+        y_start_row = pdf.get_y()
+        pdf.set_auto_page_break(False)
+        
+        # --- Colonne 1 : Nom du prestataire ---
+        pdf.set_font("Arial", 'B', 9)
+        pdf.set_text_color(255, 0, 0) # Rouge
+        pdf.set_xy(x_start, y_start_row)
+        pdf.multi_cell(col1_w, 6, txt=clean_text(p['nom'].upper()), border=0, align='L')
+        y_end1 = pdf.get_y()
+        
+        # --- Colonne 2 : Adresses et Infos ---
+        pdf.set_font("Arial", '', 9)
+        pdf.set_text_color(255, 0, 0) # 🔴 Mis en Rouge pour correspondre à ton image
+        pdf.set_xy(x_start + col1_w, y_start_row)
+        
+        # 1. Gestion du Compte Bancaire (Optionnel)
+        compte = p.get('compte', '').strip()
+        texte_compte = f" - CB : {compte}" if compte else ""
+        
+        # 2. Assemblage du texte de l'adresse
+        texte_adresse = f"{p['adresse']} - Tel : {p['telephone']}{texte_compte}\nRC : {p['rc']} - NINEA : {p['ninea']}"
+        
+        pdf.multi_cell(col2_w, 5, txt=clean_text(texte_adresse), border=0, align='L')
+        y_end2 = pdf.get_y()
+        
+        # --- Tracé des bordures ---
+        hauteur_ligne = max(y_end1, y_end2) - y_start_row
+        
+        # On remet le noir pour tracer les lignes du tableau
+        pdf.set_text_color(0, 0, 0) 
+        pdf.rect(x_start, y_start_row, col1_w, hauteur_ligne)
+        pdf.rect(x_start + col1_w, y_start_row, col2_w, hauteur_ligne)
+        
+        # 🛠️ MODIFICATION : On remet l'auto page break avec la marge basse à 20mm
+        pdf.set_auto_page_break(True, margin=20)
+        pdf.set_y(y_start_row + hauteur_ligne)
+
+    pdf.ln(6)
+    
+    # Fin de lettre
+    pdf.set_font("Arial", '', 11)
+    pdf.multi_cell(0, 6, txt=clean_text("Cette invitation ne peut être transférée à une autre société."))
+    pdf.ln(2)
+    pdf.multi_cell(0, 6, txt=clean_text("La passation de marché sera effectuée selon les dispositions du Code des Marchés publics."))
+    pdf.ln(2)
+    pdf.multi_cell(0, 6, txt=clean_text("La présente DRP comprend les sections suivantes :"))
+    pdf.cell(10)
+    pdf.multi_cell(0, 6, txt=clean_text("Section I : Lettre d'invitation\nSection II - Instructions aux Candidats\nSection III- Nature des services\nSection IV : Projet de Marché\nAnnexes."))
+    pdf.ln(4)
+    pdf.write(6, clean_text("Ces prestations sont à effectuer pour le compte de la Direction de l'Administration générale et de l'Equipement (DAGE) sise aux Almadies en face de la TFM - Dakar, dès "))
+    pdf.set_font("Arial", 'B', 11); pdf.write(6, clean_text("la notification du marché.\n"))
+    pdf.ln(6)
+    pdf.set_font("Arial", '', 11); pdf.multi_cell(0, 6, txt=clean_text("Veuillez agréer, Madame, Monsieur, l'expression de ma considération distinguée."))
+
+
+    # =========================================================
+    # SECTION 2 : FICHE DE TRANSMISSION
+    # =========================================================
+    pdf.add_page()
+    # 🛠️ MODIFICATION ICI : Marges à 20mm (2cm)
+    pdf.set_margins(20, 20, 20)
+    
+    dessiner_en_tete(pdf, data) 
+
+    pdf.set_font("Arial", 'BU', 10)
+    pdf.cell(15, 6, txt="Objet : ", ln=0)
+    pdf.set_font("Arial", '', 10)
+    pdf.write(6, clean_text("Demande de renseignements et de prix (DRP) relative à "))
+    pdf.set_text_color(255, 0, 0); pdf.write(6, clean_text(f"{objet_marche}\n")); pdf.set_text_color(0, 0, 0)
+    pdf.ln(5)
+
+    x_line = pdf.get_x(); y_line = pdf.get_y()
+    pdf.line(x_line, y_line, 190, y_line) # Ajusté pour la marge de droite
+    pdf.ln(8)
+
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 10, txt=clean_text("FICHE DE TRANSMISSION - LETTRE D'INVITATION"), ln=True, align='C')
+    pdf.ln(8)
+
+    # 🛠️ AJUSTEMENT : 40 + 60 + 35 + 35 = 170mm
+    col_cand = 40; col_adr = 60; col_date = 35; col_sign = 35; x_start = pdf.get_x()
+    pdf.set_font("Arial", 'B', 9); y_start_head = pdf.get_y()
+    
+    pdf.rect(x_start, y_start_head, col_cand, 10); pdf.set_xy(x_start, y_start_head); pdf.cell(col_cand, 10, "CANDIDAT", align='C')
+    pdf.rect(x_start + col_cand, y_start_head, col_adr, 10); pdf.set_xy(x_start + col_cand, y_start_head); pdf.cell(col_adr, 10, "ADRESSE", align='C')
+    pdf.rect(x_start + col_cand + col_adr, y_start_head, col_date, 10); pdf.set_xy(x_start + col_cand + col_adr, y_start_head); pdf.cell(col_date, 10, clean_text("Date de réception"), align='C')
+    pdf.rect(x_start + col_cand + col_adr + col_date, y_start_head, col_sign, 10); pdf.set_xy(x_start + col_cand + col_adr + col_date, y_start_head + 2); pdf.multi_cell(col_sign, 4, "EMARGEMENT &\nCACHET", align='C')
+    pdf.set_y(y_start_head + 10)
+
+    for p in prestataires:
+        if pdf.get_y() > 240:
+            pdf.add_page()
+            y_start_head = pdf.get_y()
+            pdf.rect(x_start, y_start_head, col_cand, 10); pdf.set_xy(x_start, y_start_head); pdf.cell(col_cand, 10, "CANDIDAT", align='C')
+            pdf.rect(x_start + col_cand, y_start_head, col_adr, 10); pdf.set_xy(x_start + col_cand, y_start_head); pdf.cell(col_adr, 10, "ADRESSE", align='C')
+            pdf.rect(x_start + col_cand + col_adr, y_start_head, col_date, 10); pdf.set_xy(x_start + col_cand + col_adr, y_start_head); pdf.cell(col_date, 10, clean_text("Date de réception"), align='C')
+            pdf.rect(x_start + col_cand + col_adr + col_date, y_start_head, col_sign, 10); pdf.set_xy(x_start + col_cand + col_adr + col_date, y_start_head + 2); pdf.multi_cell(col_sign, 4, "EMARGEMENT &\nCACHET", align='C')
+            pdf.set_y(y_start_head + 10)
+
+        y_start_row = pdf.get_y()
+        pdf.set_auto_page_break(False)
+        
+        pdf.set_font("Arial", 'B', 9); pdf.set_text_color(255, 0, 0); pdf.set_xy(x_start, y_start_row + 2)
+        pdf.multi_cell(col_cand, 5, txt=clean_text(p['nom'].upper()), align='C')
+        y_end1 = pdf.get_y()
+        
+        pdf.set_font("Arial", '', 8); pdf.set_text_color(0, 0, 0); pdf.set_xy(x_start + col_cand, y_start_row + 2)
+        texte_adr = f"{p['adresse']}\nTél : {p['telephone']}"
+        pdf.multi_cell(col_adr, 5, txt=clean_text(texte_adr), align='L')
+        y_end2 = pdf.get_y()
+        
+        h = max(y_end1, y_end2) - y_start_row + 4
+        if h < 20: h = 20
+        
+        pdf.rect(x_start, y_start_row, col_cand, h); pdf.rect(x_start + col_cand, y_start_row, col_adr, h)
+        pdf.rect(x_start + col_cand + col_adr, y_start_row, col_date, h); pdf.rect(x_start + col_cand + col_adr + col_date, y_start_row, col_sign, h)
+        
+        # 🛠️ MODIFICATION : On remet l'auto page break avec la marge basse à 20mm
+        pdf.set_auto_page_break(True, margin=20)
+        pdf.set_y(y_start_row + h)
+
+    # --- SAUVEGARDE ---
+    dossier_pdf = os.path.join(current_app.root_path, 'static', 'pdfs')
+    if not os.path.exists(dossier_pdf):
+        os.makedirs(dossier_pdf)
+        
+    immatriculation_propre = clean_text(immatriculation).replace(" ", "_").replace("/", "_")
+    nom_fichier = f"Lettre_Invitation_{immatriculation_propre}.pdf"
+    chemin_complet = os.path.join(dossier_pdf, nom_fichier)
+    
+    pdf.output(chemin_complet)
+    return chemin_complet
+
+
+from fpdf import FPDF
+import os
+
+def clean_text(text):
+    if not text: return ""
+    text = str(text)
+    replacements = {
+        '\u2019': "'", '\u2018': "'", 'â€™': "'", '`': "'",
+        '\u201c': '"', '\u201d': '"', '\u2013': '-', '\u2014': '-',
+        '\u2026': '...', '\u00A0': ' ', 'Å“': 'oe', 'Å’': 'OE', 'â‚¬': 'Euros', 'Â°': 'o' 
+    }
+    for k, v in replacements.items(): text = text.replace(k, v)
+    return text.encode('latin-1', 'replace').decode('latin-1')
+
+def generer_pdf_contrat(data):
+    # =======================================================
+    # 1. LA MACHINE À LAVER MAGIQUE POUR LES DONNÉES
+    # =======================================================
+    for k, v in data.items():
+        if v is not None:
+            data[k] = clean_text(str(v))
+            
+    def ct(texte):
+        return clean_text(texte)
+
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # Chemin du fichier
+    dossier_app = os.path.abspath(os.path.dirname(__file__))
+    chemin_pdf = os.path.join(dossier_app, "Projet_Contrat_MCAT.pdf")
+
+    # ==========================================
+    # PAGE 1 : PAGE DE GARDE (Design mis à jour)
+    # ==========================================
+    pdf.add_page()
+
+    # En-tête Page 1
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 5, ct("République du Sénégal"), ln=1, align="C")
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(0, 5, ct("Un Peuple - Un But - Une Foi"), ln=1, align="C")
+    pdf.cell(0, 5, "______", ln=1, align="C")
+    pdf.ln(2)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 5, ct("Ministère du Tourisme et de l'Artisanat"), ln=1, align="C")
+    pdf.cell(0, 5, "*********", ln=1, align="C")
+    pdf.cell(0, 5, ct("DIRECTION DE L'ADMINISTRATION"), ln=1, align="C")
+    pdf.cell(0, 5, ct("GÉNÉRALE ET DE L'ÉQUIPEMENT"), ln=1, align="C")
+
+    pdf.ln(12)
+
+    # Titre CONTRAT (Souligné et surligné en gris comme sur l'image)
+    pdf.set_font("Arial", "BU", 12)
+    pdf.set_fill_color(225, 225, 225) 
+    pdf.cell(85) # Centrage manuel approximatif
+    pdf.cell(25, 6, "CONTRAT", ln=1, align="C", fill=True)
+    pdf.ln(4)
+    
+    # GESTION
+    pdf.set_font("Arial", "BU", 11)
+    pdf.cell(0, 6, ct(f"GESTION {data.get('gestion_annee', '2025')}"), ln=1, align="C")
+
+    pdf.ln(12)
+
+    # Bloc 1 : Titulaire
+    pdf.set_font("Arial", "U", 11)
+    pdf.cell(18, 6, "Titulaire", ln=0)
+    pdf.set_font("Arial", "", 11)
+    pdf.cell(3, 6, " : ", ln=0)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 6, data.get('titulaire', '').upper(), ln=1)
+    pdf.ln(2)
+
+    # NINEA / RC
+    pdf.set_font("Arial", "", 11)
+    pdf.cell(0, 6, ct(f"NINEA : {data.get('ninea', '')}, RC : {data.get('rc', '')}"), ln=1)
+    pdf.ln(2)
+
+    # Compte bancaire
+    pdf.set_font("Arial", "", 11)
+    pdf.cell(35, 6, "Compte bancaire : ", ln=0)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 6, data.get('compte_bancaire', ''), ln=1)
+
+    pdf.ln(12)
+
+    # ==========================================
+    # OBJET DU MARCHÉ (Encadré par double ligne)
+    # ==========================================
+    # Double ligne supérieure
+    y_line = pdf.get_y()
+    pdf.line(10, y_line, 200, y_line)
+    pdf.line(10, y_line + 1, 200, y_line + 1)
+    
+    pdf.ln(4)
+    
+    # Texte Objet
+    pdf.set_font("Arial", "B", 11)
+    pdf.multi_cell(0, 6, data.get('objet_marche', ''), align="C")
+    
+    pdf.ln(1)
+    
+    # Double ligne inférieure
+    y_line2 = pdf.get_y()
+    pdf.line(10, y_line2, 200, y_line2)
+    pdf.line(10, y_line2 + 1, 200, y_line2 + 1)
+
+    pdf.ln(12)
+
+    # ==========================================
+    # Bloc 3 : Finances
+    # ==========================================
+    # Montant
+    pdf.set_font("Arial", "U", 11)
+    pdf.cell(18, 6, "Montant", ln=0)
+    pdf.set_font("Arial", "", 11)
+    pdf.cell(3, 6, " : ", ln=0)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 6, ct(f"{data.get('montant', '')} CFA TTC"), ln=1)
+    pdf.ln(3)
+
+    # Financement
+    pdf.set_font("Arial", "U", 11)
+    pdf.cell(26, 6, "Financement", ln=0)
+    pdf.set_font("Arial", "", 11)
+    pdf.cell(3, 6, ": ", ln=0)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 6, data.get('financement', ''), ln=1)
+    pdf.ln(3)
+
+    # Imputation budgétaire
+    pdf.set_font("Arial", "U", 11)
+    pdf.cell(42, 6, ct("Imputation budgétaire"), ln=0)
+    pdf.set_font("Arial", "", 11)
+    pdf.cell(3, 6, " : ", ln=0)
+    pdf.set_font("Arial", "B", 11)
+    pdf.multi_cell(0, 6, ct(f"{data.get('imputation', '')}, Programme : {data.get('programme', '')}"))
+    pdf.ln(3)
+
+    # Comptable assignataire
+    pdf.set_font("Arial", "U", 11)
+    pdf.cell(46, 6, "Comptable assignataire", ln=0)
+    pdf.set_font("Arial", "", 11)
+    pdf.cell(3, 6, " : ", ln=0)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 6, data.get('comptable', ''), ln=1)
+
+
+    # ==========================================
+    # PAGE 2 : CORPS DU CONTRAT JURIDIQUE
+    # ==========================================
+    pdf.add_page()
+
+    # En-tête centré et stylisé (Page 2)
+    pdf.set_font("Times", "I", 14)
+    pdf.cell(0, 6, ct("République du Sénégal"), ln=1, align="C")
+    pdf.set_font("Times", "BI", 10)
+    pdf.cell(0, 5, ct("Un Peuple - Un But - Une Foi"), ln=1, align="C")
+    pdf.set_font("Times", "", 10)
+    pdf.cell(0, 2, "______", ln=1, align="C")
+    pdf.ln(2)
+    
+    pdf.set_font("Times", "I", 12)
+    pdf.cell(0, 5, ct("Ministère du Tourisme et"), ln=1, align="C")
+    pdf.cell(0, 5, "de l'Artisanat", ln=1, align="C")
+    pdf.cell(0, 2, "______", ln=1, align="C")
+    pdf.ln(2)
+    
+    pdf.set_font("Times", "I", 11)
+    pdf.cell(0, 5, ct("DIRECTION DE L'ADMINISTRATION"), ln=1, align="C")
+    pdf.cell(0, 5, ct("GÉNÉRALE ET DE L'ÉQUIPEMENT"), ln=1, align="C")
+    
+    pdf.ln(4)
+    pdf.set_line_width(0.6)
+    pdf.line(20, pdf.get_y(), 190, pdf.get_y())
+    pdf.set_line_width(0.2)
+    pdf.ln(4)
+
+    
+    # On ajoute un bel espace pour descendre le texte
+    # ... (la ligne noire de séparation se trouve juste au-dessus) ...
+    
+    # 1. POUR MONTER : On réduit le saut de ligne (on passe de 15 à 5)
+    # Tu peux mettre 2 ou 3 si tu veux que ça monte encore plus !
+    pdf.ln(5) 
+
+    # ==========================================
+    # RÉFÉRENCE ET DATE (Dynamiques)
+    # ==========================================
+    numero = data.get('numero', '..........................')
+    ref_service = data.get('ref_service', 'MTA/SG/DAGE/ges') 
+    date_signature = data.get('date_lettre', '---------------------------------')
+
+    pdf.set_font("Arial", "B", 10)
+    
+    # 2. POUR DÉCALER À DROITE : On le pousse avec un espace vide de 90 millimètres
+    # Si tu veux le décaler ENCORE PLUS à droite, change le 90 en 100 ou 110.
+    # Si tu veux le ramener vers la gauche, mets 80 ou 70.
+    pdf.cell(130) 
+    pdf.cell(0, 5, ct(f"N° {numero} {ref_service}"), ln=1)
+    
+    pdf.ln(4) # Petit espace avant la date
+    
+
+    # 2. POUR LA DATE : On la pousse depuis la gauche (ex: à 130 mm)
+    # Plus le chiffre (130) est PETIT, plus la date ira vers la GAUCHE.
+    # Plus le chiffre est GRAND, plus elle ira vers la DROITE.
+    pdf.cell(130) 
+    pdf.cell(0, 5, ct(f"Dakar, le {date_signature}"), ln=1)
+
+    # Un bon espace avant le grand titre "CONTRAT DE PRESTATION"
+    pdf.ln(10)
+
+    # Titre du contrat
+    pdf.set_font("Arial", "BU", 12)
+    pdf.cell(0, 6, "CONTRAT DE PRESTATION", ln=1, align="C")
+    pdf.ln(8)
+    
+    # Soussignés
+    pdf.set_font("Arial", "BU", 10)
+    pdf.cell(0, 6, ct("Entre les soussignés :"), ln=1)
+    pdf.set_font("Arial", "", 10)
+    pdf.multi_cell(0, 5, ct("Le Ministère du Tourisme et de l'Artisanat, sis aux Almadies en face de la TFM, Dakar, désigné dans la suite du contrat sous le vocable « partie contractante » d'une part"))
+    
+    pdf.ln(2)
+    pdf.set_font("Arial", "BU", 10)
+    pdf.cell(0, 6, "ET :", ln=1)
+    pdf.set_font("Arial", "", 10)
+    
+    nom_entreprise = data.get('titulaire', '')
+    adresse = data.get('adresse_candidat', '.........................')
+    tel = data.get('tel_candidat', '..........')
+    compte = data.get('compte_bancaire', '................................')
+    vocable = data.get('vocable', 'Prestataire')
+
+    texte_prestataire = f"La société, « {nom_entreprise} », {adresse}, Tél : {tel} ;\n"
+    texte_prestataire += f"Compte bancaire : {compte}\n"
+    texte_prestataire += f"Désigné sous le vocable « {vocable} » d'autre part"
+    pdf.multi_cell(0, 5, ct(texte_prestataire))
+
+    pdf.ln(3)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 6, ct("Il a été convenu et arrêté ce qui suit :"), ln=1)
+    pdf.ln(2)
+
+    # ================= ARTICLES =================
+    pdf.set_font("Arial", "BU", 10)
+    pdf.cell(16, 5, "Article 1", ln=0)
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(5, 5, " :", ln=1)
+    
+    objet = data.get('objet_marche', '')
+    montant_lettres = data.get('montant_lettres', '.......................')
+    montant_chiffres = data.get('montant', '')
+    annee = data.get('gestion_annee', '2025')
+    
+    texte_art1 = f"Le service consiste à effectuer {objet} pour le compte de la DAGE du Ministère du Tourisme et de l'Artisanat pour un montant de {montant_lettres} ({montant_chiffres}) francs CFA toutes taxes comprises durant la gestion {annee}."
+    pdf.multi_cell(0, 5, ct(texte_art1))
+
+    pdf.ln(3)
+    pdf.set_font("Arial", "BU", 10)
+    pdf.cell(60, 5, ct("Article 2 : Modalités de paiement"), ln=1)
+    pdf.set_font("Arial", "", 10)
+    
+    imputation = data.get('imputation', '')
+    programme = data.get('programme', '')
+    
+    texte_art2 = f"Le paiement sera effectué selon l'imputation suivante :\n- DAGE : {imputation}, Programme : {programme}"
+    pdf.multi_cell(0, 5, ct(texte_art2))
+
+    pdf.ln(3)
+    pdf.set_font("Arial", "BU", 10)
+    pdf.cell(40, 5, ct("Article 3 : Règlement"), ln=1)
+    pdf.set_font("Arial", "", 10)
+    pdf.multi_cell(0, 5, ct("Les règlements seront effectués selon la procédure actuelle après traitement des dossiers de liquidation par la partie contractante sur présentation d'une facture définitive en quatre (04) exemplaires."))
+
+    pdf.ln(3)
+    pdf.set_font("Arial", "BU", 10)
+    pdf.cell(40, 5, ct("Article 4 : Pénalités"), ln=1)
+    pdf.set_font("Arial", "", 10)
+    pdf.multi_cell(0, 5, ct("En cas de non-exécution des prestations dans les conditions annoncées dans le bordereau descriptif et quantitatif, la partie contractante se réserve le droit de s'approvisionner sur le marché, après mise en demeure infructueuse aux risques et périls du prestataire."))
+
+    pdf.ln(3)
+    pdf.set_font("Arial", "BU", 10)
+    pdf.cell(60, 5, ct("Article 5 : Dispositions générales"), ln=1)
+    pdf.set_font("Arial", "", 10)
+    pdf.multi_cell(0, 5, ct("Les dispositions relatives au code des marchés sont applicables au présent contrat qui prend effet à compter de sa signature."))
+
+    pdf.ln(3)
+    pdf.set_font("Arial", "BU", 10)
+    pdf.cell(60, 5, ct("Article 6 : Enregistrement et timbre"), ln=1)
+    pdf.set_font("Arial", "", 10)
+    pdf.multi_cell(0, 5, ct("Les frais d'enregistrement et de timbre sont à la charge du prestataire."))
+
+    # ==========================================
+    # PAGE 3 : SAUT DE PAGE POUR L'ARTICLE 7 ET SIGNATURES
+    # ==========================================
+    pdf.add_page() # <-- La commande magique qui force le passage à la page suivante
+
+    # Article 7
+    pdf.set_font("Arial", "BU", 10)
+    pdf.cell(40, 5, ct("Article 7 : Litiges"), ln=1)
+    
+    pdf.ln(1) # Grand espace blanc comme sur ton image
+    
+    pdf.set_font("Arial", "", 10)
+    pdf.multi_cell(0, 5, ct("Les litiges survenus au cours de l'exécution des prestations seront traités à l'amiable ou à défaut par un tribunal compétent en la matière."))
+
+    # Signatures
+    pdf.ln(15) # Bel espace avant "Lu et accepté"
+    pdf.set_font("Arial", "B", 10) 
+    pdf.cell(0, 5, ct("Lu et accepté"), ln=1, align="C") 
+
+    pdf.ln(10) # Espace avant les signataires
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(90, 5, "Le Prestataire", ln=0, align="L")
+    pdf.cell(0, 5, "Le Directeur de l'Administration", ln=1, align="R")
+    pdf.cell(0, 5, ct("Générale et de l'Équipement"), ln=1, align="R")
+
+    # On génère le fichier
+    pdf.output(chemin_pdf)
+    
+    return chemin_pdf
