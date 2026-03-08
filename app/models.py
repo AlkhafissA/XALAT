@@ -36,6 +36,7 @@ class Candidat(db.Model):
     titre_signataire = db.Column(db.String(150), default="Le Directeur") 
     rc = db.Column(db.String(100))               # <-- NOUVEAU
     compte_bancaire = db.Column(db.String(200))  # <-- NOUVEAU
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
 
 class Cotation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -59,12 +60,14 @@ class Cotation(db.Model):
     membre1 = db.Column(db.String(100))
     membre2 = db.Column(db.String(100))
     offres = db.relationship('Offre', backref='cotation', lazy=True, cascade="all, delete-orphan")
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
 
 class Offre(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     cotation_id = db.Column(db.Integer, db.ForeignKey('cotation.id'), nullable=False)
     nom_candidat = db.Column(db.String(100))
     montant = db.Column(db.Integer)
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
 
 class Bordereau(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -75,12 +78,14 @@ class Bordereau(db.Model):
     observations = db.Column(db.String(200))
     # On stocke la liste des dossiers sous forme de texte (JSON)
     dossiers_data = db.Column(db.Text) 
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
 
     def get_dossiers(self):
         # Petite fonction pour récupérer la liste propre
         if self.dossiers_data:
             return json.loads(self.dossiers_data)
         return []
+        
 
 class LettreNotification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -92,6 +97,7 @@ class LettreNotification(db.Model):
     # Ce champ va stocker TOUTES les données du formulaire sous forme de texte (JSON)
     # pour pouvoir régénérer le PDF exactement pareil plus tard.
     form_data = db.Column(db.Text)
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
 
 
 class ProcesVerbal(db.Model):
@@ -101,6 +107,7 @@ class ProcesVerbal(db.Model):
     entreprise = db.Column(db.String(200)) # L'entreprise déclarée moins disante
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
     form_data = db.Column(db.Text) # Pour stocker toutes les infos du formulaire en JSON
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
 
 
 class LettreInvitation(db.Model):
@@ -112,6 +119,7 @@ class LettreInvitation(db.Model):
     # Ce champ va stocker TOUTES les données du formulaire sous forme de texte (JSON)
     # Y compris la liste des prestataires choisis, les heures de dépôt, etc.
     form_data = db.Column(db.Text)
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
 
 
 class Contrat(db.Model):
@@ -137,4 +145,17 @@ class Contrat(db.Model):
     rc_candidat = db.Column(db.String(100))
     compte_bancaire = db.Column(db.String(200))
     
+    numero = db.Column(db.String(50), nullable=True)
+    ref_service = db.Column(db.String(100), nullable=True)
+    date_lettre = db.Column(db.String(50), nullable=True)
+    
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
+
+
+class LettreInformation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    immatriculation = db.Column(db.String(100))
+    objet_marche = db.Column(db.Text)
+    form_data = db.Column(db.Text) # On va y stocker tout le JSON (dates, prestataires, etc.)
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI

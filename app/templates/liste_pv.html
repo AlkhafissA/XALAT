@@ -93,10 +93,27 @@
                             <td><div class="fw-bold text-dark">{{ pv.entreprise }}</div></td>
                             <td>{{ pv.date_creation.strftime('%d/%m/%Y') }}</td>
                             <td class="text-end pe-4">
-                                <div class="btn-group">
-                                    <a href="{{ url_for('main.download_pv_pdf', id=pv.id) }}" class="btn btn-outline-danger btn-sm" target="_blank"><i class="bi bi-file-earmark-pdf-fill"></i> PDF</a>
-                                    <a href="{{ url_for('main.supprimer_pv', id=pv.id) }}" class="btn btn-outline-secondary btn-sm ms-1" onclick="return confirm('Supprimer ce PV ?')"><i class="bi bi-trash"></i></a>
-                                </div>
+
+                            <div class="btn-group">
+    <a href="{{ url_for('main.download_pv_pdf', id=pv.id) }}" class="btn btn-outline-danger btn-sm" target="_blank" title="Télécharger le PDF">
+        <i class="bi bi-file-earmark-pdf-fill"></i> PDF
+    </a>
+
+    {% if pv.fichier_scanne %}
+        <a href="{{ url_for('main.voir_scan', nom_fichier=pv.fichier_scanne) }}" target="_blank" class="btn btn-sm btn-outline-success ms-1" title="Voir le PV signé">
+            👁️ Voir Scan
+        </a>
+    {% else %}
+        <button type="button" class="btn btn-sm btn-outline-warning ms-1" data-bs-toggle="modal" data-bs-target="#modalScan{{ pv.id }}" title="Joindre le PV signé">
+            📤 Joindre Scan
+        </button>
+    {% endif %}
+
+    <a href="{{ url_for('main.supprimer_pv', id=pv.id) }}" class="btn btn-outline-secondary btn-sm ms-1" onclick="return confirm('Supprimer ce PV ?')" title="Supprimer">
+        <i class="bi bi-trash"></i>
+    </a>
+</div>
+                            
                             </td>
                         </tr>
                         {% else %}
@@ -200,6 +217,36 @@ Générale et de l'Equipement</textarea>
         </div>
     </div>
 </div>
+
+{% for pv in pvs %}
+    {% if not pv.fichier_scanne %}
+    <div class="modal fade" id="modalScan{{ pv.id }}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title fw-bold text-dark">Joindre le PV d'Attribution signé</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
+                    <div class="modal-body p-4">
+                        
+                        <input type="hidden" name="type_doc" value="pv_attribution">
+                        <input type="hidden" name="doc_id" value="{{ pv.id }}">
+                        <input type="hidden" name="page_retour" value="main.liste_pv">
+                        <label class="form-label fw-bold">Sélectionnez le PV scanné (PDF/Image) :</label>
+                        <input type="file" name="scan_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required>
+                    </div>
+                    <div class="modal-footer bg-light border-0">
+                        <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-warning px-4 rounded-pill fw-bold">Uploader le Scan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

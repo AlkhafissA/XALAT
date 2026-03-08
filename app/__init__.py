@@ -1,3 +1,4 @@
+from flask_migrate import Migrate
 from flask import Flask
 from config import Config
 from app.extensions import db, mail, login_manager
@@ -8,6 +9,7 @@ def create_app(config_class=Config):
 
     # Initialisation
     db.init_app(app)
+    migrate = Migrate(app, db, render_as_batch=True)
     mail.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'main.login'

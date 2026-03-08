@@ -668,11 +668,33 @@ def drps():
                 download_name=f'PV_Attribution_{data["immatriculation"]}.pdf', 
                 mimetype='application/pdf'
             )
+
     # =========================================================
     # Affichage normal de la page (quand on clique sur l'onglet)
     # =========================================================
+    
     candidats = Candidat.query.order_by(Candidat.nom_entreprise).all()
-    return render_template('drps.html', candidats=candidats)
+    
+    # 1. On récupère les lettres depuis la base de données
+    lettres_db = LettreInvitation.query.order_by(LettreInvitation.id.desc()).all()
+    
+    # ---> LE FAMEUX MOUCHARD EST ICI <---
+    print(f"\n\n==== DIAGNOSTIC ==== j'ai trouvé {len(lettres_db)} lettres d'invitation dans la base !\n\n")
+    
+    # 2. On déballe le texte JSON pour que le tableau HTML puisse lire les dates et numéros
+    lettres_pour_tableau = []
+    for lettre in lettres_db:
+        data = json.loads(lettre.form_data) if lettre.form_data else {}
+        lettres_pour_tableau.append({
+            'id': lettre.id,
+            'immatriculation': lettre.immatriculation,
+            'objet_marche': lettre.objet_marche,
+            'num_ordre': data.get('num_ordre', 'N/A'),
+            'date_heure_limite': data.get('date_heure_limite', 'Non défini')
+        })
+
+    # 3. On envoie TOUT au fichier HTML (les candidats ET les lettres)
+    return render_template('drps.html', candidats=candidats, lettres=lettres_pour_tableau)
 
 @main.route('/api/get_adresse/<int:id>')
 @login_required
@@ -979,6 +1001,7 @@ def supprimer_pv(id):
 @main.route('/creer_lettre_invitation', methods=['GET', 'POST'])
 def creer_lettre_invitation():
     # Remplace par l'endroit où se trouvent tes modèles
+    import json
     from app.models import Candidat, LettreInvitation 
     from app import db
     
@@ -1050,27 +1073,65 @@ def creer_lettre_invitation():
 
         return send_file(pdf_path, as_attachment=False)
 
-    # Si on est en GET (affichage simple de la page)
+# Si on est en GET (affichage simple de la page)
+    import json
     candidats = Candidat.query.all()
-    return render_template('creer_lettre_invitation.html', candidats=candidats)
+    
+    # On récupère aussi les lettres pour que le tableau ne soit pas vide sur cette page !
+    lettres_db = LettreInvitation.query.order_by(LettreInvitation.id.desc()).all()
+    lettres_pour_tableau = []
+    for lettre in lettres_db:
+        data = json.loads(lettre.form_data) if lettre.form_data else {}
+        lettres_pour_tableau.append({
+            'id': lettre.id,
+            'immatriculation': lettre.immatriculation,
+            'objet_marche': lettre.objet_marche,
+            'num_ordre': data.get('num_ordre', 'N/A'),
+            'date_heure_limite': data.get('date_heure_limite', 'Non défini'),
+            'fichier_scanne': lettre.fichier_scanne  # <-- LA LIGNE MAGIQUE EST ICI !
+        })
 
+    return render_template('creer_lettre_invitation.html', candidats=candidats, lettres=lettres_pour_tableau)
+
+@main.route('/telecharger_lettre/<int:id>')
+def telecharger_lettre(id):
+    from app.models import LettreInvitation
+    from app.utils import generer_pdf_lettre_invitation
+    import json
+    
+    lettre = LettreInvitation.query.get_or_404(id)
+    form_data_dict = json.loads(lettre.form_data)
+    
+    pdf_path = generer_pdf_lettre_invitation(form_data_dict)
+    return send_file(pdf_path, as_attachment=True)
+
+@main.route('/supprimer_lettre/<int:id>', methods=['POST'])
+def supprimer_lettre(id):
+    from app.models import LettreInvitation
+    from app import db
+    
+    lettre = LettreInvitation.query.get_or_404(id)
+    db.session.delete(lettre)
+    db.session.commit()
+    
+    return redirect(url_for('main.drps'))
 
 
 @main.route('/creer_contrat', methods=['GET', 'POST'])
 def creer_contrat():
     candidats = Candidat.query.all()
     marches = LettreInvitation.query.all()
+    
+    # 1. On récupère les contrats pour les afficher dans le tableau HTML
+    contrats_sauvegardes = Contrat.query.order_by(Contrat.id.desc()).all()
 
     if request.method == 'POST':
-        # 1. Le Prestataire
         candidat_id = request.form.get('candidat_id')
         candidat_gagnant = Candidat.query.get(candidat_id)
         
-        # 2. Le Marché
         marche_id = request.form.get('marche_id')
         marche_choisi = LettreInvitation.query.get(marche_id)
         
-        # 3. Les autres infos du formulaire
         gestion_annee = request.form.get('gestion_annee', '2025')
         montant = request.form.get('montant')
         montant_lettres = request.form.get('montant_lettres', '') 
@@ -1080,13 +1141,11 @@ def creer_contrat():
         comptable = request.form.get('comptable', 'Payeur Général du Trésor (PGT)')
         vocable = request.form.get('vocable', 'Prestataire')
         
-        # --- NOUVEAUX CHAMPS AJOUTÉS ---
         numero = request.form.get('numero')
         ref_service = request.form.get('ref_service')
         date_lettre = request.form.get('date_lettre')
-        # -------------------------------
 
-        # 4. EXTRACTION DU JSON DE LA LETTRE
+        # Extraction du RC et Compte depuis la lettre d'invitation
         lettre_data = {}
         if marche_choisi and marche_choisi.form_data:
             try:
@@ -1094,41 +1153,47 @@ def creer_contrat():
             except:
                 pass
 
-        # =========================================================
-        # LA VRAIE MAGIE EST ICI : ON FOUILLE DANS LE TIROIR
-        # =========================================================
         rc_final = '........................'
         compte_final = '...................................'
 
-        # On récupère la liste de tous les prestataires invités dans la lettre
         prestataires_lettre = lettre_data.get('prestataires', [])
-        
-        # On cherche l'entreprise gagnante dans cette liste
         for p in prestataires_lettre:
             if p.get('nom') == candidat_gagnant.nom_entreprise:
-                # On a trouvé l'entreprise ! On extrait son RC et sa Banque
                 if p.get('rc') and p.get('rc') != 'Non renseigné':
                     rc_final = p.get('rc')
                 if p.get('compte'):
                     compte_final = p.get('compte')
-                break # On arrête de chercher puisqu'on l'a trouvée
+                break
 
-        # =========================================================
+        # -------------------------------------------------------------
+        # 2. LA NOUVEAUTÉ : ON SAUVEGARDE LE CONTRAT DANS LA BASE DE DONNÉES
+        # -------------------------------------------------------------
+        nouveau_contrat = Contrat(
+            candidat_id=candidat_gagnant.id,
+            objet_marche=marche_choisi.objet_marche,
+            gestion_annee=gestion_annee,
+            montant_chiffres=montant,
+            montant_lettres=montant_lettres,
+            financement=financement,
+            imputation=imputation,
+            programme=programme,
+            comptable_assignataire=comptable,
+            rc_candidat=rc_final,
+            compte_bancaire=compte_final
+        )
+        db.session.add(nouveau_contrat)
+        db.session.commit()
 
-        # 5. PRÉPARATION DU DICTIONNAIRE
+        # -------------------------------------------------------------
+        # 3. ON GÉNÈRE LE PDF COMME AVANT
+        # -------------------------------------------------------------
         data_contrat = {
             'titulaire': candidat_gagnant.nom_entreprise or '........................',
             'ninea': candidat_gagnant.ninea or '........................',
-            
-            # --- ON UTILISE NOS VARIABLES EXTRAITES DU TIROIR ---
             'rc': rc_final,                       
             'compte_bancaire': compte_final, 
-            
-            # --- L'ADRESSE ET LE TÉLÉPHONE VIENNENT DU CANDIDAT ---
-            'adresse_candidat': getattr(candidat_gagnant, 'adresse', '........................'),    
+            'adresse_candidat': getattr(candidat_gagnant, 'adresse', '........................'),   
             'tel_candidat': getattr(candidat_gagnant, 'telephone', '..........'),      
-            # --------------------------------------------------------------------------------------
-
             'objet_marche': marche_choisi.objet_marche or '........................',      
             'gestion_annee': gestion_annee,
             'montant': montant,
@@ -1138,19 +1203,332 @@ def creer_contrat():
             'programme': programme,
             'comptable': comptable,
             'vocable': vocable,
-            
-            # --- NOS NOUVELLES DONNÉES POUR LA PAGE 2 ---
             'numero': numero,
             'ref_service': ref_service,
-            'date_lettre': date_lettre
-            # --------------------------------------------
+            'date_lettre': date_lettre,
+            
         }
 
-        # 1. On génère le fichier PDF
+        # Assure-toi que l'import de generer_pdf_contrat est bien fait en haut de ton fichier !
         chemin_pdf = generer_pdf_contrat(data_contrat)
-        
-        # 2. On l'envoie directement en téléchargement
         nom_fichier = f"Contrat_{candidat_gagnant.nom_entreprise.replace(' ', '_')}.pdf"
         return send_file(chemin_pdf, as_attachment=True, download_name=nom_fichier)
 
-    return render_template('formulaire_contrat.html', candidats=candidats, marches=marches)
+    # 4. On envoie les données au fichier HTML
+    return render_template('formulaire_contrat.html', candidats=candidats, marches=marches, contrats=contrats_sauvegardes)
+
+
+# --- ROUTE POUR LE BOUTON "TÉLÉCHARGER PDF" DU TABLEAU ---
+@main.route('/telecharger_contrat/<int:id>')
+def telecharger_contrat(id):
+    contrat = Contrat.query.get_or_404(id)
+    candidat = contrat.candidat
+    
+    data_contrat = {
+        'titulaire': candidat.nom_entreprise,
+        'ninea': candidat.ninea,
+        'rc': contrat.rc_candidat,                       
+        'compte_bancaire': contrat.compte_bancaire, 
+        'adresse_candidat': candidat.adresse,   
+        'tel_candidat': candidat.telephone,      
+        'objet_marche': contrat.objet_marche,      
+        'gestion_annee': contrat.gestion_annee,
+        'montant': contrat.montant_chiffres,
+        'montant_lettres': contrat.montant_lettres,
+        'financement': contrat.financement,
+        'imputation': contrat.imputation,
+        'programme': contrat.programme,
+        'comptable': contrat.comptable_assignataire,
+        'vocable': 'Prestataire',
+        # ---> CHANGE CES 3 LIGNES ICI <---
+        'numero': contrat.numero or '', 
+        'ref_service': contrat.ref_service or '', 
+        'date_lettre': contrat.date_lettre or '' 
+    }
+    
+    chemin_pdf = generer_pdf_contrat(data_contrat)
+    nom_fichier = f"Contrat_{candidat.nom_entreprise.replace(' ', '_')}.pdf"
+    return send_file(chemin_pdf, as_attachment=True, download_name=nom_fichier)
+
+# --- ROUTE POUR LE BOUTON "SUPPRIMER" DU TABLEAU ---
+@main.route('/supprimer_contrat/<int:id>', methods=['POST'])
+def supprimer_contrat(id):
+    contrat = Contrat.query.get_or_404(id)
+    db.session.delete(contrat)
+    db.session.commit()
+    return redirect(url_for('main.creer_contrat'))
+    
+    
+@main.route('/creer_lettre_information', methods=['POST'])
+@login_required
+def creer_lettre_information():
+    import io
+    from datetime import datetime
+    from app.models import Candidat
+    from app import db
+
+    direction_name = request.form.get('direction_name')
+    num_ordre = request.form.get('num_ordre')
+    ref_service = request.form.get('ref_service')
+    signataire = request.form.get('signataire')
+    
+    date_lettre_raw = request.form.get('date_lettre')
+    try:
+        dt_lettre = datetime.strptime(date_lettre_raw, '%Y-%m-%d')
+        date_lettre = dt_lettre.strftime('%d/%m/%Y')
+    except:
+        date_lettre = date_lettre_raw or datetime.now().strftime('%d/%m/%Y')
+
+    immatriculation = request.form.get('immatriculation')
+    date_comm_raw = request.form.get('date_commission')
+    try:
+        dt = datetime.strptime(date_comm_raw, '%Y-%m-%d')
+        date_commission = dt.strftime('%d/%m/%Y')
+    except:
+        date_commission = date_comm_raw
+
+    objet_marche = request.form.get('objet_marche')
+    
+    prestataires_ids = request.form.getlist('prestataire_id[]')
+    rcs_saisis = request.form.getlist('rc[]') 
+    
+    prestataires = []
+    from itertools import zip_longest
+    for pid, rc_agent in zip_longest(prestataires_ids, rcs_saisis, fillvalue=""):
+        if pid:
+            candidat = db.session.get(Candidat, int(pid))
+            if candidat:
+                adresse_db = candidat.adresse or ""
+                ville_db = candidat.ville or ""
+                ninea_db = candidat.ninea or "Néant"
+                tel_db = candidat.telephone or "Néant"
+                rc_final = rc_agent or "Non renseigné"
+                
+                lieu = f"{adresse_db} {ville_db}".strip()
+                phrase_adresse_complete = f"{lieu}, RC : {rc_final}, NINEA : {ninea_db}, Tél : {tel_db} ;"
+                
+                prestataires.append({
+                    'nom': candidat.nom_entreprise,
+                    'adresse': phrase_adresse_complete
+                })
+    
+    buffer = io.BytesIO()
+    data = {
+        'direction_name': direction_name,
+        'num_ordre': num_ordre,
+        'ref_service': ref_service,
+        'date_lettre': date_lettre,
+        'signataire': signataire,
+        'immatriculation': immatriculation,
+        'date_commission': date_commission,
+        'objet_marche': objet_marche,
+        'prestataires': prestataires
+    }            
+
+    # =========================================================
+    # ---> AJOUTE CECI POUR SAUVEGARDER DANS LA BASE <---
+    # =========================================================
+    from app.models import LettreInformation
+    import json
+    
+    nouvelle_lettre = LettreInformation(
+        immatriculation=immatriculation,
+        objet_marche=objet_marche,
+        form_data=json.dumps(data)
+    )
+    db.session.add(nouvelle_lettre)
+    db.session.commit()
+    # =========================================================
+
+
+    from app.utils import generer_pdf_lettre_information 
+    generer_pdf_lettre_information(buffer, data)
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        as_attachment=False, # Mis sur False pour l'ouvrir dans le navigateur, ou True pour forcer le téléchargement
+        download_name=f"Lettre_Information_{immatriculation}.pdf",
+        mimetype='application/pdf'
+    )    
+
+
+
+@main.route('/lettres_information', methods=['GET'])
+@login_required
+def lettres_information():
+    from app.models import Candidat, LettreInformation
+    import json
+    
+    candidats = Candidat.query.order_by(Candidat.nom_entreprise).all()
+    
+    # On récupère les lettres depuis la base !
+    lettres_db = LettreInformation.query.order_by(LettreInformation.id.desc()).all()
+    
+    lettres_pour_tableau = []
+    for lettre in lettres_db:
+        data = json.loads(lettre.form_data) if lettre.form_data else {}
+        lettres_pour_tableau.append({
+            'id': lettre.id,
+            'immatriculation': lettre.immatriculation,
+            'objet_marche': lettre.objet_marche,
+            'num_ordre': data.get('num_ordre', 'N/A'),
+            'date_commission': data.get('date_commission', 'Non défini'),
+            'fichier_scanne': lettre.fichier_scanne  # <--
+        })
+
+    # On envoie la liste remplie au tableau HTML
+    return render_template('lettres_information.html', candidats=candidats, lettres=lettres_pour_tableau)
+
+@main.route('/telecharger_lettre_information/<int:id>')
+@login_required
+def telecharger_lettre_information(id):
+    from app.models import LettreInformation
+    import json, io
+    from app.utils import generer_pdf_lettre_information
+    
+    lettre = LettreInformation.query.get_or_404(id)
+    data = json.loads(lettre.form_data)
+    
+    buffer = io.BytesIO()
+    generer_pdf_lettre_information(buffer, data)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f"Lettre_Information_{lettre.immatriculation}.pdf",
+        mimetype='application/pdf'
+    )
+
+@main.route('/supprimer_lettre_information/<int:id>', methods=['POST'])
+@login_required
+def supprimer_lettre_information(id):
+    from app.models import LettreInformation
+    lettre = LettreInformation.query.get_or_404(id)
+    db.session.delete(lettre)
+    db.session.commit()
+    return redirect(url_for('main.lettres_information'))
+    
+    import os
+from werkzeug.utils import secure_filename
+from flask import request, redirect, url_for, flash, current_app, send_from_directory
+
+
+# --- ROUTE POUR VOIR LE SCAN ---
+@main.route('/voir_scan/<nom_fichier>')
+@login_required
+def voir_scan(nom_fichier):
+    dossier_scans = os.path.join(current_app.root_path, 'static', 'uploads', 'scans')
+    # Ouvre le PDF directement dans le navigateur
+    return send_from_directory(dossier_scans, nom_fichier)
+    
+    
+@main.route('/uploader_scan', methods=['POST'])
+@login_required
+def uploader_scan():
+    print("--- DÉBUT DE L'UPLOAD ---")
+    
+    type_doc = request.form.get('type_doc')
+    doc_id = request.form.get('doc_id')
+    page_retour = request.form.get('page_retour')
+    
+    print(f"1. Infos reçues -> Type: {type_doc} | ID: {doc_id} | Retour: {page_retour}")
+    
+    if 'scan_file' not in request.files:
+        print("ERREUR : Le formulaire n'a pas envoyé de fichier (vérifie enctype).")
+        flash("Aucun fichier sélectionné.", "danger")
+        return redirect(url_for(page_retour))
+        
+    file = request.files['scan_file']
+    print(f"2. Fichier reçu : {file.filename}")
+    
+    if file.filename == '':
+        print("ERREUR : Le nom du fichier est vide.")
+        flash("Aucun fichier sélectionné.", "danger")
+        return redirect(url_for(page_retour))
+
+    if file:
+        filename = secure_filename(file.filename)
+        nouveau_nom = f"{type_doc}_{doc_id}_{filename}"
+        
+        dossier_sauvegarde = os.path.join(current_app.root_path, 'static', 'uploads', 'scans')
+        os.makedirs(dossier_sauvegarde, exist_ok=True)
+        
+        chemin_complet = os.path.join(dossier_sauvegarde, nouveau_nom)
+        file.save(chemin_complet)
+        print(f"3. Fichier sauvegardé sur le disque : {chemin_complet}")
+        
+        from app.models import LettreInvitation, Contrat
+        from app import db
+        
+        # --- CONDITIONS POUR CHAQUE TYPE DE DOCUMENT ---
+        if type_doc == 'lettre_invitation':
+            doc = LettreInvitation.query.get(doc_id)
+            print(f"4. Recherche en base de données : {doc}")
+            if doc: 
+                doc.fichier_scanne = nouveau_nom
+                db.session.commit()
+                print("5. SUCCÈS : Base de données (Lettre) mise à jour !")
+            else:
+                print("ERREUR : Aucun document trouvé en base avec cet ID.")
+                
+        elif type_doc == 'contrat':
+            doc = Contrat.query.get(doc_id)
+            print(f"4. Recherche en base de données : {doc}")
+            if doc: 
+                doc.fichier_scanne = nouveau_nom
+                db.session.commit()
+                print("5. SUCCÈS : Base de données (Contrat) mise à jour !")
+            else:
+                print("ERREUR : Aucun contrat trouvé en base avec cet ID.")
+        # -----------------------------------------------
+        
+        elif type_doc == 'lettre_information':
+            from app.models import LettreInformation # N'oublie pas de l'importer !
+            doc = LettreInformation.query.get(doc_id)
+            print(f"4. Recherche en base de données : {doc}")
+            if doc: 
+                doc.fichier_scanne = nouveau_nom
+                db.session.commit()
+                print("5. SUCCÈS : Base de données (Lettre Info) mise à jour !")
+            else:
+                print("ERREUR : Aucune lettre d'information trouvée en base.")
+                
+        elif type_doc == 'lettre_notification':
+            from app.models import LettreNotification # Ton modèle
+            doc = LettreNotification.query.get(doc_id)
+            print(f"4. Recherche en base de données : {doc}")
+            if doc: 
+                doc.fichier_scanne = nouveau_nom
+                db.session.commit()
+                print("5. SUCCÈS : Base de données (Lettre Notif) mise à jour !")
+            else:
+                print("ERREUR : Aucune lettre de notification trouvée.")
+                
+        elif type_doc == 'bordereau':
+            from app.models import Bordereau # <-- Met le vrai nom de ton modèle ici
+            doc = Bordereau.query.get(doc_id)
+            if doc: 
+                doc.fichier_scanne = nouveau_nom
+                db.session.commit()
+           
+        elif type_doc == 'pv_attribution':
+            from app.models import ProcesVerbal  # <-- LE BON NOM EST ICI !
+            doc = ProcesVerbal.query.get(doc_id)
+            if doc:
+                doc.fichier_scanne = nouveau_nom
+                db.session.commit()  
+                
+        elif type_doc == 'cotation':
+            from app.models import Cotation
+            doc = Cotation.query.get(doc_id)
+            if doc:
+                doc.fichier_scanne = nouveau_nom
+                db.session.commit()        
+                
+        flash("Le document scanné a été ajouté avec succès !", "success")
+        print("--- FIN DE L'UPLOAD ---")
+        
+    return redirect(url_for(page_retour))
+    
+    

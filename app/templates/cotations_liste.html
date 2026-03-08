@@ -193,17 +193,28 @@
                                 </span>
                             </td>
                             <td class="text-end pe-4">
-                                <div class="btn-group">
-                                    <a href="{{ url_for('main.telecharger_pv', id=cot.id) }}" class="btn btn-action btn-light text-success" title="Télécharger les PV (PDF)">
-                                        📄
-                                    </a>
-                                    <a href="{{ url_for('main.modifier_cotation', id=cot.id) }}" class="btn btn-action btn-light text-primary" title="Modifier">
-                                        ✏️
-                                    </a>
-                                    <a href="{{ url_for('main.supprimer_cotation', id=cot.id) }}" class="btn btn-action btn-light text-danger" onclick="return confirm('Supprimer ce marché ?')" title="Supprimer">
-                                        🗑️
-                                    </a>
-                                </div>
+                             <div class="btn-group">
+    <a href="{{ url_for('main.telecharger_pv', id=cot.id) }}" class="btn btn-action btn-light text-success" title="Télécharger les PV (PDF)">
+        📄
+    </a>
+    
+    {% if cot.fichier_scanne %}
+        <a href="{{ url_for('main.voir_scan', nom_fichier=cot.fichier_scanne) }}" target="_blank" class="btn btn-action btn-light text-success" title="Voir le PV scanné">
+            👁️
+        </a>
+    {% else %}
+        <button type="button" class="btn btn-action btn-light text-warning" data-bs-toggle="modal" data-bs-target="#modalScan{{ cot.id }}" title="Joindre le PV scanné">
+            📤
+        </button>
+    {% endif %}
+
+    <a href="{{ url_for('main.modifier_cotation', id=cot.id) }}" class="btn btn-action btn-light text-primary" title="Modifier">
+        ✏️
+    </a>
+    <a href="{{ url_for('main.supprimer_cotation', id=cot.id) }}" class="btn btn-action btn-light text-danger" onclick="return confirm('Supprimer ce marché ?')" title="Supprimer">
+        🗑️
+    </a>
+</div>   
                             </td>
                         </tr>
                         {% else %}
@@ -219,7 +230,35 @@
             </div>
         </div>
     </div>
-
+{% for cot in cotations %}
+    {% if not cot.fichier_scanne %}
+    <div class="modal fade" id="modalScan{{ cot.id }}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title fw-bold text-dark">Joindre le dossier scanné</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
+                    <div class="modal-body p-4">
+                        
+                        <input type="hidden" name="type_doc" value="cotation">
+                        <input type="hidden" name="doc_id" value="{{ cot.id }}">
+                        <input type="hidden" name="page_retour" value="main.liste_cotations">
+                        <label class="form-label fw-bold">Sélectionnez le fichier scanné (PDF/Image) :</label>
+                        <input type="file" name="scan_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required>
+                    </div>
+                    <div class="modal-footer bg-light border-0">
+                        <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-warning px-4 rounded-pill fw-bold">Uploader le Scan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
     <script>
         document.getElementById('searchInput').addEventListener('keyup', function() {
             var filter = this.value.toLowerCase();

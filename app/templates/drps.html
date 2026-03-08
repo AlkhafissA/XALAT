@@ -135,75 +135,140 @@
           {% endif %}
         {% endwith %}
 
-        <div class="row g-4">
+    <style>
+    .card-menu {
+        transition: all 0.3s ease;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        background: #fff;
+    }
+    .card-menu:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
+        border-color: #d1d5db;
+    }
+    .icon-box {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        font-size: 1.4rem;
+    }
+/* LE STYLE DU BLOC BLANC (LE CUBE) */
+.card-cube {
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: 24px; /* Bords bien arrondis */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    padding: 30px 20px;
+    height: 100%;
+    min-height: 220px; /* Donne l'aspect "cube" ou carré */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+/* EFFET AU SURVOL DU BLOC */
+.card-cube:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 24px rgba(0, 51, 102, 0.12); /* Ombre bleutée de ton thème */
+    border-color: rgba(0, 51, 102, 0.3);
+}
+
+/* LE STYLE DE L'ICÔNE À L'INTÉRIEUR */
+.icon-vibre {
+    width: 65px;
+    height: 65px;
+    border-radius: 18px; /* Petit carré arrondi pour l'icône */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin-bottom: 20px;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* EFFET DE VIBRATION DE L'ICÔNE AU SURVOL DU BLOC */
+.card-cube:hover .icon-vibre {
+    transform: scale(1.15) rotate(8deg);
+}
+
+/* On s'assure que les liens n'ont pas de soulignement */
+.lien-cube {
+    text-decoration: none !important;
+    display: block;
+    height: 100%;
+}
+</style>
+    <div class="row g-4">
             
-            <div class="col-xl-4 col-md-6">
-                <a href="{{ url_for('main.liste_bordereaux') }}" class="text-decoration-none">
-                    <div class="card card-stat p-4 text-center">
-                        <div class="d-flex flex-column align-items-center">
-                            <div class="stat-icon bg-primary bg-opacity-10 text-primary">📋</div>
-                            <h5 class="fw-bold text-dark">Bordereau de Revue</h5>
-                            <p class="text-muted small mb-0">Gérer l'historique et créer de nouveaux bordereaux</p>
-                        </div>
-                    </div>
-                </a>
+    <div class="col-lg-4 col-md-6">
+        <a href="{{ url_for('main.liste_bordereaux') }}" class="lien-cube">
+            <div class="card-cube">
+                <div class="icon-vibre bg-primary bg-opacity-10 text-primary">📋</div>
+                <h5 class="fw-bold text-dark mb-2">Bordereau de Revue</h5>
+                <p class="text-muted small mb-0">Gérer l'historique et créer de nouveaux bordereaux</p>
             </div>
-
-            <div class="col-xl-4 col-md-6">
-                <a href="{{ url_for('main.creer_contrat') }}" class="text-decoration-none">
-                    <div class="card card-stat p-4 text-center shadow-sm" style="transition: transform 0.2s;">
-                        <div class="d-flex flex-column align-items-center">
-                            <div class="stat-icon bg-success bg-opacity-10 text-success mb-2" style="font-size: 2rem;">✍🏽</div>
-                            <h5 class="fw-bold text-dark">Projet de Contrat</h5>
-                            <p class="text-muted small mb-0">Créer un nouveau contrat final</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
-
-            <div class="col-xl-4 col-md-6">
-                <a href="{{ url_for('main.creer_lettre_invitation') }}" class="card card-stat p-4 text-center text-decoration-none text-dark">
-                    <div class="d-flex flex-column align-items-center">
-                        <div class="stat-icon bg-warning bg-opacity-10 text-warning">📩</div>
-                        <h5 class="fw-bold text-dark">Lettre d’Invitation</h5>
-                        <p class="text-muted small mb-0">Inviter des prestataires à soumissionner</p>
-                    </div>
-                </a>
-            </div>
-
-            <div class="col-xl-4 col-md-6">
-                <div class="card card-stat p-4 text-center" data-bs-toggle="modal" data-bs-target="#modalInformation">
-                    <div class="d-flex flex-column align-items-center">
-                        <div class="stat-icon bg-info bg-opacity-10 text-info">ℹ️</div>
-                        <h5 class="fw-bold text-dark">Lettre d’Information</h5>
-                        <p class="text-muted small mb-0">Informer les candidats non retenus</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-xl-4 col-md-6">
-                <div class="card card-stat p-4 text-center" onclick="window.location.href='{{ url_for('main.liste_notifications') }}'" style="cursor: pointer;">
-                    <div class="d-flex flex-column align-items-center">
-                        <div class="stat-icon bg-danger bg-opacity-10 text-danger">✅</div>
-                        <h5 class="fw-bold text-dark">Lettre de Notification</h5>
-                        <p class="text-muted small mb-0">Notifier l'attribution provisoire</p>
-                    </div>
-                </div>
-            </div>
-           
-           <div class="col-xl-4 col-md-6">
-               <div class="card card-stat p-4 text-center" onclick="window.location.href='{{ url_for('main.liste_pv') }}'" style="cursor: pointer;">
-                   <div class="d-flex flex-column align-items-center">
-                       <div class="stat-icon bg-secondary bg-opacity-10 text-dark">⚖️</div>
-                       <h5 class="fw-bold text-dark">PV d’Attribution</h5>
-                       <p class="text-muted small mb-0">Générer le procès-verbal final</p>
-                   </div>
-               </div>
-           </div>
-
-       </div>
+        </a>
     </div>
 
+    <div class="col-lg-4 col-md-6">
+        <a href="{{ url_for('main.lettres_information') }}" class="lien-cube">
+            <div class="card-cube">
+                <div class="icon-vibre bg-info bg-opacity-10 text-info">ℹ️</div>
+                <h5 class="fw-bold text-dark mb-2">Lettre d’Information</h5>
+                <p class="text-muted small mb-0">Informer les candidats non retenus</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-lg-4 col-md-6">
+        <a href="{{ url_for('main.liste_notifications') }}" class="lien-cube">
+            <div class="card-cube">
+                <div class="icon-vibre bg-danger bg-opacity-10 text-danger">✅</div>
+                <h5 class="fw-bold text-dark mb-2">Lettre de Notification</h5>
+                <p class="text-muted small mb-0">Notifier l'attribution provisoire</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-lg-4 col-md-6">
+        <a href="{{ url_for('main.liste_pv') }}" class="lien-cube">
+            <div class="card-cube">
+                <div class="icon-vibre bg-secondary bg-opacity-10 text-dark">⚖️</div>
+                <h5 class="fw-bold text-dark mb-2">PV d’Attribution</h5>
+                <p class="text-muted small mb-0">Générer le procès-verbal final</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-lg-4 col-md-6">
+        <a href="{{ url_for('main.creer_lettre_invitation') }}" class="lien-cube">
+            <div class="card-cube">
+                <div class="icon-vibre bg-warning bg-opacity-10 text-warning">📩</div>
+                <h5 class="fw-bold text-dark mb-2">Lettre d’Invitation</h5>
+                <p class="text-muted small mb-0">Inviter des prestataires à soumissionner</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-lg-4 col-md-6">
+        <a href="{{ url_for('main.creer_contrat') }}" class="lien-cube">
+            <div class="card-cube">
+                <div class="icon-vibre bg-success bg-opacity-10 text-success">✍🏽</div>
+                <h5 class="fw-bold text-dark mb-2">Projet de Contrat</h5>
+                <p class="text-muted small mb-0">Créer un nouveau contrat final</p>
+            </div>
+        </a>
+    </div>
+
+</div>
     <div class="modal fade" id="modalBordereau" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content shadow">
