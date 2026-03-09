@@ -159,3 +159,11 @@ class LettreInformation(db.Model):
     objet_marche = db.Column(db.Text)
     form_data = db.Column(db.Text) # On va y stocker tout le JSON (dates, prestataires, etc.)
     fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
+    
+
+class ArchiveDocument(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    reference = db.Column(db.String(100), nullable=False) # Ex: S_DAGE_198
+    type_document = db.Column(db.String(50), nullable=False) # Ex: 'Bordereau', 'Lettre Invitation', 'Contrat'
+    nom_fichier = db.Column(db.String(255), nullable=False) # Le nom du PDF sauvegardé
+    date_ajout = db.Column(db.DateTime, default=datetime.utcnow) # Date d'upload

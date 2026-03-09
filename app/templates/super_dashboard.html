@@ -134,7 +134,28 @@
                 </div>
             </div>
         </div>
-
+        <div class="card card-custom mb-4 border-start border-success border-4">
+            <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="fas fa-shield-alt text-success"></i> Sécurité & Sauvegarde</h5>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8 mb-3 mb-md-0">
+                        <p class="text-muted mb-1">Téléchargez une archive compressée <strong>(.zip)</strong> contenant l'intégralité de votre système :</p>
+                        <ul class="text-muted small mb-0">
+                            <li><i class="fas fa-database text-primary"></i> La base de données (<strong>mes_marches.db</strong>) avec tous les historiques et mots de passe.</li>
+                            <li><i class="fas fa-file-pdf text-danger"></i> Tous les documents scannés stockés dans (<strong>app/static/uploads</strong>).</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <a href="{{ url_for('main.telecharger_backup_complet') }}" class="btn btn-success fw-bold shadow-sm rounded-pill px-4">
+                            <i class="fas fa-cloud-download-alt"></i> Exporter le Système
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div class="card card-custom">
             <div class="card-header bg-white border-0 py-3 d-flex flex-column flex-md-row justify-content-between align-items-center">
                 <h5 class="mb-2 mb-md-0 fw-bold"><i class="fas fa-history text-warning"></i> Journal de Surveillance</h5>

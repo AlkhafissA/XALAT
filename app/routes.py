@@ -1,7 +1,10 @@
 import os
+import zipfile
 import json
+from werkzeug.utils import secure_filename
 from flask import send_file, make_response, abort
 import io
+from app.models import ArchiveDocument
 from app.models import Bordereau 
 from app.models import LettreNotification, LettreInvitation, Contrat
 from app.models import Candidat, LettreNotification, ProcesVerbal
@@ -391,7 +394,55 @@ def sauvegarde_bdd():
     if current_user.role != 'superadmin': return redirect(url_for('main.tableau_de_bord'))
     db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
     return send_file(db_path, as_attachment=True)
+@main.route('/telecharger_backup_complet')
+@login_required
+def telecharger_backup_complet():
+    # Sécurité absolue : seul le superadmin passe
+    if current_user.role != 'superadmin': 
+        return redirect(url_for('main.tableau_de_bord'))
 
+    
+
+    # On prépare le fichier ZIP en mémoire
+    memory_file = BytesIO()
+    
+    # On définit les chemins exacts d'après tes infos
+    base_dir = os.path.abspath(os.path.dirname(current_app.root_path))
+    db_path = os.path.join(base_dir, 'mes_marches.db')
+    uploads_dir = os.path.join(current_app.root_path, 'static', 'uploads')
+
+    # On commence à remplir le ZIP
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # 1. Ajout de la base de données
+        if os.path.exists(db_path):
+            zf.write(db_path, 'mes_marches.db')
+        
+        # 2. Ajout de TOUS les dossiers et fichiers PDF
+        if os.path.exists(uploads_dir):
+            for root, dirs, files in os.walk(uploads_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    # On garde une belle structure de dossiers dans le ZIP
+                    arcname = os.path.relpath(file_path, start=os.path.dirname(uploads_dir))
+                    zf.write(file_path, os.path.join('uploads', arcname))
+    
+    memory_file.seek(0)
+    
+    # On génère un nom stylé avec la date et l'heure
+    date_str = datetime.now().strftime('%Y-%m-%d_%Hh%M')
+    zip_filename = f"MCAT_Backup_Complet_{date_str}.zip"
+    
+    # On enregistre l'action dans ton journal de surveillance
+    log_action("Téléchargement Backup", "Base de données + Fichiers PDF")
+    db.session.commit()
+    
+    # On envoie le fichier au Superadmin
+    return send_file(
+        memory_file,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=zip_filename
+    )
 @main.route('/admin/download-backup')
 @login_required
 def download_backup():
@@ -1409,19 +1460,16 @@ def supprimer_lettre_information(id):
     db.session.commit()
     return redirect(url_for('main.lettres_information'))
     
-    import os
-from werkzeug.utils import secure_filename
-from flask import request, redirect, url_for, flash, current_app, send_from_directory
+# ==========================================
+# --- ROUTES : GESTION DES SCANS ET UPLOADS ---
+# ==========================================
 
-
-# --- ROUTE POUR VOIR LE SCAN ---
 @main.route('/voir_scan/<nom_fichier>')
 @login_required
 def voir_scan(nom_fichier):
     dossier_scans = os.path.join(current_app.root_path, 'static', 'uploads', 'scans')
-    # Ouvre le PDF directement dans le navigateur
+    from flask import send_from_directory
     return send_from_directory(dossier_scans, nom_fichier)
-    
     
 @main.route('/uploader_scan', methods=['POST'])
 @login_required
@@ -1432,18 +1480,13 @@ def uploader_scan():
     doc_id = request.form.get('doc_id')
     page_retour = request.form.get('page_retour')
     
-    print(f"1. Infos reçues -> Type: {type_doc} | ID: {doc_id} | Retour: {page_retour}")
-    
     if 'scan_file' not in request.files:
-        print("ERREUR : Le formulaire n'a pas envoyé de fichier (vérifie enctype).")
         flash("Aucun fichier sélectionné.", "danger")
         return redirect(url_for(page_retour))
         
     file = request.files['scan_file']
-    print(f"2. Fichier reçu : {file.filename}")
     
     if file.filename == '':
-        print("ERREUR : Le nom du fichier est vide.")
         flash("Aucun fichier sélectionné.", "danger")
         return redirect(url_for(page_retour))
 
@@ -1456,64 +1499,45 @@ def uploader_scan():
         
         chemin_complet = os.path.join(dossier_sauvegarde, nouveau_nom)
         file.save(chemin_complet)
-        print(f"3. Fichier sauvegardé sur le disque : {chemin_complet}")
         
-        from app.models import LettreInvitation, Contrat
-        from app import db
-        
-        # --- CONDITIONS POUR CHAQUE TYPE DE DOCUMENT ---
+        # --- MISE À JOUR BASE DE DONNÉES ---
         if type_doc == 'lettre_invitation':
+            from app.models import LettreInvitation
             doc = LettreInvitation.query.get(doc_id)
-            print(f"4. Recherche en base de données : {doc}")
             if doc: 
                 doc.fichier_scanne = nouveau_nom
                 db.session.commit()
-                print("5. SUCCÈS : Base de données (Lettre) mise à jour !")
-            else:
-                print("ERREUR : Aucun document trouvé en base avec cet ID.")
                 
         elif type_doc == 'contrat':
+            from app.models import Contrat
             doc = Contrat.query.get(doc_id)
-            print(f"4. Recherche en base de données : {doc}")
             if doc: 
                 doc.fichier_scanne = nouveau_nom
                 db.session.commit()
-                print("5. SUCCÈS : Base de données (Contrat) mise à jour !")
-            else:
-                print("ERREUR : Aucun contrat trouvé en base avec cet ID.")
-        # -----------------------------------------------
         
         elif type_doc == 'lettre_information':
-            from app.models import LettreInformation # N'oublie pas de l'importer !
+            from app.models import LettreInformation
             doc = LettreInformation.query.get(doc_id)
-            print(f"4. Recherche en base de données : {doc}")
             if doc: 
                 doc.fichier_scanne = nouveau_nom
                 db.session.commit()
-                print("5. SUCCÈS : Base de données (Lettre Info) mise à jour !")
-            else:
-                print("ERREUR : Aucune lettre d'information trouvée en base.")
                 
         elif type_doc == 'lettre_notification':
-            from app.models import LettreNotification # Ton modèle
+            from app.models import LettreNotification
             doc = LettreNotification.query.get(doc_id)
-            print(f"4. Recherche en base de données : {doc}")
             if doc: 
                 doc.fichier_scanne = nouveau_nom
                 db.session.commit()
-                print("5. SUCCÈS : Base de données (Lettre Notif) mise à jour !")
-            else:
-                print("ERREUR : Aucune lettre de notification trouvée.")
                 
         elif type_doc == 'bordereau':
-            from app.models import Bordereau # <-- Met le vrai nom de ton modèle ici
+            from app.models import Bordereau
             doc = Bordereau.query.get(doc_id)
             if doc: 
                 doc.fichier_scanne = nouveau_nom
                 db.session.commit()
            
         elif type_doc == 'pv_attribution':
-            from app.models import ProcesVerbal  # <-- LE BON NOM EST ICI !
+            from app.models import ProcesVerbal
             doc = ProcesVerbal.query.get(doc_id)
             if doc:
                 doc.fichier_scanne = nouveau_nom
@@ -1524,11 +1548,175 @@ def uploader_scan():
             doc = Cotation.query.get(doc_id)
             if doc:
                 doc.fichier_scanne = nouveau_nom
-                db.session.commit()        
-                
+                db.session.commit()  
+                      
+        elif type_doc == 'agrement':
+            from app.models import Candidat
+            doc = Candidat.query.get(doc_id)
+            if doc:
+                doc.fichier_scanne = nouveau_nom
+                db.session.commit()
+        # =========================================================
+        # --- NOUVEAU : AJOUT AUTOMATIQUE AUX ARCHIVES GLOBALES ---
+        # =========================================================
+        
+        
+        # 1. On récupère la référence du document s'il en a une, sinon on génère un nom par défaut (ex: LETTRE_INFORMATION-3)
+        ref_archive = getattr(doc, 'reference', f"{type_doc.upper()}-{doc_id}")
+        
+        # 2. On rend le type joli pour le tableau (ex: "lettre_information" devient "Lettre Information")
+        type_formate = type_doc.replace('_', ' ').title()
+        
+        # 3. On enregistre dans la table des archives
+        nouvelle_archive = ArchiveDocument(
+            reference=ref_archive,
+            type_document=type_formate,
+            nom_fichier=nouveau_nom
+        )
+        db.session.add(nouvelle_archive)
+        db.session.commit()
+        
         flash("Le document scanné a été ajouté avec succès !", "success")
-        print("--- FIN DE L'UPLOAD ---")
         
     return redirect(url_for(page_retour))
+
+# ==========================================
+# --- ROUTES : ARCHIVES GLOBALES ---
+# ==========================================
+
+@main.route('/archives', methods=['GET'])
+@login_required
+def page_archives():
+    from app.models import ArchiveDocument
+    toutes_les_archives = ArchiveDocument.query.order_by(ArchiveDocument.date_ajout.desc()).all()
+    return render_template('archives.html', archives=toutes_les_archives)
+
+@main.route('/upload_archive', methods=['POST'])
+@login_required
+def upload_archive():
+    from app.models import ArchiveDocument
+    
+    if 'fichier' not in request.files:
+        flash("Aucun fichier sélectionné.", "danger")
+        return redirect(url_for('main.page_archives'))
+        
+    file = request.files['fichier']
+    if file.filename == '':
+        flash("Aucun fichier sélectionné.", "danger")
+        return redirect(url_for('main.page_archives'))
+
+    if file:
+        filename = secure_filename(file.filename)
+        dossier_sauvegarde = os.path.join(current_app.root_path, 'static', 'uploads', 'archives')
+        os.makedirs(dossier_sauvegarde, exist_ok=True)
+        
+        chemin_complet = os.path.join(dossier_sauvegarde, filename)
+        file.save(chemin_complet)
+        
+        nouvelle_archive = ArchiveDocument(
+            reference=request.form.get('reference'),
+            type_document=request.form.get('type_document'),
+            nom_fichier=filename
+        )
+        db.session.add(nouvelle_archive)
+        db.session.commit()
+        
+        flash("Document archivé avec succès !", "success")
+        return redirect(url_for('main.page_archives'))
+
+@main.route('/telecharger_archive/<nom_fichier>')
+@login_required
+def telecharger_archive(nom_fichier):
+    import os
+    from flask import send_from_directory, current_app, abort
+    
+    dossier_archives = os.path.join(current_app.root_path, 'static', 'uploads', 'archives')
+    dossier_scans = os.path.join(current_app.root_path, 'static', 'uploads', 'scans')
+    
+    # 1. On regarde d'abord si le fichier a été uploadé manuellement (dans 'archives')
+    if os.path.exists(os.path.join(dossier_archives, nom_fichier)):
+        return send_from_directory(dossier_archives, nom_fichier)
+        
+    # 2. Sinon, on regarde s'il vient d'un scan automatique (dans 'scans')
+    elif os.path.exists(os.path.join(dossier_scans, nom_fichier)):
+        return send_from_directory(dossier_scans, nom_fichier)
+        
+    # 3. Si on ne le trouve nulle part, on affiche une erreur 404
+    else:
+        abort(404)
+        
+        
+@main.route('/supprimer_archive/<int:id>')
+@login_required
+def supprimer_archive(id):
+    
+    archive = db.session.get(ArchiveDocument, id)
+    if archive:
+        # 1. On cherche si le fichier physique est dans le dossier des archives manuelles
+        dossier_archives = os.path.join(current_app.root_path, 'static', 'uploads', 'archives')
+        chemin_fichier = os.path.join(dossier_archives, archive.nom_fichier)
+        
+        # S'il y est, on le supprime physiquement pour libérer de l'espace
+        if os.path.exists(chemin_fichier):
+            try:
+                os.remove(chemin_fichier)
+            except Exception as e:
+                print(f"Erreur lors de la suppression du fichier physique : {e}")
+        
+        # (Si le fichier est dans 'scans', on ne le supprime pas physiquement pour ne pas casser l'agrément d'origine)
+
+        # 2. On supprime la ligne dans la base de données
+        db.session.delete(archive)
+        db.session.commit()
+        
+        flash("L'archive a été supprimée avec succès.", "success")
+    else:
+        flash("Archive introuvable.", "danger")
+        
+    return redirect(url_for('main.page_archives'))
     
     
+# --- EXPORT EXCEL ---
+@main.route('/exporter_archives_excel')
+@login_required
+def exporter_archives_excel():
+    from app.models import ArchiveDocument
+    import pandas as pd
+    from io import BytesIO
+    from flask import send_file
+    # J'ai supprimé le 'import datetime' ici
+    
+    archives = ArchiveDocument.query.order_by(ArchiveDocument.date_ajout.desc()).all()
+    
+    donnees = []
+    for doc in archives:
+        donnees.append({
+            "Référence du Document": doc.reference,
+            "Type de Document": doc.type_document,
+            "Nom du Fichier (Scan)": doc.nom_fichier,
+            "Date d'Archivage": doc.date_ajout.strftime('%d/%m/%Y %H:%M') if doc.date_ajout else "N/A"
+        })
+        
+    df = pd.DataFrame(donnees)
+    
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Registre_Archives')
+        
+        worksheet = writer.sheets['Registre_Archives']
+        for idx, col in enumerate(df.columns):
+            max_len = max(df[col].astype(str).map(len).max(), len(col)) + 5
+            worksheet.column_dimensions[chr(65 + idx)].width = max_len
+            
+    output.seek(0)
+    
+    # ICI : on utilise juste datetime.now()
+    date_jour = datetime.now().strftime('%Y-%m-%d')
+    nom_fichier_export = f"Registre_Archives_MCAT_{date_jour}.xlsx"
+    
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=nom_fichier_export,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
