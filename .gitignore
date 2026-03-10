@@ -12,4 +12,7 @@ instance/
 *.sqlite3
 .env
 backups_automatiques/
-app/static/uploads/scans/
+# On ignore tout le contenu du dossier scans...
+app/static/uploads/scans/*
+# ...sauf le fichier .gitkeep pour garder la structure du dossier
+!app/static/uploads/scans/.gitkeep
