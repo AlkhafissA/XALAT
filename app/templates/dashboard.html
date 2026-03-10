@@ -303,9 +303,11 @@
                                    class="btn btn-action btn-success text-white" title="Télécharger Final">📥</a>
                                 {% endif %}
 
-                                <a href="{{ url_for('main.supprimer', id=candidat.id) }}" 
-                                   class="btn btn-action btn-light text-danger"
-                                   onclick="return confirm('Supprimer ce dossier ?');" title="Supprimer">🗑️</a>
+                                <form action="{{ url_for('main.supprimer', id=candidat.id) }}" method="POST" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" title="Supprimer" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.');">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                         {% else %}

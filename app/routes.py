@@ -30,6 +30,12 @@ from app.utils import clean_text, generer_lettre_agrement, num2words_fr, dessine
 # Création du "Blueprint"
 main = Blueprint('main', __name__)
 
+# Seuls les PDF et les images sont acceptés !
+ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg'}
+
+def fichier_est_autorise(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 def log_action(action, cible):
     try:
         user_name = current_user.username if current_user.is_authenticated else "Système"
@@ -160,7 +166,7 @@ def decision(id, type_decision):
         db.session.commit()
     return redirect(url_for('main.tableau_de_bord'))
 
-@main.route('/supprimer/<int:id>')
+@main.route('/supprimer/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
 @login_required
 def supprimer(id):
     candidat = db.session.get(Candidat, id)
@@ -223,15 +229,23 @@ def sauvegarder_cotation():
         nom = request.form.get(f'candidat_{i}')
         mnt = request.form.get(f'montant_{i}')
         if nom and mnt:
-            db.session.add(Offre(cotation_id=cotation.id, nom_candidat=nom, montant=int(mnt)))
+           db.session.add(Offre(cotation_id=cotation.id, nom_candidat=nom, montant=int(mnt)))
+    action = "Modification Cotation" if cotation_id else "Création Cotation"
+    log_action(action, cotation.objet)
     db.session.commit()
     return redirect(url_for('main.liste_cotations'))
 
-@main.route('/supprimer_cotation/<int:id>')
+@main.route('/supprimer_cotation/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
 @login_required
 def supprimer_cotation(id):
     c = db.session.get(Cotation, id)
-    if c: db.session.delete(c); db.session.commit()
+    if c: 
+        # 👇 ON PLACE LE RADAR ICI 👇
+        log_action("Suppression Cotation", c.objet)
+        
+        db.session.delete(c)
+        db.session.commit()
+        
     return redirect(url_for('main.liste_cotations'))
 
 @main.route('/telecharger_pv/<int:id>')
@@ -326,6 +340,9 @@ def telecharger_pv(id):
 
     chemin_complet = os.path.join(dossier_pv, f"PV_{cotation.id}.pdf")
     pdf.output(chemin_complet)
+    
+    log_action("Téléchargement PV Cotation", cotation.objet)
+    db.session.commit()
 
     return send_file(
         chemin_complet, 
@@ -479,7 +496,7 @@ def creer_utilisateur():
         
     return redirect(url_for('main.super_dashboard'))
 
-@main.route('/supprimer_utilisateur/<int:id>')
+@main.route('/supprimer_utilisateur/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
 @login_required
 def supprimer_utilisateur(id):
     if current_user.role != 'superadmin': 
@@ -666,6 +683,8 @@ def drps():
             from app.utils import generer_pdf_lettre_information 
             generer_pdf_lettre_information(buffer, data)
             buffer.seek(0)
+            log_action("Génération Lettre Info", immatriculation)
+            db.session.commit()
             return send_file(
                 buffer,
                 as_attachment=True,
@@ -795,6 +814,7 @@ def ajouter_bordereau():
     )
     
     db.session.add(nouveau_bordereau)
+    log_action("Ajout Bordereau", f"N° {numero}")
     db.session.commit()
     flash("Bordereau enregistré avec succès !", "success")
     return redirect(url_for('main.download_bordereau_pdf', id=nouveau_bordereau.id))
@@ -824,9 +844,10 @@ def download_bordereau_pdf(id):
     )
 
 # --- 4. SUPPRIMER UN BORDEREAU ---
-@main.route('/bordereaux/supprimer/<int:id>')
+@main.route('/bordereaux/supprimer/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
 def supprimer_bordereau(id):
     bordereau = Bordereau.query.get_or_404(id)
+    log_action("Suppression Bordereau", f"N° {bordereau.numero}")
     db.session.delete(bordereau)
     db.session.commit()
     flash('Bordereau supprimé.', 'danger')
@@ -852,6 +873,8 @@ def exporter_bordereaux():
         df.to_excel(writer, index=False, sheet_name='Bordereaux')
         
     output.seek(0)
+    log_action("Export Excel", "Liste des Bordereaux")
+    db.session.commit()
     return send_file(output, download_name="Export_Bordereaux.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # ==========================================
@@ -908,6 +931,7 @@ def ajouter_notification():
         form_data=json.dumps(data) # On convertit le dictionnaire en texte JSON
     )
     db.session.add(nouvelle_notif)
+    log_action("Ajout Notification", data['immatriculation'])
     db.session.commit()
     
     flash("Lettre de notification enregistrée avec succès !", "success")
@@ -934,10 +958,11 @@ def download_notification_pdf(id):
         mimetype='application/pdf'
     )
 
-@main.route('/notifications/supprimer/<int:id>')
+@main.route('/notifications/supprimer/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
 @login_required
 def supprimer_notification(id):
     notif = LettreNotification.query.get_or_404(id)
+    log_action("Suppression Notification", notif.immatriculation)
     db.session.delete(notif)
     db.session.commit()
     flash("Lettre de notification supprimée.", "danger")
@@ -980,6 +1005,7 @@ def ajouter_pv():
         form_data=json.dumps(data)
     )
     db.session.add(nouveau_pv)
+    log_action("Génération PV Attribution", entreprise_nom)
     db.session.commit()
     
     flash("Procès-Verbal d'attribution généré !", "success")
@@ -1032,12 +1058,12 @@ def liste_pv():
     # 3. On envoie tout ça à la page HTML (note l'ajout de candidats=candidats)
     return render_template('liste_pv.html', pvs=pvs, candidats=candidats)
 
-@main.route('/pv-attribution/supprimer/<int:id>')
+@main.route('/pv-attribution/supprimer/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
 @login_required
 def supprimer_pv(id):
     # 1. On cherche le PV dans la base de données grâce à son ID
     pv = db.session.query(ProcesVerbal).get_or_404(id)
-    
+    log_action("Suppression PV", pv.numero_drp)
     # 2. On le supprime et on valide les changements
     db.session.delete(pv)
     db.session.commit()
@@ -1116,6 +1142,8 @@ def creer_lettre_invitation():
             form_data=json.dumps(form_data_dict) # On transforme le dico en texte JSON
         )
         db.session.add(nouvelle_lettre)
+        # 👇 AJOUTE CES DEUX LIGNES 👇
+        log_action("Génération Lettre Invitation", candidat.nom_entreprise)
         db.session.commit()
 
         # 5. On envoie tout au PDF !
@@ -1162,10 +1190,11 @@ def supprimer_lettre(id):
     from app import db
     
     lettre = LettreInvitation.query.get_or_404(id)
+    log_action("Suppression Lettre Invitation", lettre.immatriculation)
     db.session.delete(lettre)
     db.session.commit()
     
-    return redirect(url_for('main.drps'))
+    return redirect(url_for('main.creer_lettre_invitation'))
 
 
 @main.route('/creer_contrat', methods=['GET', 'POST'])
@@ -1233,6 +1262,7 @@ def creer_contrat():
             compte_bancaire=compte_final
         )
         db.session.add(nouveau_contrat)
+        log_action("Ajout Contrat", candidat_gagnant.nom_entreprise)
         db.session.commit()
 
         # -------------------------------------------------------------
@@ -1305,6 +1335,7 @@ def telecharger_contrat(id):
 @main.route('/supprimer_contrat/<int:id>', methods=['POST'])
 def supprimer_contrat(id):
     contrat = Contrat.query.get_or_404(id)
+    log_action("Suppression Contrat", contrat.candidat.nom_entreprise)
     db.session.delete(contrat)
     db.session.commit()
     return redirect(url_for('main.creer_contrat'))
@@ -1388,6 +1419,7 @@ def creer_lettre_information():
         form_data=json.dumps(data)
     )
     db.session.add(nouvelle_lettre)
+    log_action("Ajout Lettre Information", immatriculation)
     db.session.commit()
     # =========================================================
 
@@ -1443,6 +1475,8 @@ def telecharger_lettre_information(id):
     buffer = io.BytesIO()
     generer_pdf_lettre_information(buffer, data)
     buffer.seek(0)
+    log_action("Téléchargement Lettre Info", lettre.immatriculation)
+    db.session.commit()
     
     return send_file(
         buffer,
@@ -1456,6 +1490,7 @@ def telecharger_lettre_information(id):
 def supprimer_lettre_information(id):
     from app.models import LettreInformation
     lettre = LettreInformation.query.get_or_404(id)
+    log_action("Suppression Lettre Info", lettre.immatriculation)
     db.session.delete(lettre)
     db.session.commit()
     return redirect(url_for('main.lettres_information'))
@@ -1467,6 +1502,8 @@ def supprimer_lettre_information(id):
 @main.route('/voir_scan/<nom_fichier>')
 @login_required
 def voir_scan(nom_fichier):
+    log_action("Consultation Scan", nom_fichier)
+    db.session.commit()
     dossier_scans = os.path.join(current_app.root_path, 'static', 'uploads', 'scans')
     from flask import send_from_directory
     return send_from_directory(dossier_scans, nom_fichier)
@@ -1491,6 +1528,16 @@ def uploader_scan():
         return redirect(url_for(page_retour))
 
     if file:
+        # ==========================================================
+        # 👇 LE BOUCLIER DE SÉCURITÉ EST LÀ 👇
+        if not fichier_est_autorise(file.filename):
+            flash("Fichier non autorisé ! Seuls les PDF et images sont acceptés.", "danger")
+            # Le mouchard enregistre la tentative et précise la cible !
+            log_action("Alerte Sécurité", f"Tentative d'upload illégal : {file.filename} sur {type_doc} n°{doc_id}")
+            db.session.commit()
+            return redirect(url_for(page_retour))
+        # 👆 FIN DU BOUCLIER 👆
+        # ==========================================================
         filename = secure_filename(file.filename)
         nouveau_nom = f"{type_doc}_{doc_id}_{filename}"
         
@@ -1560,11 +1607,10 @@ def uploader_scan():
         # --- NOUVEAU : AJOUT AUTOMATIQUE AUX ARCHIVES GLOBALES ---
         # =========================================================
         
-        
-        # 1. On récupère la référence du document s'il en a une, sinon on génère un nom par défaut (ex: LETTRE_INFORMATION-3)
+        # 1. On récupère la référence du document s'il en a une, sinon on génère un nom par défaut
         ref_archive = getattr(doc, 'reference', f"{type_doc.upper()}-{doc_id}")
         
-        # 2. On rend le type joli pour le tableau (ex: "lettre_information" devient "Lettre Information")
+        # 2. On rend le type joli pour le tableau 
         type_formate = type_doc.replace('_', ' ').title()
         
         # 3. On enregistre dans la table des archives
@@ -1574,7 +1620,11 @@ def uploader_scan():
             nom_fichier=nouveau_nom
         )
         db.session.add(nouvelle_archive)
-        db.session.commit()
+        
+        # 👇 ON PLACE LE RADAR JUSTE AVANT LE DERNIER COMMIT 👇
+        log_action("Upload Scan", f"{type_formate} ({ref_archive})")
+        
+        db.session.commit() # Ce commit valide l'archive ET l'historique d'un seul coup
         
         flash("Le document scanné a été ajouté avec succès !", "success")
         
@@ -1606,6 +1656,17 @@ def upload_archive():
         return redirect(url_for('main.page_archives'))
 
     if file:
+    # ==========================================================
+        # 👇 LE BOUCLIER DE SÉCURITÉ EST LÀ 👇
+        if not fichier_est_autorise(file.filename):
+            flash("Fichier non autorisé ! Seuls les PDF et images sont acceptés.", "danger")
+            # Le mouchard enregistre la tentative de piratage
+            log_action("Alerte Sécurité", f"Tentative d'upload illégal : {file.filename}")
+            db.session.commit()
+            # On renvoie le pirate d'où il vient sans sauvegarder le fichier
+            return redirect(url_for('main.page_archives'))
+        # 👆 FIN DU BOUCLIER 👆
+        # ==========================================================
         filename = secure_filename(file.filename)
         dossier_sauvegarde = os.path.join(current_app.root_path, 'static', 'uploads', 'archives')
         os.makedirs(dossier_sauvegarde, exist_ok=True)
@@ -1613,12 +1674,20 @@ def upload_archive():
         chemin_complet = os.path.join(dossier_sauvegarde, filename)
         file.save(chemin_complet)
         
+        # --- CORRECTION ICI : On stocke les infos dans des variables ---
+        reference_saisie = request.form.get('reference')
+        type_doc = request.form.get('type_document')
+        
         nouvelle_archive = ArchiveDocument(
-            reference=request.form.get('reference'),
-            type_document=request.form.get('type_document'),
+            reference=reference_saisie,
+            type_document=type_doc,
             nom_fichier=filename
         )
         db.session.add(nouvelle_archive)
+        
+        # 👇 Maintenant le mouchard comprend les variables ! 👇
+        log_action("Ajout Archive", f"{type_doc} ({reference_saisie})")
+        
         db.session.commit()
         
         flash("Document archivé avec succès !", "success")
@@ -1629,6 +1698,10 @@ def upload_archive():
 def telecharger_archive(nom_fichier):
     import os
     from flask import send_from_directory, current_app, abort
+    
+    # 👇 ON AJOUTE LE RADAR ICI 👇
+    log_action("Consultation Archive", nom_fichier)
+    db.session.commit()
     
     dossier_archives = os.path.join(current_app.root_path, 'static', 'uploads', 'archives')
     dossier_scans = os.path.join(current_app.root_path, 'static', 'uploads', 'scans')
@@ -1646,7 +1719,7 @@ def telecharger_archive(nom_fichier):
         abort(404)
         
         
-@main.route('/supprimer_archive/<int:id>')
+@main.route('/supprimer_archive/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
 @login_required
 def supprimer_archive(id):
     
@@ -1664,7 +1737,8 @@ def supprimer_archive(id):
                 print(f"Erreur lors de la suppression du fichier physique : {e}")
         
         # (Si le fichier est dans 'scans', on ne le supprime pas physiquement pour ne pas casser l'agrément d'origine)
-
+# 👇 AJOUTE CETTE LIGNE (avant de le supprimer) 👇
+        log_action("Suppression Archive", f"{archive.type_document} ({archive.reference})")
         # 2. On supprime la ligne dans la base de données
         db.session.delete(archive)
         db.session.commit()
@@ -1713,6 +1787,10 @@ def exporter_archives_excel():
     # ICI : on utilise juste datetime.now()
     date_jour = datetime.now().strftime('%Y-%m-%d')
     nom_fichier_export = f"Registre_Archives_MCAT_{date_jour}.xlsx"
+    
+    # 👇 AJOUTE CES DEUX LIGNES 👇
+    log_action("Export Excel", "Registre des Archives Documentaires")
+    db.session.commit()
     
     return send_file(
         output,

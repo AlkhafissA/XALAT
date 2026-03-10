@@ -106,7 +106,13 @@
         </button>
     {% endif %}
     
-    <a href="{{ url_for('main.supprimer_notification', id=n.id) }}" class="btn btn-outline-secondary btn-sm ms-1" onclick="return confirm('Supprimer ?')"><i class="bi bi-trash"></i></a>
+    <form action="{{ url_for('main.supprimer_notification', id=n.id) }}" method="POST" style="display:inline;">
+        <button type="submit" class="btn btn-outline-secondary btn-sm ms-1" 
+                onclick="return confirm('Supprimer cette notification ?')" 
+                title="Supprimer">
+               <i class="bi bi-trash"></i>
+        </button>
+    </form>
 </div>
                             </td>
                         </tr>

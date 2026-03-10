@@ -216,9 +216,11 @@
     <a href="{{ url_for('main.modifier_cotation', id=cot.id) }}" class="btn btn-action btn-light text-primary" title="Modifier">
         ✏️
     </a>
-    <a href="{{ url_for('main.supprimer_cotation', id=cot.id) }}" class="btn btn-action btn-light text-danger" onclick="return confirm('Supprimer ce marché ?')" title="Supprimer">
+    <form action="{{ url_for('main.supprimer_cotation', id=cot.id) }}" method="POST" style="display:inline;">
+        <button type="submit" class="btn btn-action btn-light text-danger" onclick="return confirm('Confirmer la suppression définitive de ce marché ?')" title="Supprimer">
         🗑️
-    </a>
+        </button>
+    </form>
 </div>   
                             </td>
                         </tr>
