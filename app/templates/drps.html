@@ -282,7 +282,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 
-                <form action="{{ url_for('main.drps') }}" method="POST">
+                <form action="{{ url_for('main.ajouter_bordereau') }}" method="POST"></form>
                     <div class="modal-body p-4">
                         <input type="hidden" name="type_document" value="bordereau">
 
@@ -515,7 +515,7 @@
                     <h5 class="modal-title fw-bold">Lettre de Notification (Attributaire)</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="{{ url_for('main.drps') }}" method="POST">
+                <form action="{{ url_for('main.ajouter_notification') }}" method="POST"></form>
                     <div class="modal-body p-4">
                         <input type="hidden" name="type_document" value="notification">
 
@@ -594,7 +594,7 @@
                     <h5 class="modal-title fw-bold">PV d'Attribution</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="{{ url_for('main.drps') }}" method="POST">
+                <form action="{{ url_for('main.ajouter_pv') }}" method="POST">
                     <div class="modal-body p-4">
                         <input type="hidden" name="type_document" value="pv_attribution">
 

@@ -210,7 +210,7 @@
               <tr>
                 <td class="ps-4 fw-bold">N° {{ contrat.id }}</td>
                 <td>{{ contrat.objet_marche[:50] }}...</td>
-                <td>{{ contrat.candidat.nom_entreprise }}</td>
+                <td>{{ contrat.entreprise_nom }}</td>
                 <td class="fw-bold text-success">
                   {{ contrat.montant_chiffres }} FCFA
                 </td>
@@ -223,7 +223,7 @@
                   </a>
                   {% if contrat.fichier_scanne %}
                   <a
-                    href="{{ url_for('main.voir_scan', nom_fichier=contrat.fichier_scanne) }}"
+                    href="{{ url_for('main.voir_scan_contrat', id=contrat.id) }}"
                     target="_blank"
                     class="btn btn-sm btn-outline-success"
                     title="Voir le contrat signé"
@@ -627,6 +627,7 @@
         });
       });
     </script>
+
     {% for contrat in contrats %} {% if not contrat.fichier_scanne %}
     <div class="modal fade" id="modalScan{{ contrat.id }}" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered">

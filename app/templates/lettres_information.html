@@ -224,7 +224,7 @@
                     </a>
                     {% if lettre.fichier_scanne %}
                     <a
-                      href="{{ url_for('main.voir_scan', nom_fichier=lettre.fichier_scanne) }}"
+                      href="{{ url_for('main.voir_scan_lettre_info', id=lettre.id) }}"
                       target="_blank"
                       class="btn btn-sm btn-outline-success"
                       title="Voir la lettre signée"
@@ -300,7 +300,6 @@
           <form
             action="{{ url_for('main.creer_lettre_information') }}"
             method="POST"
-            target="_blank"
           >
             <div class="modal-body p-4">
               <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">

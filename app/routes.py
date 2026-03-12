@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import io
 from app.models import ArchiveDocument
 from app.models import Bordereau 
-from app.models import LettreNotification, LettreInvitation, Contrat
+from app.models import LettreNotification, LettreInvitation, Contrat, LettreInformation
 from app.models import Candidat, LettreNotification, ProcesVerbal
 from app.utils import generer_pdf_bordereau, generer_pdf_contrat
 from app.utils import generer_pdf_pv_attribution
@@ -719,84 +719,20 @@ def drps():
         # On récupère le type de document avec un seul nom de variable
         type_document = request.form.get('type_document')
 
-        # ---------------------------------------------------------
-        # 1. GENERATION DU BORDEREAU D'ENVOI
-        # ---------------------------------------------------------
-        if type_document == 'bordereau':
+        # ---------- LETTRE D'INFORMATION ----------
+        if type_document == 'information':
             direction_name = request.form.get('direction_name')
-            numero = request.form.get('numero')
-            service_ref = request.form.get('service_ref')
-            date_sign = request.form.get('date_signature')
-            observations = request.form.get('observations')
-
-            if not date_sign:
-                date_sign = datetime.now().strftime("%d/%m/%Y")
-            else:
-                try:
-                    parts = date_sign.split('-')
-                    date_sign = f"{parts[2]}/{parts[1]}/{parts[0]}"
-                except:
-                    pass
-
-            liste_objets = request.form.getlist('objets[]')
-            liste_refs = request.form.getlist('references[]')
-            
-            dossiers = []
-            for i in range(len(liste_objets)):
-                dossiers.append({
-                    'objet': liste_objets[i],
-                    'ref': liste_refs[i]
-                })
-
-            buffer = io.BytesIO()
-            data = {
-                'direction': direction_name.upper() if direction_name else "DIRECTION...",
-                'numero': numero,
-                'service_ref': service_ref,
-                'date': date_sign,
-                'dossiers': dossiers,
-                'observations': observations if observations else ""
-            }
-            
-            from app.utils import generer_pdf_bordereau
-            generer_pdf_bordereau(buffer, data)
-            buffer.seek(0)
-            return send_file(
-                buffer,
-                as_attachment=True,
-                download_name=f"Bordereau_N{numero}.pdf",
-                mimetype='application/pdf'
-            )
-
-        # ---------------------------------------------------------
-        # 2. GENERATION DE LA LETTRE D'INFORMATION
-        # ---------------------------------------------------------
-        elif type_document == 'information':
-            direction_name = request.form.get('direction_name')
-            num_ordre = request.form.get('num_ordre')
-            ref_service = request.form.get('ref_service')
-            signataire = request.form.get('signataire')
-            
-            date_lettre_raw = request.form.get('date_lettre')
-            try:
-                dt_lettre = datetime.strptime(date_lettre_raw, '%Y-%m-%d')
-                date_lettre = dt_lettre.strftime('%d/%m/%Y')
-            except:
-                date_lettre = date_lettre_raw or datetime.now().strftime('%d/%m/%Y')
-
+            num_ordre = request.form.get('num_ordre', '')
+            ref_service = request.form.get('ref_service', '')
+            date_lettre = request.form.get('date_lettre', '')
+            signataire = request.form.get('signataire', '')
             immatriculation = request.form.get('immatriculation')
-            date_comm_raw = request.form.get('date_commission')
-            try:
-                dt = datetime.strptime(date_comm_raw, '%Y-%m-%d')
-                date_commission = dt.strftime('%d/%m/%Y')
-            except:
-                date_commission = date_comm_raw
-
+            date_commission = request.form.get('date_commission')
             objet_marche = request.form.get('objet_marche')
-            
-            prestataires_ids = request.form.getlist('prestataire_id[]')
-            rcs_saisis = request.form.getlist('rc[]') 
-            
+
+            prestataires_ids = request.form.getlist('prestataires_ids')
+            rcs_saisis = request.form.getlist('rc[]')
+
             prestataires = []
             from itertools import zip_longest
             for pid, rc_agent in zip_longest(prestataires_ids, rcs_saisis, fillvalue=""):
@@ -808,15 +744,15 @@ def drps():
                         ninea_db = candidat.ninea or "Néant"
                         tel_db = candidat.telephone or "Néant"
                         rc_final = rc_agent or "Non renseigné"
-                        
+
                         lieu = f"{adresse_db} {ville_db}".strip()
                         phrase_adresse_complete = f"{lieu}, RC : {rc_final}, NINEA : {ninea_db}, Tél : {tel_db} ;"
-                        
+
                         prestataires.append({
                             'nom': candidat.nom_entreprise,
                             'adresse': phrase_adresse_complete
                         })
-            
+
             buffer = io.BytesIO()
             data = {
                 'direction_name': direction_name,
@@ -828,9 +764,9 @@ def drps():
                 'date_commission': date_commission,
                 'objet_marche': objet_marche,
                 'prestataires': prestataires
-            }            
+            }
 
-            from app.utils import generer_pdf_lettre_information 
+            from app.utils import generer_pdf_lettre_information
             generer_pdf_lettre_information(buffer, data)
             buffer.seek(0)
             log_action("Génération Lettre Info", immatriculation)
@@ -842,21 +778,17 @@ def drps():
                 mimetype='application/pdf'
             )
 
-
-        # ---------------------------------------------------------
-        # 4. GENERATION DU PV D'ATTRIBUTION
-        # ---------------------------------------------------------
+        # ---------- PV D'ATTRIBUTION ----------
         elif type_document == 'pv_attribution':
-            # Formatage de la date en français (ex: 2025-11-21 -> 21 novembre 2025)
             date_commission_raw = request.form.get('date_commission')
-            mois_fr = ["", "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+            mois_fr = ["", "janvier", "février", "mars", "avril", "mai", "juin",
+                       "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
             try:
                 dt = datetime.strptime(date_commission_raw, '%Y-%m-%d')
                 date_commission_fr = f"{dt.day:02d} {mois_fr[dt.month]} {dt.year}"
             except:
                 date_commission_fr = date_commission_raw
 
-            # Récupération de l'entreprise gagnante via son ID
             prestataire_id = request.form.get('prestataire_id_pv')
             entreprise_nom = "ENTREPRISE NON RENSEIGNÉE"
             if prestataire_id:
@@ -869,7 +801,7 @@ def drps():
                 'num_ordre': request.form.get('num_ordre', '............'),
                 'date_lettre': request.form.get('date_lettre'),
                 'signataire': request.form.get('signataire', 'Le Directeur,'),
-                'signataire_bas': request.form.get('signataire_bas', ''), 
+                'signataire_bas': request.form.get('signataire_bas', ''),
                 'direction_name': request.form.get('direction_name'),
                 'adresse_direction': request.form.get('adresse_direction', 'route des Almadies, Dakar'),
                 'immatriculation': request.form.get('immatriculation'),
@@ -877,17 +809,22 @@ def drps():
                 'date_commission': date_commission_fr,
                 'entreprise_attributaire': entreprise_nom
             }
-            
+
             buffer = io.BytesIO()
             from app.utils import generer_pdf_pv_attribution
             generer_pdf_pv_attribution(buffer, data)
             buffer.seek(0)
             return send_file(
-                buffer, 
-                as_attachment=True, 
-                download_name=f'PV_Attribution_{data["immatriculation"]}.pdf', 
+                buffer,
+                as_attachment=True,
+                download_name=f"PV_Attribution_{data['immatriculation']}.pdf",
                 mimetype='application/pdf'
             )
+
+        # ---------- NOTIFICATION ---------- 
+        elif type_document == 'notification':
+            # déléguer à la fonction existante
+            return ajouter_notification()
 
     # =========================================================
     # Affichage normal de la page (quand on clique sur l'onglet)
@@ -916,22 +853,18 @@ def drps():
     # 3. On envoie TOUT au fichier HTML (les candidats ET les lettres)
     return render_template('drps.html', candidats=candidats, lettres=lettres_pour_tableau)
 
-@main.route('/api/get_adresse/<int:id>')
-@login_required
-def get_adresse(id):
-    candidat = db.session.get(Candidat, id)
-    if candidat:
-        return jsonify({'adresse': candidat.adresse})
-    return jsonify({'adresse': ''}), 404
+# ==========================================
+# --- ROUTES : BORDEREAUX D'ENVOI ---
+# ==========================================
 
-# --- 1. AFFICHER LA LISTE ---
 @main.route('/bordereaux')
+@login_required
 def liste_bordereaux():
     bordereaux = Bordereau.query.order_by(Bordereau.id.desc()).all()
     return render_template('liste_bordereaux.html', bordereaux=bordereaux)
 
-# --- 2. AJOUTER UN BORDEREAU (Sauvegarde + PDF) ---
 @main.route('/bordereaux/ajouter', methods=['POST'])
+@login_required
 def ajouter_bordereau():
     direction_name = request.form.get('direction_name')
     numero = request.form.get('numero')
@@ -954,6 +887,7 @@ def ajouter_bordereau():
             'ref': liste_refs[i]
         })
     
+    # On sauvegarde dans la base de données
     nouveau_bordereau = Bordereau(
         direction_name=direction_name,
         numero=numero,
@@ -966,17 +900,19 @@ def ajouter_bordereau():
     db.session.add(nouveau_bordereau)
     log_action("Ajout Bordereau", f"N° {numero}")
     db.session.commit()
+    
     flash("Bordereau enregistré avec succès !", "success")
+    # On renvoie vers le téléchargement du PDF
     return redirect(url_for('main.download_bordereau_pdf', id=nouveau_bordereau.id))
 
-# --- 3. TÉLÉCHARGER LE PDF (Depuis la base de données) ---
 @main.route('/bordereaux/pdf/<int:id>')
+@login_required
 def download_bordereau_pdf(id):
     bordereau = Bordereau.query.get_or_404(id)
     buffer = io.BytesIO()
     
     data = {
-        'direction': bordereau.direction_name.upper(),
+        'direction': bordereau.direction_name.upper() if bordereau.direction_name else "DIRECTION...",
         'numero': bordereau.numero,
         'service_ref': bordereau.service_ref,
         'date': bordereau.date_signature.strftime("%d/%m/%Y"),
@@ -984,8 +920,11 @@ def download_bordereau_pdf(id):
         'observations': bordereau.observations
     }
     
+    # On génère le PDF à la volée (en mémoire RAM)
+    from app.utils import generer_pdf_bordereau
     generer_pdf_bordereau(buffer, data)
     buffer.seek(0)
+    
     return send_file(
         buffer,
         as_attachment=True,
@@ -993,18 +932,39 @@ def download_bordereau_pdf(id):
         mimetype='application/pdf'
     )
 
-# --- 4. SUPPRIMER UN BORDEREAU ---
-@main.route('/bordereaux/supprimer/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
+# --- NOUVEAU : ROUTE POUR VOIR LE SCAN DU BORDEREAU ---
+@main.route('/bordereaux/voir_scan/<int:id>')
+@login_required
+def voir_scan_bordereau(id):
+    bordereau = Bordereau.query.get_or_404(id)
+    if bordereau.fichier_scanne:
+        # On utilise notre super route sécurisée pour aller chercher le document !
+        return redirect(url_for('main.secure_download', folder='scans', filename=bordereau.fichier_scanne))
+    else:
+        flash("Aucun fichier scanné n'a été uploadé pour ce bordereau.", "warning")
+        return redirect(url_for('main.liste_bordereaux'))
+
+@main.route('/bordereaux/supprimer/<int:id>', methods=['POST'])
+@login_required
 def supprimer_bordereau(id):
     bordereau = Bordereau.query.get_or_404(id)
+    
+    # OPTIONNEL MAIS CONSEILLÉ : Supprimer le fichier physique du scan s'il existe
+    if bordereau.fichier_scanne:
+        basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+        chemin_fichier = os.path.join(basedir, 'stockage_prive', 'scans', bordereau.fichier_scanne)
+        if os.path.exists(chemin_fichier):
+            os.remove(chemin_fichier)
+            
     log_action("Suppression Bordereau", f"N° {bordereau.numero}")
     db.session.delete(bordereau)
     db.session.commit()
-    flash('Bordereau supprimé.', 'danger')
+    
+    flash('Bordereau et ses fichiers associés supprimés.', 'success')
     return redirect(url_for('main.liste_bordereaux'))
 
-# --- 5. EXPORT EXCEL ---
 @main.route('/bordereaux/export')
+@login_required
 def exporter_bordereaux():
     bordereaux = Bordereau.query.all()
     data = []
@@ -1012,11 +972,12 @@ def exporter_bordereaux():
         data.append({
             'Numéro': b.numero,
             'Service': b.service_ref,
-            'Date Signature': b.date_signature,
+            'Date Signature': b.date_signature.strftime("%d/%m/%Y"),
             'Nombre Dossiers': len(b.get_dossiers()),
             'Observations': b.observations
         })
     
+    import pandas as pd
     df = pd.DataFrame(data)
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -1025,7 +986,19 @@ def exporter_bordereaux():
     output.seek(0)
     log_action("Export Excel", "Liste des Bordereaux")
     db.session.commit()
-    return send_file(output, download_name="Export_Bordereaux.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    return send_file(output, download_name="Export_Bordereaux.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") 
+            
+
+
+
+
+@main.route('/api/get_adresse/<int:id>')
+@login_required
+def get_adresse(id):
+    candidat = db.session.get(Candidat, id)
+    if candidat:
+        return jsonify({'adresse': candidat.adresse})
+    return jsonify({'adresse': ''}), 404
 
 # ==========================================
 # --- ROUTES : LETTRES DE NOTIFICATION ---
@@ -1034,16 +1007,13 @@ def exporter_bordereaux():
 @main.route('/notifications')
 @login_required
 def liste_notifications():
-    # On récupère toutes les notifications de la BDD
     notifications = LettreNotification.query.order_by(LettreNotification.id.desc()).all()
-    # On a besoin des candidats pour le menu déroulant du modal
     candidats = Candidat.query.order_by(Candidat.nom_entreprise).all()
     return render_template('liste_notifications.html', notifications=notifications, candidats=candidats)
 
 @main.route('/notifications/ajouter', methods=['POST'])
 @login_required
 def ajouter_notification():
-    # 1. On récupère les infos de l'entreprise depuis la base de données
     prestataire_id = request.form.get('prestataire_id_notif')
     destinataire_nom = "Non renseignée"
     destinataire_adresse = ""
@@ -1057,7 +1027,6 @@ def ajouter_notification():
             destinataire_adresse = lieu if lieu else "Adresse non renseignée"
             destinataire_tel = candidat.telephone or "Non renseigné"
 
-    # 2. On prépare le dictionnaire des données
     data = {
         'ref_service': request.form.get('ref_service'),
         'direction_name': request.form.get('direction_name'),
@@ -1073,27 +1042,23 @@ def ajouter_notification():
         'destinataire_tel': destinataire_tel
     }
 
-    # 3. On sauvegarde dans la base de données
     nouvelle_notif = LettreNotification(
         immatriculation=data['immatriculation'],
         objet_marche=data['objet_marche'],
         entreprise=destinataire_nom,
-        form_data=json.dumps(data) # On convertit le dictionnaire en texte JSON
+        form_data=json.dumps(data)
     )
     db.session.add(nouvelle_notif)
     log_action("Ajout Notification", data['immatriculation'])
     db.session.commit()
     
     flash("Lettre de notification enregistrée avec succès !", "success")
-    # 4. On redirige vers la fonction qui télécharge le PDF
     return redirect(url_for('main.download_notification_pdf', id=nouvelle_notif.id))
 
 @main.route('/notifications/pdf/<int:id>')
 @login_required
 def download_notification_pdf(id):
-    # On récupère la notification depuis la base
     notif = LettreNotification.query.get_or_404(id)
-    # On retransforme le texte JSON en dictionnaire
     data = json.loads(notif.form_data)
     
     buffer = io.BytesIO()
@@ -1108,20 +1073,47 @@ def download_notification_pdf(id):
         mimetype='application/pdf'
     )
 
-@main.route('/notifications/supprimer/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
+# --- NOUVEAU : ROUTE POUR VOIR LE SCAN DE LA NOTIFICATION ---
+@main.route('/notifications/voir_scan/<int:id>')
+@login_required
+def voir_scan_notification(id):
+    notif = LettreNotification.query.get_or_404(id)
+    if notif.fichier_scanne:
+        # On utilise la route sécurisée pour pointer vers le dossier 'scans'
+        return redirect(url_for('main.secure_download', folder='scans', filename=notif.fichier_scanne))
+    else:
+        flash("Aucun fichier scanné n'a été uploadé pour cette notification.", "warning")
+        return redirect(url_for('main.liste_notifications'))
+
+@main.route('/notifications/supprimer/<int:id>', methods=['POST'])
 @login_required
 def supprimer_notification(id):
     notif = LettreNotification.query.get_or_404(id)
+    
+    # --- NOUVEAU : SUPPRESSION DU FICHIER PHYSIQUE SI EXISTANT ---
+    if notif.fichier_scanne:
+        basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+        chemin_fichier = os.path.join(basedir, 'stockage_prive', 'scans', notif.fichier_scanne)
+        if os.path.exists(chemin_fichier):
+            os.remove(chemin_fichier)
+            
     log_action("Suppression Notification", notif.immatriculation)
     db.session.delete(notif)
     db.session.commit()
-    flash("Lettre de notification supprimée.", "danger")
+    
+    flash("Lettre de notification et ses fichiers associés supprimés.", "success")
     return redirect(url_for('main.liste_notifications'))
-
 
 # ==========================================
 # --- ROUTES : PROCÈS-VERBAL D'ATTRIBUTION ---
 # ==========================================
+
+@main.route('/pv-attribution')
+@login_required
+def liste_pv():
+    pvs = db.session.query(ProcesVerbal).order_by(ProcesVerbal.id.desc()).all()
+    candidats = Candidat.query.order_by(Candidat.nom_entreprise).all()
+    return render_template('liste_pv.html', pvs=pvs, candidats=candidats)
 
 @main.route('/pv-attribution/ajouter', methods=['POST'])
 @login_required
@@ -1134,6 +1126,15 @@ def ajouter_pv():
         if candidat:
             entreprise_nom = candidat.nom_entreprise
 
+    # Formatage de la date en français (ex: 2025-11-21 -> 21 novembre 2025)
+    date_commission_raw = request.form.get('date_commission', '')
+    mois_fr = ["", "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+    try:
+        dt = datetime.strptime(date_commission_raw, '%Y-%m-%d')
+        date_commission_fr = f"{dt.day:02d} {mois_fr[dt.month]} {dt.year}"
+    except:
+        date_commission_fr = date_commission_raw
+
     data = {
         'num_ordre': request.form.get('num_ordre', ''),
         'ref_service': request.form.get('ref_service', ''),
@@ -1144,7 +1145,7 @@ def ajouter_pv():
         'signataire_bas': request.form.get('signataire_bas', ''),
         'objet_marche': request.form.get('objet_marche', ''),
         'immatriculation': request.form.get('immatriculation', ''),
-        'date_commission': request.form.get('date_commission', ''),
+        'date_commission': date_commission_fr,  # <--- On utilise la belle date formatée !
         'entreprise_nom': entreprise_nom
     }
 
@@ -1164,30 +1165,18 @@ def ajouter_pv():
 @main.route('/pv-attribution/download/<int:id>')
 @login_required
 def download_pv_pdf(id):
-    # 1. On récupère le PV dans la base de données
     pv = db.session.get(ProcesVerbal, id)
     if not pv:
         abort(404)
     
-    # 2. On transforme les données enregistrées (texte) en dictionnaire Python
     data = json.loads(pv.form_data)
-    
-    # --- LA CORRECTION EST ICI ---
-    # On fait le pont entre le nom de ton formulaire et le nom attendu par le PDF
     data['entreprise_attributaire'] = data.get('entreprise_nom', 'Entreprise non renseignée')
-    # -----------------------------
     
-    # 3. On prépare un fichier virtuel en mémoire
     buffer = io.BytesIO()
-    
-    # 4. On appelle la fonction de création de PDF
     from app.utils import generer_pdf_pv_attribution
     generer_pdf_pv_attribution(buffer, data)
-    
-    # 5. On replace le curseur au début du fichier pour pouvoir le lire
     buffer.seek(0)
     
-    # 6. On l'envoie à l'utilisateur pour téléchargement
     nom_fichier = f"PV_Attribution_{pv.numero_drp.replace('/', '_')}.pdf"
     return send_file(
         buffer,
@@ -1196,41 +1185,45 @@ def download_pv_pdf(id):
         mimetype='application/pdf'
     )
 
-@main.route('/pv-attribution')
+# --- NOUVEAU : ROUTE POUR VOIR LE SCAN DU PV ---
+@main.route('/pv-attribution/voir_scan/<int:id>')
 @login_required
-def liste_pv():
-    # 1. On récupère tous les PV dans la base de données
-    pvs = db.session.query(ProcesVerbal).all()
-    
-    # 2. On récupère AUSSI la liste de toutes les entreprises pour ton formulaire !
-    candidats = Candidat.query.order_by(Candidat.nom_entreprise).all()
-    
-    # 3. On envoie tout ça à la page HTML (note l'ajout de candidats=candidats)
-    return render_template('liste_pv.html', pvs=pvs, candidats=candidats)
+def voir_scan_pv(id):
+    pv = db.session.get(ProcesVerbal, id)
+    if pv and pv.fichier_scanne:
+        return redirect(url_for('main.secure_download', folder='scans', filename=pv.fichier_scanne))
+    else:
+        flash("Aucun fichier scanné n'a été uploadé pour ce PV.", "warning")
+        return redirect(url_for('main.liste_pv'))
 
-@main.route('/pv-attribution/supprimer/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
+@main.route('/pv-attribution/supprimer/<int:id>', methods=['POST'])
 @login_required
 def supprimer_pv(id):
-    # 1. On cherche le PV dans la base de données grâce à son ID
     pv = db.session.query(ProcesVerbal).get_or_404(id)
+    
+    # --- NOUVEAU : SUPPRESSION DU FICHIER PHYSIQUE SI EXISTANT ---
+    if pv.fichier_scanne:
+        basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+        chemin_fichier = os.path.join(basedir, 'stockage_prive', 'scans', pv.fichier_scanne)
+        if os.path.exists(chemin_fichier):
+            os.remove(chemin_fichier)
+            
     log_action("Suppression PV", pv.numero_drp)
-    # 2. On le supprime et on valide les changements
     db.session.delete(pv)
     db.session.commit()
     
-    # 3. Petit message de confirmation (optionnel mais pratique)
-    flash("Le PV a été supprimé avec succès.", "success")
-    
-    # 4. On redirige vers la page de la liste
+    flash("Le PV et ses fichiers associés ont été supprimés avec succès.", "success")
     return redirect(url_for('main.liste_pv'))
 
 
+# ==========================================
+# --- ROUTES : LETTRES D'INVITATION ---
+# ==========================================
+
 @main.route('/creer_lettre_invitation', methods=['GET', 'POST'])
+@login_required
 def creer_lettre_invitation():
-    # Remplace par l'endroit où se trouvent tes modèles
     import json
-    from app.models import Candidat, LettreInvitation 
-    from app import db
     
     if request.method == 'POST':
         # 1. On récupère les informations générales du formulaire
@@ -1249,17 +1242,11 @@ def creer_lettre_invitation():
         prestataires_ids = request.form.getlist('prestataires_ids')
         prestataires_selectionnes = []
 
-        # Pour chaque entreprise cochée, on va chercher ses infos en base 
-        # ET le fameux RC saisi par l'agent à l'écran
         for p_id in prestataires_ids:
-            candidat = Candidat.query.get(p_id)
+            candidat = db.session.get(Candidat, int(p_id))
             if candidat:
-                # La magie opère ici : on récupère rc_1, rc_5, etc.
                 rc_saisi = request.form.get(f'rc_{p_id}', 'Non renseigné')
                 compte = request.form.get(f'compte_bancaire_{candidat.id}', '')
-
-                # Ajoute cette ligne pour vérifier ce que le serveur reçoit :
-                print(f"==== TEST COMPTE BANCAIRE pour l'ID {candidat} : '{compte}' ====")
                 
                 prestataires_selectionnes.append({
                     'nom': candidat.nom_entreprise,
@@ -1267,10 +1254,10 @@ def creer_lettre_invitation():
                     'telephone': candidat.telephone,
                     'ninea': candidat.ninea,
                     'rc': rc_saisi,
-                    'compte': compte  # <-- Tu l'ajoutes à ton dictionnaire
+                    'compte': compte
                 })
 
-        # 3. On emballe tout ça dans un beau dictionnaire
+        # 3. Dictionnaire de données
         form_data_dict = {
             'immatriculation': immatriculation,
             'objet_marche': objet_marche,
@@ -1281,34 +1268,32 @@ def creer_lettre_invitation():
             'date_heure_limite': date_heure_limite,
             'adresse_depot': adresse_depot,
             'lieu_ouverture': lieu_ouverture,
-            'direction_nom': direction_nom,  # <--- N'oublie pas cette ligne !
+            'direction_nom': direction_nom,
             'prestataires': prestataires_selectionnes
         }
 
-        # 4. On sauvegarde en base de données (pour garder une trace)
+        # 4. Sauvegarde en BDD
         nouvelle_lettre = LettreInvitation(
             immatriculation=immatriculation,
             objet_marche=objet_marche,
-            form_data=json.dumps(form_data_dict) # On transforme le dico en texte JSON
+            form_data=json.dumps(form_data_dict)
         )
         db.session.add(nouvelle_lettre)
-        # 👇 AJOUTE CES DEUX LIGNES 👇
-        log_action("Génération Lettre Invitation", candidat.nom_entreprise)
+        # CORRECTION ICI : on log l'immatriculation pour éviter un crash si aucun candidat n'est coché
+        log_action("Génération Lettre Invitation", immatriculation) 
         db.session.commit()
 
-        # 5. On envoie tout au PDF !
+        # 5. On génère et on affiche le PDF
         from app.utils import generer_pdf_lettre_invitation
         pdf_path = generer_pdf_lettre_invitation(form_data_dict)
 
         return send_file(pdf_path, as_attachment=False)
 
-# Si on est en GET (affichage simple de la page)
-    import json
+    # === PARTIE GET (Affichage de la page) ===
     candidats = Candidat.query.all()
-    
-    # On récupère aussi les lettres pour que le tableau ne soit pas vide sur cette page !
     lettres_db = LettreInvitation.query.order_by(LettreInvitation.id.desc()).all()
     lettres_pour_tableau = []
+    
     for lettre in lettres_db:
         data = json.loads(lettre.form_data) if lettre.form_data else {}
         lettres_pour_tableau.append({
@@ -1317,16 +1302,16 @@ def creer_lettre_invitation():
             'objet_marche': lettre.objet_marche,
             'num_ordre': data.get('num_ordre', 'N/A'),
             'date_heure_limite': data.get('date_heure_limite', 'Non défini'),
-            'fichier_scanne': lettre.fichier_scanne  # <-- LA LIGNE MAGIQUE EST ICI !
+            'fichier_scanne': lettre.fichier_scanne
         })
 
     return render_template('creer_lettre_invitation.html', candidats=candidats, lettres=lettres_pour_tableau)
 
 @main.route('/telecharger_lettre/<int:id>')
+@login_required
 def telecharger_lettre(id):
-    from app.models import LettreInvitation
-    from app.utils import generer_pdf_lettre_invitation
     import json
+    from app.utils import generer_pdf_lettre_invitation
     
     lettre = LettreInvitation.query.get_or_404(id)
     form_data_dict = json.loads(lettre.form_data)
@@ -1334,27 +1319,59 @@ def telecharger_lettre(id):
     pdf_path = generer_pdf_lettre_invitation(form_data_dict)
     return send_file(pdf_path, as_attachment=True)
 
-@main.route('/supprimer_lettre/<int:id>', methods=['POST'])
-def supprimer_lettre(id):
-    from app.models import LettreInvitation
-    from app import db
-    
+# --- NOUVEAU : ROUTE POUR VOIR LE SCAN DE LA LETTRE ---
+@main.route('/lettre_invitation/voir_scan/<int:id>')
+@login_required
+def voir_scan_lettre(id):
     lettre = LettreInvitation.query.get_or_404(id)
+    if lettre.fichier_scanne:
+        return redirect(url_for('main.secure_download', folder='scans', filename=lettre.fichier_scanne))
+    else:
+        flash("Aucun fichier scanné n'a été uploadé pour cette lettre d'invitation.", "warning")
+        return redirect(url_for('main.creer_lettre_invitation'))
+
+@main.route('/supprimer_lettre/<int:id>', methods=['POST'])
+@login_required
+def supprimer_lettre(id):
+    lettre = LettreInvitation.query.get_or_404(id)
+    
+    # --- NOUVEAU : SUPPRESSION DU FICHIER PHYSIQUE SI EXISTANT ---
+    if lettre.fichier_scanne:
+        basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+        chemin_fichier = os.path.join(basedir, 'stockage_prive', 'scans', lettre.fichier_scanne)
+        if os.path.exists(chemin_fichier):
+            os.remove(chemin_fichier)
+            
     log_action("Suppression Lettre Invitation", lettre.immatriculation)
     db.session.delete(lettre)
     db.session.commit()
     
+    flash("Lettre d'invitation et fichiers associés supprimés.", "success")
     return redirect(url_for('main.creer_lettre_invitation'))
 
+# ==========================================
+# --- ROUTES : CONTRATS ---
+# ==========================================
 
 @main.route('/creer_contrat', methods=['GET', 'POST'])
+@login_required
 def creer_contrat():
+    import json
     candidats = Candidat.query.all()
     marches = LettreInvitation.query.all()
     
-    # 1. On récupère les contrats pour les afficher dans le tableau HTML
-    contrats_sauvegardes = Contrat.query.order_by(Contrat.id.desc()).all()
-
+    # --- LA CORRECTION EST ICI ---
+    # 1. On récupère les contrats bruts
+    contrats_bruts = Contrat.query.order_by(Contrat.id.desc()).all()
+    
+    # 2. On attache manuellement le nom de l'entreprise à chaque contrat
+    contrats_sauvegardes = []
+    for c in contrats_bruts:
+        cand = db.session.get(Candidat, c.candidat_id)
+        # On lui invente un attribut temporaire qu'on pourra lire dans le HTML
+        c.entreprise_nom = cand.nom_entreprise if cand else "Entreprise inconnue"
+        contrats_sauvegardes.append(c)
+    # -----------------------------
     if request.method == 'POST':
         candidat_id = request.form.get('candidat_id')
         candidat_gagnant = Candidat.query.get(candidat_id)
@@ -1396,7 +1413,7 @@ def creer_contrat():
                 break
 
         # -------------------------------------------------------------
-        # 2. LA NOUVEAUTÉ : ON SAUVEGARDE LE CONTRAT DANS LA BASE DE DONNÉES
+        # 2. ON SAUVEGARDE LE CONTRAT DANS LA BASE DE DONNÉES
         # -------------------------------------------------------------
         nouveau_contrat = Contrat(
             candidat_id=candidat_gagnant.id,
@@ -1416,7 +1433,7 @@ def creer_contrat():
         db.session.commit()
 
         # -------------------------------------------------------------
-        # 3. ON GÉNÈRE LE PDF COMME AVANT
+        # 3. ON GÉNÈRE LE PDF
         # -------------------------------------------------------------
         data_contrat = {
             'titulaire': candidat_gagnant.nom_entreprise or '........................',
@@ -1437,23 +1454,26 @@ def creer_contrat():
             'numero': numero,
             'ref_service': ref_service,
             'date_lettre': date_lettre,
-            
         }
 
-        # Assure-toi que l'import de generer_pdf_contrat est bien fait en haut de ton fichier !
+        from app.utils import generer_pdf_contrat
         chemin_pdf = generer_pdf_contrat(data_contrat)
         nom_fichier = f"Contrat_{candidat_gagnant.nom_entreprise.replace(' ', '_')}.pdf"
+        flash("Contrat généré et sauvegardé avec succès !", "success")
         return send_file(chemin_pdf, as_attachment=True, download_name=nom_fichier)
 
     # 4. On envoie les données au fichier HTML
     return render_template('formulaire_contrat.html', candidats=candidats, marches=marches, contrats=contrats_sauvegardes)
 
 
-# --- ROUTE POUR LE BOUTON "TÉLÉCHARGER PDF" DU TABLEAU ---
 @main.route('/telecharger_contrat/<int:id>')
+@login_required
 def telecharger_contrat(id):
+    from app.utils import generer_pdf_contrat
     contrat = Contrat.query.get_or_404(id)
-    candidat = contrat.candidat
+    # --- CORRECTION ICI AUSSI ---
+    candidat = db.session.get(Candidat, contrat.candidat_id)
+    # ----------------------------
     
     data_contrat = {
         'titulaire': candidat.nom_entreprise,
@@ -1471,34 +1491,68 @@ def telecharger_contrat(id):
         'programme': contrat.programme,
         'comptable': contrat.comptable_assignataire,
         'vocable': 'Prestataire',
-        # ---> CHANGE CES 3 LIGNES ICI <---
-        'numero': contrat.numero or '', 
-        'ref_service': contrat.ref_service or '', 
-        'date_lettre': contrat.date_lettre or '' 
+        'numero': getattr(contrat, 'numero', ''), 
+        'ref_service': getattr(contrat, 'ref_service', ''), 
+        'date_lettre': getattr(contrat, 'date_lettre', '') 
     }
     
     chemin_pdf = generer_pdf_contrat(data_contrat)
-    nom_fichier = f"Contrat_{candidat.nom_entreprise.replace(' ', '_')}.pdf"
+   # Sécurité au cas où l'entreprise n'est pas trouvée
+    nom_safe = candidat.nom_entreprise.replace(' ', '_') if candidat else 'Inconnu'
+    nom_fichier = f"Contrat_{nom_safe}.pdf"
     return send_file(chemin_pdf, as_attachment=True, download_name=nom_fichier)
 
-# --- ROUTE POUR LE BOUTON "SUPPRIMER" DU TABLEAU ---
+
+# --- NOUVEAU : ROUTE POUR VOIR LE SCAN DU CONTRAT ---
+@main.route('/contrat/voir_scan/<int:id>')
+@login_required
+def voir_scan_contrat(id):
+    contrat = Contrat.query.get_or_404(id)
+    if contrat.fichier_scanne:
+        return redirect(url_for('main.secure_download', folder='scans', filename=contrat.fichier_scanne))
+    else:
+        flash("Aucun fichier scanné n'a été uploadé pour ce contrat.", "warning")
+        return redirect(url_for('main.creer_contrat'))
+
+
 @main.route('/supprimer_contrat/<int:id>', methods=['POST'])
+@login_required
 def supprimer_contrat(id):
     contrat = Contrat.query.get_or_404(id)
-    log_action("Suppression Contrat", contrat.candidat.nom_entreprise)
+    
+    # --- LA CORRECTION EST ICI ---
+    # On va chercher le nom de l'entreprise manuellement pour le mouchard
+    candidat = db.session.get(Candidat, contrat.candidat_id)
+    nom_entreprise = candidat.nom_entreprise if candidat else f"Entreprise ID {contrat.candidat_id}"
+    # -----------------------------
+
+    # Suppression du fichier physique si existant
+    if contrat.fichier_scanne:
+        basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+        chemin_fichier = os.path.join(basedir, 'stockage_prive', 'scans', contrat.fichier_scanne)
+        if os.path.exists(chemin_fichier):
+            os.remove(chemin_fichier)
+            
+    # On utilise notre variable sécurisée pour le log
+    log_action("Suppression Contrat", nom_entreprise)
+    
     db.session.delete(contrat)
     db.session.commit()
+    
+    flash("Le contrat et ses fichiers associés ont été supprimés avec succès.", "success")
     return redirect(url_for('main.creer_contrat'))
     
-    
+# ==========================================
+# --- ROUTES : LETTRES D'INFORMATION ---
+# ==========================================
+
 @main.route('/creer_lettre_information', methods=['POST'])
 @login_required
 def creer_lettre_information():
     import io
     from datetime import datetime
-    from app.models import Candidat
-    from app import db
-
+    import json
+    
     direction_name = request.form.get('direction_name')
     num_ordre = request.form.get('num_ordre')
     ref_service = request.form.get('ref_service')
@@ -1544,7 +1598,6 @@ def creer_lettre_information():
                     'adresse': phrase_adresse_complete
                 })
     
-    buffer = io.BytesIO()
     data = {
         'direction_name': direction_name,
         'num_ordre': num_ordre,
@@ -1557,12 +1610,7 @@ def creer_lettre_information():
         'prestataires': prestataires
     }            
 
-    # =========================================================
-    # ---> AJOUTE CECI POUR SAUVEGARDER DANS LA BASE <---
-    # =========================================================
-    from app.models import LettreInformation
-    import json
-    
+    # SAUVEGARDE DANS LA BASE DE DONNÉES
     nouvelle_lettre = LettreInformation(
         immatriculation=immatriculation,
         objet_marche=objet_marche,
@@ -1571,30 +1619,26 @@ def creer_lettre_information():
     db.session.add(nouvelle_lettre)
     log_action("Ajout Lettre Information", immatriculation)
     db.session.commit()
-    # =========================================================
 
-
+    # GÉNÉRATION DU PDF EN MÉMOIRE
+    buffer = io.BytesIO()
     from app.utils import generer_pdf_lettre_information 
     generer_pdf_lettre_information(buffer, data)
     buffer.seek(0)
+    
+    flash("Lettre d'information générée avec succès !", "success")
     return send_file(
         buffer,
-        as_attachment=False, # Mis sur False pour l'ouvrir dans le navigateur, ou True pour forcer le téléchargement
-        download_name=f"Lettre_Information_{immatriculation}.pdf",
+        as_attachment=False, 
+        download_name=f"Lettre_Information_{immatriculation.replace('/', '_')}.pdf",
         mimetype='application/pdf'
     )    
-
-
 
 @main.route('/lettres_information', methods=['GET'])
 @login_required
 def lettres_information():
-    from app.models import Candidat, LettreInformation
     import json
-    
     candidats = Candidat.query.order_by(Candidat.nom_entreprise).all()
-    
-    # On récupère les lettres depuis la base !
     lettres_db = LettreInformation.query.order_by(LettreInformation.id.desc()).all()
     
     lettres_pour_tableau = []
@@ -1606,16 +1650,14 @@ def lettres_information():
             'objet_marche': lettre.objet_marche,
             'num_ordre': data.get('num_ordre', 'N/A'),
             'date_commission': data.get('date_commission', 'Non défini'),
-            'fichier_scanne': lettre.fichier_scanne  # <--
+            'fichier_scanne': lettre.fichier_scanne
         })
 
-    # On envoie la liste remplie au tableau HTML
     return render_template('lettres_information.html', candidats=candidats, lettres=lettres_pour_tableau)
 
 @main.route('/telecharger_lettre_information/<int:id>')
 @login_required
 def telecharger_lettre_information(id):
-    from app.models import LettreInformation
     import json, io
     from app.utils import generer_pdf_lettre_information
     
@@ -1631,18 +1673,38 @@ def telecharger_lettre_information(id):
     return send_file(
         buffer,
         as_attachment=True,
-        download_name=f"Lettre_Information_{lettre.immatriculation}.pdf",
+        download_name=f"Lettre_Information_{lettre.immatriculation.replace('/', '_')}.pdf",
         mimetype='application/pdf'
     )
+
+# --- NOUVEAU : ROUTE POUR VOIR LE SCAN DE LA LETTRE INFO ---
+@main.route('/lettre_information/voir_scan/<int:id>')
+@login_required
+def voir_scan_lettre_info(id):
+    lettre = LettreInformation.query.get_or_404(id)
+    if lettre.fichier_scanne:
+        return redirect(url_for('main.secure_download', folder='scans', filename=lettre.fichier_scanne))
+    else:
+        flash("Aucun fichier scanné n'a été uploadé pour cette lettre d'information.", "warning")
+        return redirect(url_for('main.lettres_information'))
 
 @main.route('/supprimer_lettre_information/<int:id>', methods=['POST'])
 @login_required
 def supprimer_lettre_information(id):
-    from app.models import LettreInformation
     lettre = LettreInformation.query.get_or_404(id)
+    
+    # --- NOUVEAU : SUPPRESSION DU FICHIER PHYSIQUE SI EXISTANT ---
+    if lettre.fichier_scanne:
+        basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+        chemin_fichier = os.path.join(basedir, 'stockage_prive', 'scans', lettre.fichier_scanne)
+        if os.path.exists(chemin_fichier):
+            os.remove(chemin_fichier)
+            
     log_action("Suppression Lettre Info", lettre.immatriculation)
     db.session.delete(lettre)
     db.session.commit()
+    
+    flash("La lettre d'information et ses fichiers associés ont été supprimés avec succès.", "success")
     return redirect(url_for('main.lettres_information'))
     
 # ==========================================
