@@ -187,16 +187,23 @@ Je vous prie de croire, {civilite}, à l'assurance de ma considération distingu
     
     pdf.multi_cell(0, 4, txt=clean_text(texte_pied), align='C')
 
-    # ENREGISTREMENT
-    dossier_cible = os.path.join(current_app.root_path, 'static', 'documents_generes')
+   # --- ENREGISTREMENT SÉCURISÉ ---
+    # On remonte à la racine du projet pour atteindre 'stockage_prive'
+    basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+    dossier_cible = os.path.join(basedir, 'stockage_prive', 'agreement')
+    
+    # Création du dossier s'il n'existe pas
     if not os.path.exists(dossier_cible):
         os.makedirs(dossier_cible)
 
     chemin_complet = os.path.join(dossier_cible, nom_fichier)
+    
+    # Génération du PDF
     pdf.output(chemin_complet)
 
-    return os.path.join('documents_generes', nom_fichier)
-
+    # On retourne uniquement le nom du fichier
+    # (Tes routes s'occuperont de construire le chemin complet)
+    return nom_fichier
 
 # ... (Tout ton code existant reste au dessus) ...
 

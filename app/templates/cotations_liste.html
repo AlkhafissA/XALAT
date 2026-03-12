@@ -1,287 +1,478 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mes Cotations - MCAT</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
     <style>
-        :root {
-            --primary-color: #003366; 
-            --secondary-bg: #E3E8EE; 
-            --border-color: #D0D7DE; 
-        }
+      :root {
+        --primary-color: #003366;
+        --secondary-bg: #e3e8ee;
+        --border-color: #d0d7de;
+      }
 
-        body {
-            background-color: var(--secondary-bg);
-            font-family: 'Poppins', sans-serif;
-            min-height: 100vh;
-            padding-bottom: 50px;
-            color: #344767;
-        }
-        
-        /* NAVBAR */
-        .navbar {
-            background-color: var(--primary-color);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            padding: 15px 0;
-        }
-        .navbar-brand { font-weight: 700; letter-spacing: 1px; font-size: 1.2rem; }
-        .nav-link { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; padding: 10px 15px !important; border-radius: 8px; transition: all 0.3s; color: rgba(255,255,255,0.8) !important; }
-        .nav-link:hover { color: white !important; background-color: rgba(255,255,255,0.1); transform: translateY(-2px); }
-        .nav-link.active { background-color: rgba(255,255,255,0.2); color: white !important; }
+      body {
+        background-color: var(--secondary-bg);
+        font-family: "Poppins", sans-serif;
+        min-height: 100vh;
+        padding-bottom: 50px;
+        color: #344767;
+      }
 
-        /* TABLEAU & CARTE */
-        .card-table {
-            background: white;
-            border-radius: 16px; 
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            padding: 5px; overflow: hidden;
-        }
-        .table thead th {
-            background-color: #f8f9fa; color: #8898aa; font-size: 0.75rem;
-            text-transform: uppercase; letter-spacing: 1px; 
-            border-bottom: 2px solid var(--border-color);
-            padding: 15px 20px;
-        }
-        .table tbody td { 
-            padding: 20px; vertical-align: middle; 
-            border-bottom: 1px solid var(--border-color);
-        }
-        .table-hover tbody tr:hover { background-color: #fafbff; }
+      /* NAVBAR */
+      .navbar {
+        background-color: var(--primary-color);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        padding: 15px 0;
+      }
+      .navbar-brand {
+        font-weight: 700;
+        letter-spacing: 1px;
+        font-size: 1.2rem;
+      }
+      .nav-link {
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        padding: 10px 15px !important;
+        border-radius: 8px;
+        transition: all 0.3s;
+        color: rgba(255, 255, 255, 0.8) !important;
+      }
+      .nav-link:hover {
+        color: white !important;
+        background-color: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+      }
+      .nav-link.active {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: white !important;
+      }
 
-        /* BOUTONS ACTIONS */
-        .btn-action { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; margin: 0 2px; transition: all 0.2s; }
-        .btn-action:hover { transform: scale(1.1); }
+      /* TABLEAU & CARTE */
+      .card-table {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        padding: 5px;
+        overflow: hidden;
+      }
+      .table thead th {
+        background-color: #f8f9fa;
+        color: #8898aa;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-bottom: 2px solid var(--border-color);
+        padding: 15px 20px;
+      }
+      .table tbody td {
+        padding: 20px;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .table-hover tbody tr:hover {
+        background-color: #fafbff;
+      }
 
-        /* BOUTON NOUVEAU */
-        .btn-nouveau {
-            background-color: var(--primary-color); color: white; border-radius: 50px; padding: 10px 25px;
-            font-weight: 600; font-size: 0.9rem; border: none; transition: all 0.3s;
-        }
-        .btn-nouveau:hover { background-color: #002244; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 51, 102, 0.3); color: white; }
+      /* BOUTONS ACTIONS */
+      .btn-action {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        margin: 0 2px;
+        transition: all 0.2s;
+      }
+      .btn-action:hover {
+        transform: scale(1.1);
+      }
 
-        /* BARRE DE RECHERCHE */
-        .search-container { position: relative; max-width: 300px; width: 100%; }
-        .search-input {
-            border-radius: 50px; padding-left: 40px; border: 1px solid var(--border-color); background-color: white; transition: all 0.3s;
-        }
-        .search-input:focus { box-shadow: 0 0 0 4px rgba(0, 51, 102, 0.1); border-color: var(--primary-color); }
-        .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #aaa; pointer-events: none; }
+      /* BOUTON NOUVEAU */
+      .btn-nouveau {
+        background-color: var(--primary-color);
+        color: white;
+        border-radius: 50px;
+        padding: 10px 25px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border: none;
+        transition: all 0.3s;
+      }
+      .btn-nouveau:hover {
+        background-color: #002244;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 51, 102, 0.3);
+        color: white;
+      }
+
+      /* BARRE DE RECHERCHE */
+      .search-container {
+        position: relative;
+        max-width: 300px;
+        width: 100%;
+      }
+      .search-input {
+        border-radius: 50px;
+        padding-left: 40px;
+        border: 1px solid var(--border-color);
+        background-color: white;
+        transition: all 0.3s;
+      }
+      .search-input:focus {
+        box-shadow: 0 0 0 4px rgba(0, 51, 102, 0.1);
+        border-color: var(--primary-color);
+      }
+      .search-icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #aaa;
+        pointer-events: none;
+      }
     </style>
-</head>
-<body>
-
+  </head>
+  <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.tableau_de_bord') }}">
-                <span style="font-size: 1.5rem; margin-right: 10px;">🏛️</span>
-                <div style="line-height: 1;">
-                    <div>MCAT</div>
-                    <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7;">PORTAIL ADMIN</div>
-                </div>
-            </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}">AGRÉMENTS</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="{{ url_for('main.liste_cotations') }}">COTATIONS</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.drps') }}">DRPS</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link fw-bold text-warning" href="{{ url_for('main.page_archives') }}">
-                            🗄️ ARCHIVES GLOBALES
-                        </a>
-                    </li>
-                </ul>
+      <div class="container-fluid px-4">
+        <a
+          class="navbar-brand d-flex align-items-center"
+          href="{{ url_for('main.tableau_de_bord') }}"
+        >
+          <span style="font-size: 1.5rem; margin-right: 10px">🏛️</span>
+          <div style="line-height: 1">
+            <div>MCAT</div>
+            <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7">
+              PORTAIL ADMIN
             </div>
+          </div>
+        </a>
 
-            <div class="d-flex align-items-center">
-                <a href="{{ url_for('main.logout') }}" class="btn btn-outline-light btn-sm rounded-pill px-3">
-                    Déconnexion
-                </a>
-            </div>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div
+          class="collapse navbar-collapse justify-content-center"
+          id="navbarNav"
+        >
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}"
+                >AGRÉMENTS</a
+              >
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link active"
+                href="{{ url_for('main.liste_cotations') }}"
+                >COTATIONS</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.drps') }}">DRPS</a>
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link fw-bold text-warning"
+                href="{{ url_for('main.page_archives') }}"
+              >
+                🗄️ ARCHIVES GLOBALES
+              </a>
+            </li>
+          </ul>
         </div>
+
+        <div class="d-flex align-items-center">
+          <a
+            href="{{ url_for('main.logout') }}"
+            class="btn btn-outline-light btn-sm rounded-pill px-3"
+          >
+            Déconnexion
+          </a>
+        </div>
+      </div>
     </nav>
 
     <div class="container-fluid px-4 mt-5">
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for category, message in messages %}
+      <div
+        class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4"
+        role="alert"
+      >
+        {{ message }}
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+          aria-label="Close"
+        ></button>
+      </div>
+      {% endfor %} {% endif %} {% endwith %}
 
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
-            <div>
-                <h3 class="fw-bold text-dark mb-1">Registre des Cotations</h3>
-                <p class="text-muted small mb-0">Historique des demandes de prix et procès-verbaux.</p>
-            </div>
-
-            <div class="d-flex gap-2 w-100 w-md-auto justify-content-md-end align-items-center flex-wrap">
-                <div class="search-container me-2">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="searchInput" class="form-control search-input" placeholder="Rechercher...">
-                </div>
-
-                <a href="{{ url_for('main.exporter_excel') }}" class="btn btn-success shadow-sm text-nowrap rounded-pill px-3 fw-bold" style="padding-top: 10px; padding-bottom: 10px;">
-                    📊 Excel
-                </a>
-
-                <a href="{{ url_for('main.nouvelle_cotation') }}" class="btn btn-nouveau shadow-sm text-nowrap">
-                    + Nouveau Dossier
-                </a>
-            </div>
+      <div
+        class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3"
+      >
+        <div>
+          <h3 class="fw-bold text-dark mb-1">Registre des Cotations</h3>
+          <p class="text-muted small mb-0">
+            Historique des demandes de prix et procès-verbaux.
+          </p>
         </div>
 
-        <div class="card card-table">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle" id="cotationsTable">
-                    <thead>
-                        <tr>
-                            <th class="ps-4">Objet du Marché</th>
-                            <th>Lieu</th>
-                            <th>Date Ouverture</th>
-                            <th>Date Attribution</th>
-                            <th class="text-center">Offres</th>
-                            <th class="text-end pe-4">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for cot in cotations %}
-                        <tr>
-                            <td class="ps-4" style="max-width: 350px;">
-                                <div class="fw-bold text-dark text-truncate" title="{{ cot.objet }}">
-                                    {{ cot.objet }}
-                                </div>
-                            </td>
-                            <td>
-                                <span class="small text-muted">{{ cot.lieu }}</span>
-                            </td>
-                            <td>
-                                <div class="fw-semibold text-dark" style="font-size: 0.9rem;">
-                                    {{ cot.date_ouverture.strftime('%d/%m/%Y') }}
-                                </div>
-                                <div class="small text-muted" style="font-size: 0.75rem;">
-                                    {{ cot.date_ouverture.strftime('%H:%M') }}
-                                </div>
-                            </td>
-                            <td>
-                                <div class="fw-semibold text-dark" style="font-size: 0.9rem;">
-                                    {{ cot.date_attribution.strftime('%d/%m/%Y') }}
-                                </div>
-                                <div class="small text-muted" style="font-size: 0.75rem;">
-                                    {{ cot.date_attribution.strftime('%H:%M') }}
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-light text-primary border fw-bold rounded-pill px-3">
-                                    {{ cot.offres|length }}
-                                </span>
-                            </td>
-                            <td class="text-end pe-4">
-                             <div class="btn-group">
-    <a href="{{ url_for('main.telecharger_pv', id=cot.id) }}" class="btn btn-action btn-light text-success" title="Télécharger les PV (PDF)">
-        📄
-    </a>
-    
-    {% if cot.fichier_scanne %}
-        <a href="{{ url_for('main.voir_scan', nom_fichier=cot.fichier_scanne) }}" target="_blank" class="btn btn-action btn-light text-success" title="Voir le PV scanné">
-            👁️
-        </a>
-    {% else %}
-        <button type="button" class="btn btn-action btn-light text-warning" data-bs-toggle="modal" data-bs-target="#modalScan{{ cot.id }}" title="Joindre le PV scanné">
-            📤
-        </button>
-    {% endif %}
+        <div
+          class="d-flex gap-2 w-100 w-md-auto justify-content-md-end align-items-center flex-wrap"
+        >
+          <div class="search-container me-2">
+            <span class="search-icon">🔍</span>
+            <input
+              type="text"
+              id="searchInput"
+              class="form-control search-input"
+              placeholder="Rechercher..."
+            />
+          </div>
 
-    <a href="{{ url_for('main.modifier_cotation', id=cot.id) }}" class="btn btn-action btn-light text-primary" title="Modifier">
-        ✏️
-    </a>
-    <form action="{{ url_for('main.supprimer_cotation', id=cot.id) }}" method="POST" style="display:inline;">
-        <button type="submit" class="btn btn-action btn-light text-danger" onclick="return confirm('Confirmer la suppression définitive de ce marché ?')" title="Supprimer">
-        🗑️
-        </button>
-    </form>
-</div>   
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center py-5">
-                                <div class="text-muted mb-3" style="font-size: 3rem;">📂</div>
-                                <h6 class="text-muted">Aucune cotation enregistrée.</h6>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+          <a
+            href="{{ url_for('main.exporter_excel') }}"
+            class="btn btn-success shadow-sm text-nowrap rounded-pill px-3 fw-bold"
+            style="padding-top: 10px; padding-bottom: 10px"
+          >
+            📊 Excel
+          </a>
+
+          <a
+            href="{{ url_for('main.nouvelle_cotation') }}"
+            class="btn btn-nouveau shadow-sm text-nowrap"
+          >
+            + Nouveau Dossier
+          </a>
         </div>
+      </div>
+
+      <div class="card card-table">
+        <div class="table-responsive">
+          <table
+            class="table table-hover mb-0 align-middle"
+            id="cotationsTable"
+          >
+            <thead>
+              <tr>
+                <th class="ps-4">Objet du Marché</th>
+                <th>Lieu</th>
+                <th>Date Ouverture</th>
+                <th>Date Attribution</th>
+                <th class="text-center">Offres</th>
+                <th class="text-end pe-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for cot in cotations %}
+              <tr>
+                <td class="ps-4" style="max-width: 350px">
+                  <div
+                    class="fw-bold text-dark text-truncate"
+                    title="{{ cot.objet }}"
+                  >
+                    {{ cot.objet }}
+                  </div>
+                </td>
+                <td>
+                  <span class="small text-muted">{{ cot.lieu }}</span>
+                </td>
+                <td>
+                  <div class="fw-semibold text-dark" style="font-size: 0.9rem">
+                    {{ cot.date_ouverture.strftime('%d/%m/%Y') }}
+                  </div>
+                  <div class="small text-muted" style="font-size: 0.75rem">
+                    {{ cot.date_ouverture.strftime('%H:%M') }}
+                  </div>
+                </td>
+                <td>
+                  <div class="fw-semibold text-dark" style="font-size: 0.9rem">
+                    {{ cot.date_attribution.strftime('%d/%m/%Y') }}
+                  </div>
+                  <div class="small text-muted" style="font-size: 0.75rem">
+                    {{ cot.date_attribution.strftime('%H:%M') }}
+                  </div>
+                </td>
+                <td class="text-center">
+                  <span
+                    class="badge bg-light text-primary border fw-bold rounded-pill px-3"
+                  >
+                    {{ cot.offres|length }}
+                  </span>
+                </td>
+                <td class="text-end pe-4">
+                  <div class="btn-group">
+                    <a
+                      href="{{ url_for('main.telecharger_pv', id=cot.id) }}"
+                      class="btn btn-action btn-light text-success"
+                      title="Télécharger les PV (PDF)"
+                    >
+                      📄
+                    </a>
+
+                    {% if cot.fichier_scanne %}
+                    <a
+                      href="{{ url_for('main.secure_download', folder='cotations', filename=cot.fichier_scanne) }}"
+                      target="_blank"
+                      class="btn btn-action btn-light text-success"
+                      title="Voir le PV scanné"
+                    >
+                      👁️
+                    </a>
+                    {% else %} ...
+                    <button
+                      type="button"
+                      class="btn btn-action btn-light text-warning"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalScan{{ cot.id }}"
+                      title="Joindre le PV scanné"
+                    >
+                      📤
+                    </button>
+                    {% endif %}
+
+                    <a
+                      href="{{ url_for('main.modifier_cotation', id=cot.id) }}"
+                      class="btn btn-action btn-light text-primary"
+                      title="Modifier"
+                    >
+                      ✏️
+                    </a>
+                    <form
+                      action="{{ url_for('main.supprimer_cotation', id=cot.id) }}"
+                      method="POST"
+                      style="display: inline"
+                    >
+                      <button
+                        type="submit"
+                        class="btn btn-action btn-light text-danger"
+                        onclick="
+                          return confirm(
+                            'Confirmer la suppression définitive de ce marché ?',
+                          );
+                        "
+                        title="Supprimer"
+                      >
+                        🗑️
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6" class="text-center py-5">
+                  <div class="text-muted mb-3" style="font-size: 3rem">📂</div>
+                  <h6 class="text-muted">Aucune cotation enregistrée.</h6>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-{% for cot in cotations %}
-    {% if not cot.fichier_scanne %}
+    {% for cot in cotations %} {% if not cot.fichier_scanne %}
     <div class="modal fade" id="modalScan{{ cot.id }}" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content shadow">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title fw-bold text-dark">Joindre le dossier scanné</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                
-                <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
-                    <div class="modal-body p-4">
-                        
-                        <input type="hidden" name="type_doc" value="cotation">
-                        <input type="hidden" name="doc_id" value="{{ cot.id }}">
-                        <input type="hidden" name="page_retour" value="main.liste_cotations">
-                        <label class="form-label fw-bold">Sélectionnez le fichier scanné (PDF/Image) :</label>
-                        <input type="file" name="scan_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required>
-                    </div>
-                    <div class="modal-footer bg-light border-0">
-                        <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-warning px-4 rounded-pill fw-bold">Uploader le Scan</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-{% endfor %}
-    <script>
-        document.getElementById('searchInput').addEventListener('keyup', function() {
-            var filter = this.value.toLowerCase();
-            var rows = document.querySelectorAll('#cotationsTable tbody tr');
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow">
+          <div class="modal-header bg-warning">
+            <h5 class="modal-title fw-bold text-dark">
+              Joindre le dossier scanné
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
 
-            rows.forEach(function(row) {
-                var text = row.textContent.toLowerCase();
-                if (text.includes(filter)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
+          <form
+            action="{{ url_for('main.uploader_scan') }}"
+            method="POST"
+            enctype="multipart/form-data"
+          >
+            <div class="modal-body p-4">
+              <input type="hidden" name="type_doc" value="cotation" />
+              <input type="hidden" name="doc_id" value="{{ cot.id }}" />
+              <input
+                type="hidden"
+                name="page_retour"
+                value="main.liste_cotations"
+              />
+              <label class="form-label fw-bold"
+                >Sélectionnez le fichier scanné (PDF/Image) :</label
+              >
+              <input
+                type="file"
+                name="scan_file"
+                class="form-control"
+                accept=".pdf,.png,.jpg,.jpeg"
+                required
+              />
+            </div>
+            <div class="modal-footer bg-light border-0">
+              <button
+                type="button"
+                class="btn btn-link text-muted"
+                data-bs-dismiss="modal"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                class="btn btn-warning px-4 rounded-pill fw-bold"
+              >
+                Uploader le Scan
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %} {% endfor %}
+    <script>
+      document
+        .getElementById("searchInput")
+        .addEventListener("keyup", function () {
+          var filter = this.value.toLowerCase();
+          var rows = document.querySelectorAll("#cotationsTable tbody tr");
+
+          rows.forEach(function (row) {
+            var text = row.textContent.toLowerCase();
+            if (text.includes(filter)) {
+              row.style.display = "";
+            } else {
+              row.style.display = "none";
+            }
+          });
         });
     </script>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+  </body>
 </html>

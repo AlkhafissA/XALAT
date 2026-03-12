@@ -3,6 +3,8 @@ import zipfile
 import json
 from werkzeug.utils import secure_filename
 from flask import send_file, make_response, abort
+from flask import send_from_directory, abort
+from datetime import datetime, timedelta
 import io
 from app.models import ArchiveDocument
 from app.models import Bordereau 
@@ -18,20 +20,20 @@ import pandas as pd
 from openpyxl.utils import get_column_letter
 from fpdf import FPDF
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app, jsonify, session
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Message
 
 from app.extensions import db, mail
-from app.models import User, Candidat, Cotation, Offre, Historique
+from app.models import User, Candidat, Cotation, Offre, Historique, LoginAttempt, LogAction
 from app.utils import clean_text, generer_lettre_agrement, num2words_fr, dessiner_entete_officiel
 
 # Création du "Blueprint"
 main = Blueprint('main', __name__)
 
 # Seuls les PDF et les images sont acceptés !
-ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg'}
+ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'}
 
 def fichier_est_autorise(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -47,23 +49,101 @@ def log_action(action, cible):
 
 @main.route('/login', methods=['GET', 'POST'])
 def login():
+    # 1. On récupère l'IP du visiteur
+    user_ip = request.remote_addr 
+    
+    # 2. TA LISTE BLANCHE (Ajoute tes IP ici entre guillemets et séparées par des virgules)
+    IPS_AUTORISEES = [
+        "127.0.0.1",     # Ton propre ordinateur (Localhost)
+        "192.168.1.1",   # Exemple IP Bureau
+        "41.82.10.25",   # Exemple IP Maison
+    ]
+    
+    # 3. Vérification du blocage (On ignore si l'IP est dans la liste blanche)
+    record = LoginAttempt.query.filter_by(ip_address=user_ip).first()
+    
+    if record and record.is_blocked and (user_ip not in IPS_AUTORISEES):
+        # Vérification du délai de 15 minutes
+        if datetime.utcnow() - record.last_attempt > timedelta(minutes=15):
+            record.is_blocked = False
+            record.attempts = 0
+            db.session.commit()
+        else:
+            flash("Votre IP est temporairement restreinte pour sécurité.", "danger")
+            return render_template('login.html')
+
     if request.method == 'POST':
+        # --- PIÈGE POT DE MIEL DÉBOGAGE ---
+        honeypot = request.form.get('confirm_email_address')
+        if honeypot:
+            # 1. On gère le record de blocage
+            if not record:
+                record = LoginAttempt(ip_address=user_ip, attempts=5, is_blocked=True)
+                db.session.add(record)
+            else:
+                record.is_blocked = True
+                record.attempts = 5
+            
+            # 2. On écrit le log SANS passer par la fonction log_action (Test direct)
+            from app.models import LogAction # Import local pour être sûr
+            alerte = LogAction(
+                action="ALERTE_HONEYPOT", 
+                details=f"IP: {user_ip} a rempli le champ invisible."
+            )
+            db.session.add(alerte)
+            
+            # 3. On force l'écriture immédiate
+            try:
+                db.session.commit()
+                print("DEBUG: Log Honeypot enregistré avec succès en BDD")
+            except Exception as e:
+                db.session.rollback()
+                print(f"DEBUG ERROR: Échec de l'enregistrement : {e}")
+            
+            return "Accès refusé. Système de sécurité activé.", 403
         username = request.form.get('username')
         password = request.form.get('password')
         user = User.query.filter_by(username=username).first()
 
+        # CAS : SUCCÈS
         if user and check_password_hash(user.password_hash, password):
-            login_user(user)
-            if check_password_hash(user.password_hash, current_app.config['MOT_DE_PASSE_PAR_DEFAUT']):
-                flash('Par sécurité, veuillez modifier votre mot de passe temporaire.', 'warning')
-                return redirect(url_for('main.forcer_changement_mdp'))
+            session.pop('attempts', None)
+            if record:
+                db.session.delete(record)
+                # --- AJOUT ICI ---
+            session.permanent = True  # Active la limite de temps définie dans la config
+            # ------------------
             
-            if user.role == 'superadmin':
-                return redirect(url_for('main.super_dashboard'))
-            else:
-                return redirect(url_for('main.tableau_de_bord'))
+            login_user(user)
+            db.session.commit()
+            
+            # ... (Tes redirections habituelles) ...
+            return redirect(url_for('main.super_dashboard' if user.role == 'superadmin' else 'main.tableau_de_bord'))
+
+        # CAS : ÉCHEC
         else:
-            flash('Identifiant ou mot de passe incorrect.', 'danger')
+            # IMMUNITÉ : Si c'est un SuperAdmin OU si l'IP est en liste blanche, on ne bloque pas
+            if (user and user.role == 'superadmin') or (user_ip in IPS_AUTORISEES):
+                log_action("Échec Connexion", f"Tentative sur {username} (IP Immunisée)")
+                flash("Identifiant ou mot de passe incorrect.", "danger")
+            
+            else:
+                # Blocage normal pour les autres
+                if not record:
+                    record = LoginAttempt(ip_address=user_ip, attempts=1)
+                    db.session.add(record)
+                else:
+                    record.attempts += 1
+                    record.last_attempt = datetime.utcnow()
+
+                if record.attempts >= 5:
+                    record.is_blocked = True
+                    log_action("ALERTE_SECURITE", f"IP {user_ip} BANNIE (Cible: {username})")
+                
+                flash(f"Identifiant ou mot de passe incorrect ({record.attempts}/5).", "danger")
+            
+            db.session.commit()
+                
     return render_template('login.html')
 
 @main.route('/logout')
@@ -109,20 +189,35 @@ def sauvegarder():
 @login_required
 def telecharger_agrement_vierge(id):
     candidat = db.session.get(Candidat, id)
+    # On génère le fichier (assure-toi que generer_lettre_agrement enregistre maintenant dans stockage_prive)
     nom_fichier_relatif = generer_lettre_agrement(candidat, mode='vierge')
-    chemin_complet = os.path.join(current_app.root_path, 'static', nom_fichier_relatif)
-    return send_file(chemin_complet, as_attachment=True)
+    
+    # On récupère juste le nom du fichier pour utiliser notre route sécurisée
+    filename = os.path.basename(nom_fichier_relatif)
+    return redirect(url_for('main.secure_download', folder='agreement', filename=filename))
 
 @main.route('/telecharger_agrement_final/<int:id>')
 @login_required
 def telecharger_agrement_final(id):
+    print("\n--- 🛠️ DEBUG : TENTATIVE DE TELECHARGEMENT ---")
     candidat = db.session.get(Candidat, id)
+    
+    print(f"Analyse du candidat en base -> Statut: '{candidat.statut}', Réf: '{candidat.ref_interne}'")
+    
     if candidat.statut == "Retenu" and candidat.ref_interne:
+        print("✅ Conditions OK. Lancement du téléchargement.")
         nom_fichier_relatif = generer_lettre_agrement(candidat, mode='final')
-        chemin_complet = os.path.join(current_app.root_path, 'static', nom_fichier_relatif)
-        return send_file(chemin_complet, as_attachment=True)
+        filename = os.path.basename(nom_fichier_relatif)
+        return redirect(url_for('main.secure_download', folder='agreement', filename=filename))
     else:
-        flash("Ce dossier n'est pas encore validé.")
+        print("❌ Conditions NON remplies. Pourquoi ?")
+        if candidat.statut != "Retenu":
+            print(f"  -> Le statut est '{candidat.statut}' au lieu de 'Retenu'")
+        if not candidat.ref_interne:
+            print(f"  -> La ref_interne est vide (None ou '')")
+        print("----------------------------------------------\n")
+        
+        flash("Ce dossier n'est pas encore validé.", "danger")
         return redirect(url_for('main.tableau_de_bord'))
 
 @main.route('/valider_agrement_final', methods=['POST'])
@@ -133,27 +228,49 @@ def valider_agrement_final():
     
     candidat = db.session.get(Candidat, int(candidat_id))
     if candidat:
-        candidat.ref_interne = f"{request.form.get('ref_numero')} {request.form.get('ref_suffixe')}"
+        # --- LA CORRECTION EST ICI ---
+        # 1. On récupère les morceaux depuis le formulaire HTML
+        ref_numero = request.form.get('ref_numero', '').strip()
+        ref_suffixe = request.form.get('ref_suffixe', '').strip()
+        
+        # 2. On les assemble pour créer la référence interne
+        if ref_numero:
+            # Exemple: "0001" + " /SG/DAGE/ms" -> "0001 /SG/DAGE/ms"
+            candidat.ref_interne = f"{ref_numero} {ref_suffixe}".strip()
+            
+        # 3. On récupère les autres champs de ton formulaire HTML
+        candidat.titre_signataire = request.form.get('titre_signataire', 'Le Directeur')
         candidat.date_signature_agrement = request.form.get('date_signature')
         candidat.ref_lettre_candidat = request.form.get('ref_lettre_candidat')
-        candidat.titre_signataire = request.form.get('titre_signataire')
+        # -----------------------------
+
         candidat.statut = "Retenu"
-        log_action("Validation Agrément", candidat.nom_entreprise)
         db.session.commit()
         
+        # On génère le PDF final
         pdf_path_relatif = generer_lettre_agrement(candidat, mode='final')
+        filename = os.path.basename(pdf_path_relatif)
+        
+        # 👇 CHEMIN VERS LE COFFRE-FORT POUR LA PIÈCE JOINTE
+        basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+        chemin_absolu = os.path.join(basedir, 'stockage_prive', 'agreement', filename)
+        
         try:
             msg = Message()
             msg.recipients = [candidat.email]
-            msg.subject = clean_text("Félicitations : Votre Agrément (Validé)")
+            msg.subject = "Félicitations : Votre Agrément (Validé)"
             msg.body = f"Bonjour,\n\nVotre demande a été validée.\nRef: {candidat.ref_interne}."
-            chemin_absolu = os.path.join(current_app.root_path, 'static', pdf_path_relatif)
+            
             with open(chemin_absolu, 'rb') as fp:
                 msg.attach(f"Agrement_{candidat.nom_entreprise}.pdf", "application/pdf", fp.read())
+            
             mail.send(msg)
-            flash("Dossier validé et email envoyé !", "success")
+            log_action("Validation Agrément & Email", candidat.nom_entreprise)
+            flash("Dossier validé et agrément envoyé par email !", "success")
         except Exception as e:
-            flash("Validé, mais erreur envoi mail.", "warning")
+            print(f"Erreur Mail: {str(e)}")
+            flash("Dossier validé, mais l'envoi de l'email a échoué.", "warning")
+            
     return redirect(url_for('main.tableau_de_bord'))
 
 @main.route('/decision/<int:id>/<type_decision>')
@@ -333,7 +450,7 @@ def telecharger_pv(id):
         pdf.write(6, " dont l'offre est conforme et moins disante pour "); pdf.set_font("Arial", 'B', 11)
         pdf.write(6, clean_text(f"{mt_lettres} ({mt_chiffres}) F CFA TTC."))
     
-    dossier_pv = os.path.join(current_app.root_path, 'static', 'documents_generes')
+    dossier_pv = os.path.join(current_app.root_path, '..', 'stockage_prive', 'cotations')
 
     if not os.path.exists(dossier_pv):
         os.makedirs(dossier_pv)
@@ -470,10 +587,43 @@ def download_backup():
 @main.route('/super_dashboard')
 @login_required
 def super_dashboard():
-    if current_user.role != 'superadmin': return redirect(url_for('main.tableau_de_bord'))
+    if current_user.role != 'superadmin': 
+        flash("Accès réservé.", "danger")
+        return redirect(url_for('main.tableau_de_bord'))
+    
     users = User.query.all()
-    logs = Historique.query.order_by(Historique.date_action.desc()).all()
-    return render_template('super_dashboard.html', users=users, logs=logs)
+    
+    # 1. On récupère les logs de sécurité
+    logs_securite = LogAction.query.all()
+    liste_finale = []
+    
+    for s in logs_securite:
+        liste_finale.append({
+            'date_action': s.timestamp,
+            'utilisateur': 'SYSTÈME / BOT',
+            'action': s.action,
+            'cible': s.details or 'N/A'
+        })
+    
+    # 2. On récupère l'historique métier
+    historique_metier = Historique.query.all()
+    for h in historique_metier:
+        liste_finale.append({
+            'date_action': h.date_action,
+            'utilisateur': h.utilisateur,
+            'action': h.action,
+            'cible': h.cible
+        })
+    
+    # 3. On trie par date (du plus récent au plus ancien)
+    liste_finale.sort(key=lambda x: x['date_action'] if x['date_action'] else datetime.min, reverse=True)
+    
+    ips_bloquees = LoginAttempt.query.filter_by(is_blocked=True).all()
+    
+    return render_template('super_dashboard.html', 
+                           users=users, 
+                           logs=liste_finale[:100], 
+                           ips_bloquees=ips_bloquees)
 
 @main.route('/creer_utilisateur', methods=['POST'])
 @login_required
@@ -1502,10 +1652,27 @@ def supprimer_lettre_information(id):
 @main.route('/voir_scan/<nom_fichier>')
 @login_required
 def voir_scan(nom_fichier):
+    # Log de l'action
     log_action("Consultation Scan", nom_fichier)
     db.session.commit()
-    dossier_scans = os.path.join(current_app.root_path, 'static', 'uploads', 'scans')
-    from flask import send_from_directory
+    
+    # On utilise simplement notre route sécurisée universelle
+    # puisque tous les scans vont dans le dossier 'scans'
+    return redirect(url_for('main.secure_download', folder='scans', filename=nom_fichier))
+    
+    # DEBUG : Copie ce qui s'affiche dans ton terminal pour comparer
+    print(f"--- TENTATIVE DE LECTURE ---")
+    print(f"Fichier cherché : {nom_fichier}")
+    print(f"Chemin complet  : {chemin_complet}")
+    print(f"Existe sur disque ? : {chemin_complet.exists()}")
+    
+    if not chemin_complet.exists():
+        # Si le fichier n'est pas dans /scans, on teste dans /cotations par sécurité
+        chemin_secours = base_path / 'stockage_prive' / 'cotations' / nom_fichier
+        if chemin_secours.exists():
+            return send_from_directory(chemin_secours.parent, nom_fichier)
+        abort(404)
+
     return send_from_directory(dossier_scans, nom_fichier)
     
 @main.route('/uploader_scan', methods=['POST'])
@@ -1541,8 +1708,11 @@ def uploader_scan():
         filename = secure_filename(file.filename)
         nouveau_nom = f"{type_doc}_{doc_id}_{filename}"
         
-        dossier_sauvegarde = os.path.join(current_app.root_path, 'static', 'uploads', 'scans')
+        # 👇 ON ENREGISTRE MAINTENANT DANS LE DOSSIER PRIVÉ
+        basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+        dossier_sauvegarde = os.path.join(basedir, 'stockage_prive', 'scans')
         os.makedirs(dossier_sauvegarde, exist_ok=True)
+        
         
         chemin_complet = os.path.join(dossier_sauvegarde, nouveau_nom)
         file.save(chemin_complet)
@@ -1668,7 +1838,7 @@ def upload_archive():
         # 👆 FIN DU BOUCLIER 👆
         # ==========================================================
         filename = secure_filename(file.filename)
-        dossier_sauvegarde = os.path.join(current_app.root_path, 'static', 'uploads', 'archives')
+        dossier_sauvegarde = os.path.join(current_app.root_path, '..', 'stockage_prive', 'archives')
         os.makedirs(dossier_sauvegarde, exist_ok=True)
         
         chemin_complet = os.path.join(dossier_sauvegarde, filename)
@@ -1798,3 +1968,64 @@ def exporter_archives_excel():
         download_name=nom_fichier_export,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+
+
+@main.route('/debloquer_ip/<int:id>', methods=['POST'])
+@login_required
+def debloquer_ip(id):
+    if current_user.role != 'superadmin':
+        return redirect(url_for('main.tableau_de_bord'))
+    
+    ban_record = LoginAttempt.query.get_or_404(id)
+    ip_liberee = ban_record.ip_address
+    
+    db.session.delete(ban_record) # On supprime carrément l'entrée
+    log_action("DEBLOCAGE_IP", f"L'IP {ip_liberee} a été débloquée manuellement")
+    db.session.commit()
+    
+    flash(f"L'adresse IP {ip_liberee} a été débloquée avec succès.", "success")
+    return redirect(url_for('main.super_dashboard'))
+
+@main.app_errorhandler(404)
+def error_404(error):
+    return render_template('errors/404.html'), 404
+
+@main.app_errorhandler(500)
+def error_500(error):
+    db.session.rollback() # Très important : annule les bêtises en BDD si ça a planté
+    return render_template('errors/500.html'), 500
+
+
+
+@main.route('/telecharger_document/<path:filename>')
+@login_required
+def telecharger_protected_file(filename):
+    # Au lieu de chercher uniquement dans 'archives', 
+    # on utilise la logique multi-dossiers de secure_download
+    return secure_download(folder='archives', filename=filename)
+
+@main.route('/secure_download/<folder>/<path:filename>')
+@login_required
+def secure_download(folder, filename):
+    ALLOWED_FOLDERS = ['archives', 'cotations', 'scans', 'drps', 'agreement']
+    if folder not in ALLOWED_FOLDERS:
+        abort(403)
+    
+    root_dir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+    
+    # 1. On cherche d'abord dans le dossier demandé (ex: cotations)
+    target_dir = os.path.join(root_dir, 'stockage_prive', folder)
+    file_path = os.path.join(target_dir, filename)
+    
+    # 2. Si non trouvé, on cherche dans le dossier 'scans' (là où uploader_scan enregistre tout)
+    if not os.path.exists(file_path):
+        target_dir = os.path.join(root_dir, 'stockage_prive', 'scans')
+        file_path = os.path.join(target_dir, filename)
+
+    # 3. Si toujours rien, 404
+    if not os.path.exists(file_path):
+        print(f"DEBUG : Fichier introuvable nulle part -> {filename}")
+        abort(404)
+        
+    return send_from_directory(target_dir, filename)

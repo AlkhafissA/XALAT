@@ -37,7 +37,7 @@ class Candidat(db.Model):
     rc = db.Column(db.String(100))               # <-- NOUVEAU
     compte_bancaire = db.Column(db.String(200))  # <-- NOUVEAU
     fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
-
+    contrats = db.relationship('Contrat', backref='parent_candidat', cascade="all, delete-orphan")
 class Cotation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     objet = db.Column(db.Text, nullable=False)
@@ -127,7 +127,7 @@ class Contrat(db.Model):
     
     # LIAISON AVEC LA TABLE CANDIDAT
     candidat_id = db.Column(db.Integer, db.ForeignKey('candidat.id'), nullable=False)
-    candidat = db.relationship('Candidat', backref='contrats')
+    
 
     # INFORMATIONS DU MARCHÉ
     objet_marche = db.Column(db.Text, nullable=False)
@@ -167,3 +167,20 @@ class ArchiveDocument(db.Model):
     type_document = db.Column(db.String(50), nullable=False) # Ex: 'Bordereau', 'Lettre Invitation', 'Contrat'
     nom_fichier = db.Column(db.String(255), nullable=False) # Le nom du PDF sauvegardé
     date_ajout = db.Column(db.DateTime, default=datetime.utcnow) # Date d'upload
+
+class LoginAttempt(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    ip_address = db.Column(db.String(45), nullable=False, unique=True)
+    attempts = db.Column(db.Integer, default=0)
+    last_attempt = db.Column(db.DateTime, default=datetime.utcnow)
+    is_blocked = db.Column(db.Boolean, default=False)
+
+
+# journal d'audit plus fin que 'Historique' : on y enregistre
+# les connexions, blocages automatiques, honeypot, etc.
+class LogAction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    action = db.Column(db.String(200), nullable=False)
+    details = db.Column(db.Text, nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+

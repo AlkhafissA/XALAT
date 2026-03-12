@@ -187,6 +187,55 @@
         </div>
 
         <div class="col-12 col-md-8">
+          {% if ips_bloquees %}
+          <div
+            class="card card-custom border-start border-danger border-4 mb-4"
+          >
+            <div class="card-header bg-white border-0 py-3">
+              <h5 class="mb-0 fw-bold text-danger">
+                <i class="fas fa-user-shield"></i> Accès Bloqués (Sécurité IP)
+              </h5>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-4">Adresse IP</th>
+                    <th>Dernière Tentative</th>
+                    <th class="text-end pe-4">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for ban in ips_bloquees %}
+                  <tr>
+                    <td class="ps-4">
+                      <code class="fw-bold text-danger"
+                        >{{ ban.ip_address }}</code
+                      >
+                    </td>
+                    <td class="small text-muted">
+                      {{ ban.last_attempt.strftime('%d/%m/%Y à %H:%M') }}
+                    </td>
+                    <td class="text-end pe-4">
+                      <form
+                        action="{{ url_for('main.debloquer_ip', id=ban.id) }}"
+                        method="POST"
+                      >
+                        <button
+                          type="submit"
+                          class="btn btn-success btn-sm fw-bold"
+                        >
+                          <i class="fas fa-unlock"></i> DÉBLOQUER
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% endif %}
           <div class="card card-custom h-100">
             <div class="card-header bg-white border-0 py-3">
               <h5 class="mb-0 fw-bold">
@@ -228,17 +277,23 @@
                       </a>
 
                       {% if user.role != 'superadmin' %}
-                      <a
-                        href="{{ url_for('main.supprimer_utilisateur', id=user.id) }}"
-                        class="btn btn-outline-danger btn-sm"
-                        onclick="
+                      <form
+                        action="{{ url_for('main.supprimer_utilisateur', id=user.id) }}"
+                        method="POST"
+                        style="display: inline"
+                        onsubmit="
                           return confirm(
                             'Êtes-vous sûr de vouloir supprimer cet utilisateur ?',
                           );
                         "
                       >
-                        <i class="fas fa-trash"></i>
-                      </a>
+                        <button
+                          type="submit"
+                          class="btn btn-outline-danger btn-sm"
+                        >
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </form>
                       {% else %}
                       <span class="text-muted small ms-2"
                         ><i class="fas fa-lock"></i
@@ -322,6 +377,12 @@
                   placeholder="Rechercher un agent, document, cible..."
                   onkeyup="rechercherLogs()"
                 />
+                <button
+                  class="btn btn-warning btn-sm ms-2 me-1 mb-1 btn-filter"
+                  onclick="filtrerLogs('Alerte', this)"
+                >
+                  ⚠️ Alertes Sécurité
+                </button>
               </div>
             </div>
 
@@ -364,31 +425,46 @@
             class="table table-striped table-hover mb-0 align-middle text-nowrap"
             id="tableauLogs"
           >
-            <thead class="table-dark">
-              <tr>
-                <th class="ps-4">Date & Heure</th>
-                <th>Auteur</th>
-                <th>Action</th>
-                <th>Cible</th>
-              </tr>
-            </thead>
+            <tbody>
+              <thead class="table-dark">
+                <tr>
+                  <th class="ps-4">Date & Heure</th>
+                  <th>Auteur</th>
+                  <th>Action</th>
+                  <th>Cible</th>
+                </tr>
+              </thead>
+            </tbody>
+
             <tbody>
               {% for log in logs %}
               <tr class="log-row" data-action="{{ log.action }}">
                 <td class="ps-4 text-muted small fw-bold">
-                  {{ log.date_action.strftime('%d/%m/%Y à %H:%M') }}
+                  {# On simplifie l'affichage de la date sans le test 'is
+                  datetime' #} {{ log.date_action.strftime('%d/%m/%Y à %H:%M')
+                  if log.date_action else 'Date inconnue' }}
                 </td>
                 <td>
-                  <span class="badge bg-secondary text-white"
-                    >{{ log.utilisateur }}</span
+                  {# On met en rouge si c'est le bot pour que ça saute aux yeux
+                  #}
+                  <span
+                    class="badge {% if log.utilisateur == 'SYSTÈME / BOT' %}bg-danger{% else %}bg-secondary{% endif %} text-white"
                   >
+                    {{ log.utilisateur }}
+                  </span>
                 </td>
+
                 <td>
-                  {% if 'Suppression' in log.action %}
-                  <span class="text-danger fw-bold">{{ log.action }}</span>
-                  {% elif 'Validation' in log.action %}
+                  {% if 'Suppression' in log.action or 'INTERDIT' in log.action
+                  or 'HONEYPOT' in log.action %}
+                  <span class="text-danger fw-bold">
+                    <i class="fas fa-exclamation-triangle"></i> {{ log.action }}
+                  </span>
+                  {% elif 'Validation' in log.action or 'Succès' in log.action
+                  %}
                   <span class="text-success fw-bold">{{ log.action }}</span>
-                  {% elif 'Réinitialisation' in log.action %}
+                  {% elif 'Réinitialisation' in log.action or 'Alerte' in
+                  log.action %}
                   <span class="text-warning fw-bold">{{ log.action }}</span>
                   {% else %}
                   <span class="text-dark">{{ log.action }}</span>
@@ -450,6 +526,13 @@
             (actionText.includes("création") ||
               actionText.includes("modification") ||
               actionText.includes("ajout"))
+          ) {
+            ligne.style.display = "";
+          } else if (
+            categorie === "Alerte" &&
+            (actionText.includes("interdit") ||
+              actionText.includes("tentative") ||
+              actionText.includes("erreur"))
           ) {
             ligne.style.display = "";
           } else if (actionText.includes(categorie.toLowerCase())) {

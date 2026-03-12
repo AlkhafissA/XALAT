@@ -1,141 +1,189 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Connexion - MCAT</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <style>
-        body {
-            /* LE BEAU BLEU : Un dégradé professionnel et apaisant */
-            background: linear-gradient(135deg, #003366 0%, #0066cc 100%);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Segoe UI', sans-serif;
-        }
-        .card-login {
-            border: none;
-            border-radius: 12px;
-            /* Ombre plus forte pour bien détacher la carte du fond bleu */
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            overflow: hidden;
-            width: 100%;
-            max-width: 400px;
-        }
-        .card-header {
-            background-color: #fff;
-            color: #003366;
-            text-align: center;
-            padding: 30px 20px 10px 20px;
-            border-bottom: none;
-        }
+      body {
+        /* LE BEAU BLEU : Un dégradé professionnel et apaisant */
+        background: linear-gradient(135deg, #003366 0%, #0066cc 100%);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-family: "Segoe UI", sans-serif;
+      }
+      .card-login {
+        border: none;
+        border-radius: 12px;
+        /* Ombre plus forte pour bien détacher la carte du fond bleu */
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+        width: 100%;
+        max-width: 400px;
+      }
+      .card-header {
+        background-color: #fff;
+        color: #003366;
+        text-align: center;
+        padding: 30px 20px 10px 20px;
+        border-bottom: none;
+      }
 
-        /* --- STYLE POUR LE DRAPEAU --- */
-        .drapeau-container {
-            display: flex; /* Permet d'aligner les 3 bandes côte à côte */
-            width: 100%;
-            height: 12px; /* Un peu plus haut pour voir l'étoile */
-        }
-        .bande {
-            flex: 1; /* Chaque bande prend 1/3 de la largeur */
-            height: 100%;
-        }
-        .vert { background-color: #00853f; }
-        .rouge { background-color: #e31b23; }
-        .jaune { 
-            background-color: #fdef42; 
-            display: flex;
-            align-items: center; /* Centre l'étoile verticalement */
-            justify-content: center; /* Centre l'étoile horizontalement */
-            line-height: 0;
-        }
-        .etoile {
-            color: #00853f; /* L'étoile est verte */
-            font-size: 10px; /* Taille ajustée à la barre */
-            font-weight: bold;
-        }
-        /* ------------------------------------- */
+      /* --- STYLE POUR LE DRAPEAU --- */
+      .drapeau-container {
+        display: flex; /* Permet d'aligner les 3 bandes côte à côte */
+        width: 100%;
+        height: 12px; /* Un peu plus haut pour voir l'étoile */
+      }
+      .bande {
+        flex: 1; /* Chaque bande prend 1/3 de la largeur */
+        height: 100%;
+      }
+      .vert {
+        background-color: #00853f;
+      }
+      .rouge {
+        background-color: #e31b23;
+      }
+      .jaune {
+        background-color: #fdef42;
+        display: flex;
+        align-items: center; /* Centre l'étoile verticalement */
+        justify-content: center; /* Centre l'étoile horizontalement */
+        line-height: 0;
+      }
+      .etoile {
+        color: #00853f; /* L'étoile est verte */
+        font-size: 10px; /* Taille ajustée à la barre */
+        font-weight: bold;
+      }
+      /* ------------------------------------- */
 
-        .form-control {
-            padding: 12px;
-            background-color: #f0f4f8;
-            border: 1px solid #dce1e6;
-        }
-        .form-control:focus {
-            background-color: #fff;
-            box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1);
-            border-color: #003366;
-        }
-        .btn-login {
-            background-color: #003366;
-            border: none;
-            padding: 12px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            transition: all 0.3s;
-        }
-        .btn-login:hover {
-            background-color: #002244;
-            transform: translateY(-2px);
-        }
-        .footer-text {
-            margin-top: 20px;
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.7);
-        }
+      .form-control {
+        padding: 12px;
+        background-color: #f0f4f8;
+        border: 1px solid #dce1e6;
+      }
+      .form-control:focus {
+        background-color: #fff;
+        box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1);
+        border-color: #003366;
+      }
+      .btn-login {
+        background-color: #003366;
+        border: none;
+        padding: 12px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.3s;
+      }
+      .btn-login:hover {
+        background-color: #002244;
+        transform: translateY(-2px);
+      }
+      .footer-text {
+        margin-top: 20px;
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.7);
+      }
     </style>
-</head>
-<body>
-
+  </head>
+  <body>
     <div class="card card-login">
-        <div class="drapeau-container">
-            <div class="bande vert"></div>
-            <div class="bande jaune">
-                <span class="etoile">★</span>
-            </div>
-            <div class="bande rouge"></div>
+      <div class="drapeau-container">
+        <div class="bande vert"></div>
+        <div class="bande jaune">
+          <span class="etoile">★</span>
         </div>
-        <div class="card-header">
-            <h6 class="mb-1 text-uppercase fw-bold text-muted small" style="letter-spacing: 1px;">République du Sénégal</h6>
-            <div class="mt-2 mb-2">
-                <span style="font-size: 3.5rem;">🏛️</span>
-            </div>
-            <h4 class="mt-2 fw-bold" style="color: #003366;">Espace MCAT</h4>
-            <p class="mb-0 small text-muted">Authentification sécurisée</p>
+        <div class="bande rouge"></div>
+      </div>
+      <div class="card-header">
+        <h6
+          class="mb-1 text-uppercase fw-bold text-muted small"
+          style="letter-spacing: 1px"
+        >
+          République du Sénégal
+        </h6>
+        <div class="mt-2 mb-2">
+          <span style="font-size: 3.5rem">🏛️</span>
         </div>
+        <h4 class="mt-2 fw-bold" style="color: #003366">Espace MCAT</h4>
+        <p class="mb-0 small text-muted">Authentification sécurisée</p>
+      </div>
 
-        <div class="card-body p-4 pt-2 bg-white">
-            
-            {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="alert alert-danger py-2 text-center small">
-                    {{ messages[0] }}
-                </div>
-            {% endif %}
-            {% endwith %}
-
-            <form action="{{ url_for('main.login') }}" method="POST">
-                <div class="mb-3">
-                    <label class="form-label text-secondary small fw-bold">IDENTIFIANT</label>
-                    <input type="text" name="username" class="form-control" placeholder="Utilisateur" required>
-                </div>
-                <div class="mb-4">
-                    <label class="form-label text-secondary small fw-bold">MOT DE PASSE</label>
-                    <input type="password" name="password" class="form-control" placeholder="••••••••" required>
-                </div>
-                <div class="d-grid">
-                    <button type="submit" class="btn btn-primary btn-login text-uppercase shadow-sm">Se Connecter</button>
-                </div>
-            </form>
+      <div class="card-body p-4 pt-2 bg-white">
+        {% with messages = get_flashed_messages() %} {% if messages %}
+        <div class="alert alert-danger py-2 text-center small">
+          {{ messages[0] }}
         </div>
+        {% endif %} {% endwith %}
+
+        <form action="{{ url_for('main.login') }}" method="POST">
+          <div class="mb-3">
+            <label class="form-label text-secondary small fw-bold"
+              >IDENTIFIANT</label
+            >
+            <input
+              type="text"
+              name="username"
+              class="form-control"
+              placeholder="Utilisateur"
+              required
+            />
+          </div>
+          <div class="mb-4">
+            <label class="form-label text-secondary small fw-bold"
+              >MOT DE PASSE</label
+            >
+            <input
+              type="password"
+              name="password"
+              class="form-control"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+          <div class="d-grid">
+            <button
+              type="submit"
+              class="btn btn-primary btn-login text-uppercase shadow-sm"
+            >
+              Se Connecter
+            </button>
+          </div>
+          <div
+            class="hp-container"
+            style="display: none !important"
+            aria-hidden="true"
+          >
+            <input
+              type="text"
+              name="confirm_email_address"
+              tabindex="-1"
+              autocomplete="off"
+            />
+          </div>
+        </form>
+      </div>
     </div>
 
     <div class="footer-text">
-        &copy; 2025 Ministère de la Culture de l'Artisanat et du Tourisme
+      &copy; 2025 Ministère de la Culture de l'Artisanat et du Tourisme
     </div>
-
-</body>
+    <script>
+      document.querySelector("form").addEventListener("submit", function () {
+        const btn = this.querySelector(".btn-login");
+        btn.disabled = true;
+        btn.innerHTML =
+          '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Vérification...';
+      });
+    </script>
+  </body>
 </html>
