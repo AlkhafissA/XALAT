@@ -866,6 +866,9 @@ def liste_bordereaux():
 @main.route('/bordereaux/ajouter', methods=['POST'])
 @login_required
 def ajouter_bordereau():
+    import json
+    from datetime import datetime
+    
     direction_name = request.form.get('direction_name')
     numero = request.form.get('numero')
     service_ref = request.form.get('service_ref')
@@ -901,9 +904,10 @@ def ajouter_bordereau():
     log_action("Ajout Bordereau", f"N° {numero}")
     db.session.commit()
     
+    # --- MODIFICATION ICI ---
     flash("Bordereau enregistré avec succès !", "success")
-    # On renvoie vers le téléchargement du PDF
-    return redirect(url_for('main.download_bordereau_pdf', id=nouveau_bordereau.id))
+    # On redirige vers le tableau des bordereaux au lieu du téléchargement PDF
+    return redirect(url_for('main.liste_bordereaux'))
 
 @main.route('/bordereaux/pdf/<int:id>')
 @login_required
@@ -1052,8 +1056,9 @@ def ajouter_notification():
     log_action("Ajout Notification", data['immatriculation'])
     db.session.commit()
     
+    # --- LA MODIFICATION EST ICI ---
     flash("Lettre de notification enregistrée avec succès !", "success")
-    return redirect(url_for('main.download_notification_pdf', id=nouvelle_notif.id))
+    return redirect(url_for('main.liste_notifications'))
 
 @main.route('/notifications/pdf/<int:id>')
 @login_required
@@ -1159,8 +1164,8 @@ def ajouter_pv():
     log_action("Génération PV Attribution", entreprise_nom)
     db.session.commit()
     
-    flash("Procès-Verbal d'attribution généré !", "success")
-    return redirect(url_for('main.download_pv_pdf', id=nouveau_pv.id))
+    flash("PV d'attribution enregistré avec succès !", "success")
+    return redirect(url_for('main.liste_pv'))
 
 @main.route('/pv-attribution/download/<int:id>')
 @login_required
@@ -1283,11 +1288,9 @@ def creer_lettre_invitation():
         log_action("Génération Lettre Invitation", immatriculation) 
         db.session.commit()
 
-        # 5. On génère et on affiche le PDF
-        from app.utils import generer_pdf_lettre_invitation
-        pdf_path = generer_pdf_lettre_invitation(form_data_dict)
-
-        return send_file(pdf_path, as_attachment=False)
+        # --- MODIFICATION ICI (On supprime la génération directe du PDF) ---
+        flash("Lettre d'invitation générée avec succès !", "success")
+        return redirect(url_for('main.creer_lettre_invitation'))
 
     # === PARTIE GET (Affichage de la page) ===
     candidats = Candidat.query.all()
@@ -1459,10 +1462,11 @@ def creer_contrat():
         from app.utils import generer_pdf_contrat
         chemin_pdf = generer_pdf_contrat(data_contrat)
         nom_fichier = f"Contrat_{candidat_gagnant.nom_entreprise.replace(' ', '_')}.pdf"
+        # --- NOUVEAU CODE À METTRE À LA PLACE ---
         flash("Contrat généré et sauvegardé avec succès !", "success")
-        return send_file(chemin_pdf, as_attachment=True, download_name=nom_fichier)
+        return redirect(url_for('main.creer_contrat'))
 
-    # 4. On envoie les données au fichier HTML
+    # 4. On envoie les données au fichier HTML (Partie GET, on ne touche pas)
     return render_template('formulaire_contrat.html', candidats=candidats, marches=marches, contrats=contrats_sauvegardes)
 
 
@@ -1620,19 +1624,9 @@ def creer_lettre_information():
     log_action("Ajout Lettre Information", immatriculation)
     db.session.commit()
 
-    # GÉNÉRATION DU PDF EN MÉMOIRE
-    buffer = io.BytesIO()
-    from app.utils import generer_pdf_lettre_information 
-    generer_pdf_lettre_information(buffer, data)
-    buffer.seek(0)
-    
+    # REDIRECTION VERS LE TABLEAU (Méthode Post-Redirect-Get)
     flash("Lettre d'information générée avec succès !", "success")
-    return send_file(
-        buffer,
-        as_attachment=False, 
-        download_name=f"Lettre_Information_{immatriculation.replace('/', '_')}.pdf",
-        mimetype='application/pdf'
-    )    
+    return redirect(url_for('main.lettres_information'))
 
 @main.route('/lettres_information', methods=['GET'])
 @login_required

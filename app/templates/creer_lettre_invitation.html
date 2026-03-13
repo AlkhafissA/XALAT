@@ -143,7 +143,7 @@
               >
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.drps') }}">DRPS</a>
+              <a class="nav-link" href="{{ url_for('main.drps') }}">DRP</a>
             </li>
             <li class="nav-item">
               <a
@@ -166,6 +166,19 @@
     </nav>
 
     <div class="container-fluid px-4 mt-5">
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for category, message in messages %}
+      <div
+        class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4"
+      >
+        {{ message }}
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+        ></button>
+      </div>
+      {% endfor %} {% endif %} {% endwith %}
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h3 class="fw-bold text-dark mb-1">
@@ -304,7 +317,6 @@
           <form
             method="POST"
             action="{{ url_for('main.creer_lettre_invitation') }}"
-            target="_blank"
           >
             <div class="modal-body p-4">
               <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
