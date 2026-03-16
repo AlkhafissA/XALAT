@@ -5,14 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Lettres d'Information - MCAT</title>
 
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 
     <style>
       :root {
@@ -105,42 +99,25 @@
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
       <div class="container-fluid px-4">
-        <a
-          class="navbar-brand d-flex align-items-center"
-          href="{{ url_for('main.tableau_de_bord') }}"
-        >
+        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.tableau_de_bord') }}">
           <span style="font-size: 1.5rem; margin-right: 10px">🏛️</span>
           <div style="line-height: 1">
             <div>MCAT</div>
-            <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7">
-              PORTAIL ADMIN
-            </div>
+            <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7">PORTAIL ADMIN</div>
           </div>
         </a>
 
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
           <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div
-          class="collapse navbar-collapse justify-content-center"
-          id="navbarNav"
-        >
+        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
           <ul class="navbar-nav">
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}"
-                >AGRÉMENTS</a
-              >
+              <a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}">AGRÉMENTS</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.liste_cotations') }}"
-                >COTATIONS</a
-              >
+              <a class="nav-link" href="{{ url_for('main.liste_cotations') }}">COTATIONS</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('main.drps') }}">DRP</a>
@@ -152,11 +129,7 @@
         </div>
 
         <div class="d-flex align-items-center">
-          <a
-            href="{{ url_for('main.logout') }}"
-            class="btn btn-outline-light btn-sm rounded-pill px-3"
-            >Déconnexion</a
-          >
+          <a href="{{ url_for('main.logout') }}" class="btn btn-outline-light btn-sm rounded-pill px-3">Déconnexion</a>
         </div>
       </div>
     </nav>
@@ -164,19 +137,11 @@
     <div class="container-fluid px-4 mt-5">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h3 class="fw-bold text-dark mb-1">
-            Lettres d'Information (Prestataires non retenus)
-          </h3>
-          <p class="text-muted small mb-0">
-            Historique des lettres d'information générées.
-          </p>
+          <h3 class="fw-bold text-dark mb-1">Lettres d'Information (Prestataires non retenus)</h3>
+          <p class="text-muted small mb-0">Historique des lettres d'information générées.</p>
         </div>
         <div>
-          <button
-            class="btn btn-nouveau shadow-sm text-nowrap"
-            data-bs-toggle="modal"
-            data-bs-target="#modalInformation"
-          >
+          <button class="btn btn-nouveau shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalInformation">
             + Nouvelle Lettre d'Information
           </button>
         </div>
@@ -197,21 +162,11 @@
             <tbody>
               {% if lettres %} {% for lettre in lettres %}
               <tr>
-                <td class="ps-4 fw-bold text-primary">
-                  N° {{ lettre.num_ordre }}
-                </td>
+                <td class="ps-4 fw-bold text-primary">N° {{ lettre.num_ordre }}</td>
                 <td>
-                  <span class="badge bg-secondary"
-                    >{{ lettre.immatriculation }}</span
-                  >
+                  <span class="badge bg-secondary">{{ lettre.immatriculation }}</span>
                 </td>
-                <td
-                  class="text-truncate"
-                  style="max-width: 250px"
-                  title="{{ lettre.objet_marche }}"
-                >
-                  {{ lettre.objet_marche }}
-                </td>
+                <td class="text-truncate" style="max-width: 250px" title="{{ lettre.objet_marche }}">{{ lettre.objet_marche }}</td>
                 <td>{{ lettre.date_commission }}</td>
                 <td class="text-end pe-4">
                   <div class="btn-group shadow-sm">
@@ -246,19 +201,9 @@
                       action="{{ url_for('main.supprimer_lettre_information', id=lettre.id) }}"
                       method="POST"
                       class="d-inline"
-                      onsubmit="
-                        return confirm(
-                          'Êtes-vous sûr de vouloir supprimer cette lettre ?',
-                        );
-                      "
+                      onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette lettre ?');"
                     >
-                      <button
-                        type="submit"
-                        class="btn btn-sm btn-outline-danger"
-                        title="Supprimer"
-                      >
-                        🗑️
-                      </button>
+                      <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">🗑️</button>
                     </form>
                   </div>
                 </td>
@@ -267,13 +212,8 @@
               <tr>
                 <td colspan="5" class="text-center py-5">
                   <div class="text-muted mb-3" style="font-size: 3rem">✉️</div>
-                  <h6 class="text-muted">
-                    Aucune lettre d'information affichée.
-                  </h6>
-                  <p class="small text-muted">
-                    Cliquez sur "+ Nouvelle Lettre d'Information" pour en
-                    générer une.
-                  </p>
+                  <h6 class="text-muted">Aucune lettre d'information affichée.</h6>
+                  <p class="small text-muted">Cliquez sur "+ Nouvelle Lettre d'Information" pour en générer une.</p>
                 </td>
               </tr>
               {% endif %}
@@ -287,29 +227,16 @@
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content shadow">
           <div class="modal-header bg-primary text-white">
-            <h5 class="modal-title fw-bold">
-              Lettre d'Information (Non retenus)
-            </h5>
-            <button
-              type="button"
-              class="btn-close btn-close-white"
-              data-bs-dismiss="modal"
-            ></button>
+            <h5 class="modal-title fw-bold">Lettre d'Information (Non retenus)</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
 
-          <form
-            action="{{ url_for('main.creer_lettre_information') }}"
-            method="POST"
-          >
+          <form action="{{ url_for('main.creer_lettre_information') }}" method="POST">
             <div class="modal-body p-4">
-              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
-                1. En-tête de la lettre
-              </h6>
+              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête de la lettre</h6>
 
               <div class="mb-3">
-                <label class="form-label fw-bold text-danger"
-                  >Nom de la Direction (Sous le logo MCAT)</label
-                >
+                <label class="form-label fw-bold text-danger">Nom de la Direction (Sous le logo MCAT)</label>
                 <input
                   type="text"
                   class="form-control"
@@ -322,97 +249,45 @@
               <div class="row g-3 mb-3">
                 <div class="col-md-3">
                   <label class="form-label fw-bold">N° d'ordre</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    name="num_ordre"
-                    placeholder="Ex: 123"
-                    required
-                  />
+                  <input type="text" class="form-control" name="num_ordre" placeholder="Ex: 123" required />
                 </div>
                 <div class="col-md-3">
                   <label class="form-label fw-bold">Suffixe Réf.</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    name="ref_service"
-                    value="MCAT/SG/DAGE/ms"
-                    required
-                  />
+                  <input type="text" class="form-control" name="ref_service" value="MCAT/SG/DAGE/ms" required />
                 </div>
                 <div class="col-md-3">
                   <label class="form-label fw-bold">Date lettre</label>
-                  <input
-                    type="date"
-                    class="form-control"
-                    name="date_lettre"
-                    required
-                  />
+                  <input type="date" class="form-control" name="date_lettre" required />
                 </div>
                 <div class="col-md-3">
-                  <label class="form-label fw-bold text-danger"
-                    >Signataire</label
-                  >
-                  <input
-                    type="text"
-                    class="form-control"
-                    name="signataire"
-                    value="Le Directeur"
-                    required
-                  />
+                  <label class="form-label fw-bold text-danger">Signataire</label>
+                  <input type="text" class="form-control" name="signataire" value="Le Directeur" required />
                 </div>
               </div>
 
-              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">
-                2. Informations du Marché
-              </h6>
+              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Informations du Marché</h6>
               <div class="row g-3 mb-3">
                 <div class="col-md-6">
                   <label class="form-label fw-bold">N° Immatriculation</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    name="immatriculation"
-                    placeholder="Ex: S_DAGE_198"
-                    required
-                  />
+                  <input type="text" class="form-control" name="immatriculation" placeholder="Ex: S_DAGE_198" required />
                 </div>
                 <div class="col-md-6">
                   <label class="form-label fw-bold">Date de commission</label>
-                  <input
-                    type="date"
-                    class="form-control"
-                    name="date_commission"
-                    required
-                  />
+                  <input type="date" class="form-control" name="date_commission" required />
                 </div>
               </div>
               <div class="mb-3">
-                <label class="form-label fw-bold"
-                  >Objet complet du marché</label
-                >
-                <input
-                  type="text"
-                  class="form-control"
-                  name="objet_marche"
-                  placeholder="Ex: entretien et nettoiement des locaux..."
-                  required
-                />
+                <label class="form-label fw-bold">Objet complet du marché</label>
+                <input type="text" class="form-control" name="objet_marche" placeholder="Ex: entretien et nettoiement des locaux..." required />
               </div>
 
-              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">
-                3. Prestataires non retenus
-              </h6>
+              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">3. Prestataires non retenus</h6>
               <div class="alert alert-light border small">
-                <i class="bi bi-info-circle"></i> Sélectionnez l'entreprise, son
-                adresse s'affichera automatiquement.
+                <i class="bi bi-info-circle"></i> Sélectionnez l'entreprise, son adresse s'affichera automatiquement.
               </div>
 
               <div class="table-responsive">
-                <table
-                  class="table table-bordered table-sm"
-                  id="tableauPrestatairesInfo"
-                >
+                <table class="table table-bordered table-sm" id="tableauPrestatairesInfo">
                   <thead class="table-light">
                     <tr>
                       <th style="width: 5%"></th>
@@ -424,40 +299,18 @@
                   <tbody id="tbody-prestataires">
                     <tr>
                       <td class="text-center align-middle">
-                        <button
-                          type="button"
-                          class="btn btn-sm btn-outline-danger border-0"
-                          onclick="supprimerLigneInfo(this)"
-                        >
-                          🗑️
-                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="supprimerLigneInfo(this)">🗑️</button>
                       </td>
                       <td>
-                        <select
-                          class="form-select form-select-sm"
-                          name="prestataire_id[]"
-                          onchange="updateAdresseInfo(this)"
-                          required
-                        >
+                        <select class="form-select form-select-sm" name="prestataire_id[]" onchange="updateAdresseInfo(this)" required>
                           <option value="">-- Choisir --</option>
                           {% for candidat in candidats %}
-                          <option
-                            value="{{ candidat.id }}"
-                            data-adresse="{{ candidat.adresse }}"
-                          >
-                            {{ candidat.nom_entreprise }}
-                          </option>
+                          <option value="{{ candidat.id }}" data-adresse="{{ candidat.adresse }}">{{ candidat.nom_entreprise }}</option>
                           {% endfor %}
                         </select>
                       </td>
                       <td>
-                        <input
-                          type="text"
-                          class="form-control form-control-sm"
-                          name="rc[]"
-                          placeholder="Ex: SN-DKR-..."
-                          required
-                        />
+                        <input type="text" class="form-control form-control-sm" name="rc[]" placeholder="Ex: SN-DKR-..." required />
                       </td>
                       <td>
                         <input
@@ -474,30 +327,15 @@
               </div>
 
               <div class="text-end mb-2">
-                <button
-                  type="button"
-                  class="btn btn-outline-primary btn-sm rounded-pill fw-bold"
-                  onclick="ajouterLigneInfo()"
-                >
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill fw-bold" onclick="ajouterLigneInfo()">
                   + Ajouter une entreprise
                 </button>
               </div>
             </div>
 
             <div class="modal-footer bg-light border-0">
-              <button
-                type="button"
-                class="btn btn-link text-muted"
-                data-bs-dismiss="modal"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                class="btn btn-primary px-5 fw-bold rounded-pill"
-              >
-                Générer le PDF
-              </button>
+              <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+              <button type="submit" class="btn btn-primary px-5 fw-bold rounded-pill">Générer le PDF</button>
             </div>
           </form>
         </div>
@@ -556,55 +394,22 @@
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow">
           <div class="modal-header bg-warning">
-            <h5 class="modal-title fw-bold text-dark">
-              Joindre la lettre signée
-            </h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-            ></button>
+            <h5 class="modal-title fw-bold text-dark">Joindre la lettre signée</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
 
-          <form
-            action="{{ url_for('main.uploader_scan') }}"
-            method="POST"
-            enctype="multipart/form-data"
-          >
+          <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
             <div class="modal-body p-4">
               <input type="hidden" name="type_doc" value="lettre_information" />
               <input type="hidden" name="doc_id" value="{{ lettre.id }}" />
-              <input
-                type="hidden"
-                name="page_retour"
-                value="main.lettres_information"
-              />
+              <input type="hidden" name="page_retour" value="main.lettres_information" />
 
-              <label class="form-label fw-bold"
-                >Sélectionnez la lettre scannée (PDF/Image) :</label
-              >
-              <input
-                type="file"
-                name="scan_file"
-                class="form-control"
-                accept=".pdf,.png,.jpg,.jpeg"
-                required
-              />
+              <label class="form-label fw-bold">Sélectionnez la lettre scannée (PDF/Image) :</label>
+              <input type="file" name="scan_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required />
             </div>
             <div class="modal-footer bg-light border-0">
-              <button
-                type="button"
-                class="btn btn-link text-muted"
-                data-bs-dismiss="modal"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                class="btn btn-warning px-4 rounded-pill fw-bold"
-              >
-                Uploader le Scan
-              </button>
+              <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+              <button type="submit" class="btn btn-warning px-4 rounded-pill fw-bold">Uploader le Scan</button>
             </div>
           </form>
         </div>

@@ -539,14 +539,23 @@ def generer_pdf_lettre_information(buffer, data):
 
     pdf.set_font("Arial", '', 10)
 
-    prestataires_liste = data.get('prestataires', [])
+    # CORRECTION 1 : On va chercher la clé 'perdants' qu'on a créée dans routes.py
+    prestataires_liste = data.get('perdants', [])
 
     if not prestataires_liste:
-        pdf.cell(largeur_col1 + largeur_col2, 7, "Aucun prestataire sélectionné", border=1, align='C', ln=1)
+        pdf.cell(largeur_col1 + largeur_col2, 7, "Aucun prestataire trouvé", border=1, align='C', ln=1)
     else:
         for candidat in prestataires_liste:
-            nom_entreprise = candidat.get('nom', 'Nom non renseigné')
-            chaine_adresse = candidat.get('adresse', 'Adresse non renseignée')
+            # CORRECTION 2 : On utilise 'nom_entreprise'
+            nom_entreprise = candidat.get('nom_entreprise', 'Nom non renseigné')
+            
+            # CORRECTION 3 : On formate l'adresse exactement comme sur votre modèle PDF
+            adresse_base = candidat.get('adresse', 'Adresse non renseignée')
+            rc = candidat.get('rc', 'Non renseigné')
+            ninea = candidat.get('ninea', 'Non renseigné')
+            tel = candidat.get('tel', 'Non renseigné')
+            
+            chaine_adresse = f"{adresse_base}, RC: {rc}, NINEA: {ninea}, Tél: {tel};"
             
             x_depart = pdf.get_x()
             y_depart = pdf.get_y()
@@ -575,7 +584,7 @@ def generer_pdf_lettre_information(buffer, data):
             
             # Reset au point le plus bas pour le candidat suivant
             pdf.set_xy(x_depart, y_max)
-
+            
     # --- 5. PIED DE PAGE ---
     pdf.set_auto_page_break(auto=False)
     pdf.set_y(-25)
@@ -1029,7 +1038,7 @@ def clean_text(text):
 def dessiner_en_tete(pdf, data):
     # Variables dynamiques
     direction_nom = data.get('direction_nom', "Direction de l'Administration Générale et de l'Equipement")
-    num_ordre = data.get('numero_lettre', '200')
+    num_ordre = data.get('num_ordre', '')
     ref_service = data.get('ref_service', 'MCAT/SG/DAGE/ms')
     date_lettre = data.get('date_lettre', '15 mars 2015')
     signataire = data.get('signataire', 'Le Directeur')

@@ -5,18 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mes Contrats - MCAT</title>
 
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" />
 
     <style>
       :root {
@@ -105,75 +96,43 @@
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
       <div class="container-fluid px-4">
-        <a
-          class="navbar-brand d-flex align-items-center"
-          href="{{ url_for('main.tableau_de_bord') }}"
-        >
+        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.tableau_de_bord') }}">
           <span style="font-size: 1.5rem; margin-right: 10px">🏛️</span>
           <div style="line-height: 1">
             <div>MCAT</div>
-            <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7">
-              PORTAIL ADMIN
-            </div>
+            <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7">PORTAIL ADMIN</div>
           </div>
         </a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
           <span class="navbar-toggler-icon"></span>
         </button>
-        <div
-          class="collapse navbar-collapse justify-content-center"
-          id="navbarNav"
-        >
+        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
           <ul class="navbar-nav">
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}"
-                >AGRÉMENTS</a
-              >
+              <a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}">AGRÉMENTS</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.liste_cotations') }}"
-                >COTATIONS</a
-              >
+              <a class="nav-link" href="{{ url_for('main.liste_cotations') }}">COTATIONS</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('main.drps') }}">DRP</a>
             </li>
             <li class="nav-item">
-              <a
-                class="nav-link active"
-                href="{{ url_for('main.creer_contrat') }}"
-                >CONTRATS</a
-              >
+              <a class="nav-link active" href="{{ url_for('main.creer_contrat') }}">CONTRATS</a>
             </li>
           </ul>
         </div>
         <div class="d-flex align-items-center">
-          <a
-            href="{{ url_for('main.logout') }}"
-            class="btn btn-outline-light btn-sm rounded-pill px-3"
-            >Déconnexion</a
-          >
+          <a href="{{ url_for('main.logout') }}" class="btn btn-outline-light btn-sm rounded-pill px-3">Déconnexion</a>
         </div>
       </div>
     </nav>
 
     <div class="container-fluid px-4 mt-5">
-      {% with messages = get_flashed_messages(with_categories=true) %} {% if
-      messages %} {% for category, message in messages %}
-      <div
-        class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4"
-      >
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4">
         {{ message }}
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="alert"
-        ></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>
       {% endfor %} {% endif %} {% endwith %}
 
@@ -183,11 +142,7 @@
           <p class="text-muted small mb-0">Historique des contrats générés.</p>
         </div>
         <div>
-          <button
-            class="btn btn-nouveau shadow-sm text-nowrap"
-            data-bs-toggle="modal"
-            data-bs-target="#modalNouveauContrat"
-          >
+          <button class="btn btn-nouveau shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalNouveauContrat">
             + Nouveau Contrat
           </button>
         </div>
@@ -211,16 +166,9 @@
                 <td class="ps-4 fw-bold">N° {{ contrat.id }}</td>
                 <td>{{ contrat.objet_marche[:50] }}...</td>
                 <td>{{ contrat.entreprise_nom }}</td>
-                <td class="fw-bold text-success">
-                  {{ contrat.montant_chiffres }} FCFA
-                </td>
+                <td class="fw-bold text-success">{{ contrat.montant_chiffres }} FCFA</td>
                 <td class="text-end pe-4">
-                  <a
-                    href="{{ url_for('main.telecharger_contrat', id=contrat.id) }}"
-                    class="btn btn-sm btn-outline-danger me-1"
-                  >
-                    📄 PDF
-                  </a>
+                  <a href="{{ url_for('main.telecharger_contrat', id=contrat.id) }}" class="btn btn-sm btn-outline-danger me-1"> 📄 PDF </a>
                   {% if contrat.fichier_scanne %}
                   <a
                     href="{{ url_for('main.voir_scan_contrat', id=contrat.id) }}"
@@ -245,18 +193,9 @@
                     action="{{ url_for('main.supprimer_contrat', id=contrat.id) }}"
                     method="POST"
                     class="d-inline"
-                    onsubmit="
-                      return confirm(
-                        'Êtes-vous sûr de vouloir supprimer ce contrat ?',
-                      );
-                    "
+                    onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce contrat ?');"
                   >
-                    <button
-                      type="submit"
-                      class="btn btn-sm btn-outline-secondary"
-                    >
-                      🗑️
-                    </button>
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">🗑️</button>
                   </form>
                 </td>
               </tr>
@@ -265,9 +204,7 @@
                 <td colspan="5" class="text-center py-5">
                   <div class="text-muted mb-3" style="font-size: 3rem">📄</div>
                   <h6 class="text-muted">Aucun contrat affiché.</h6>
-                  <p class="small text-muted">
-                    Cliquez sur "+ Nouveau Contrat" pour en générer un.
-                  </p>
+                  <p class="small text-muted">Cliquez sur "+ Nouveau Contrat" pour en générer un.</p>
                 </td>
               </tr>
               {% endif %}
@@ -282,105 +219,50 @@
         <div class="modal-content shadow">
           <div class="modal-header bg-primary text-white">
             <h5 class="modal-title fw-bold">Générer un Contrat</h5>
-            <button
-              type="button"
-              class="btn-close btn-close-white"
-              data-bs-dismiss="modal"
-            ></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <form method="POST" action="{{ url_for('main.creer_contrat') }}">
             <div class="modal-body p-4">
-              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
-                1. Références et Dates
-              </h6>
+              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. Références et Dates</h6>
               <div class="row g-3 mb-3">
                 <div class="col-md-4">
-                  <label class="form-label small fw-bold text-muted"
-                    >Numéro</label
-                  >
-                  <input
-                    type="text"
-                    name="numero"
-                    class="form-control border-primary"
-                    placeholder="ex: 00123"
-                  />
+                  <label class="form-label small fw-bold text-muted">Numéro</label>
+                  <input type="text" name="numero" class="form-control border-primary" placeholder="ex: 00123" />
                 </div>
                 <div class="col-md-4">
-                  <label class="form-label small fw-bold text-muted"
-                    >Réf. Service</label
-                  >
-                  <input
-                    type="text"
-                    name="ref_service"
-                    class="form-control border-primary"
-                    value="MTA/SG/DAGE/ges"
-                  />
+                  <label class="form-label small fw-bold text-muted">Réf. Service</label>
+                  <input type="text" name="ref_service" class="form-control border-primary" value="MTA/SG/DAGE/ges" />
                 </div>
                 <div class="col-md-4">
-                  <label class="form-label small fw-bold text-muted"
-                    >Date de la lettre</label
-                  >
-                  <input
-                    type="text"
-                    name="date_lettre"
-                    class="form-control border-primary"
-                    placeholder="ex: 12 février 2026"
-                  />
+                  <label class="form-label small fw-bold text-muted">Date de la lettre</label>
+                  <input type="text" name="date_lettre" class="form-control border-primary" placeholder="ex: 12 février 2026" />
                 </div>
               </div>
 
-              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">
-                2. Sélection du Marché & Titulaire
-              </h6>
+              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Sélection du Marché & Titulaire</h6>
               <div class="row g-3 mb-3">
                 <div class="col-md-6">
-                  <label class="form-label small fw-bold text-muted"
-                    >Sélectionner le Prestataire (Titulaire)</label
-                  >
-                  <select
-                    name="candidat_id"
-                    class="form-select border-primary"
-                    required
-                  >
+                  <label class="form-label small fw-bold text-muted">Sélectionner le Prestataire (Titulaire)</label>
+                  <select name="candidat_id" class="form-select border-primary" required>
                     <option value="">-- Choisir une entreprise --</option>
                     {% for c in candidats %}
-                    <option value="{{ c.id }}">
-                      {{ c.nom_entreprise }} (NINEA: {{ c.ninea }})
-                    </option>
+                    <option value="{{ c.id }}">{{ c.nom_entreprise }} (NINEA: {{ c.ninea }})</option>
                     {% endfor %}
                   </select>
-                  <small class="text-success" style="font-size: 0.75rem"
-                    >RC et Compte Bancaire récupérés automatiquement</small
-                  >
+                  <small class="text-success" style="font-size: 0.75rem">RC et Compte Bancaire récupérés automatiquement</small>
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label small fw-bold text-muted"
-                    >Sélectionner le Marché (Objet)</label
-                  >
-                  <select
-                    name="marche_id"
-                    class="form-select border-primary"
-                    required
-                  >
-                    <option value="">
-                      -- Choisir un marché (Lettre d'invitation) --
-                    </option>
+                  <label class="form-label small fw-bold text-muted">Sélectionner le Marché (Objet)</label>
+                  <select name="marche_id" class="form-select border-primary" required>
+                    <option value="">-- Choisir un marché (Lettre d'invitation) --</option>
                     {% for m in marches %}
-                    <option value="{{ m.id }}">
-                      {{ m.immatriculation }} - {{ m.objet_marche[:50] }}...
-                    </option>
+                    <option value="{{ m.id }}">{{ m.immatriculation }} - {{ m.objet_marche[:50] }}...</option>
                     {% endfor %}
                   </select>
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label small fw-bold text-muted"
-                    >Désigné sous le vocable (Page 2) :</label
-                  >
-                  <select
-                    name="vocable"
-                    class="form-select border-primary"
-                    required
-                  >
+                  <label class="form-label small fw-bold text-muted">Désigné sous le vocable (Page 2) :</label>
+                  <select name="vocable" class="form-select border-primary" required>
                     <option value="Prestataire" selected>Prestataire</option>
                     <option value="Fournisseur">Fournisseur</option>
                     <option value="Consultant">Consultant</option>
@@ -389,26 +271,14 @@
                 </div>
               </div>
 
-              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">
-                3. Informations Financières & Budgétaires
-              </h6>
+              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">3. Informations Financières & Budgétaires</h6>
               <div class="row g-3 mb-3">
                 <div class="col-md-4">
-                  <label class="form-label small fw-bold text-muted"
-                    >Année de Gestion</label
-                  >
-                  <input
-                    type="text"
-                    name="gestion_annee"
-                    class="form-control"
-                    value="2025"
-                    required
-                  />
+                  <label class="form-label small fw-bold text-muted">Année de Gestion</label>
+                  <input type="text" name="gestion_annee" class="form-control" value="2025" required />
                 </div>
                 <div class="col-md-8">
-                  <label class="form-label small fw-bold text-muted"
-                    >Montant du marché (en chiffres TTC)</label
-                  >
+                  <label class="form-label small fw-bold text-muted">Montant du marché (en chiffres TTC)</label>
                   <input
                     type="text"
                     id="montantInput"
@@ -420,10 +290,7 @@
                 </div>
                 <div class="col-md-12">
                   <label class="form-label small fw-bold text-muted"
-                    >Montant du marché (en lettres) -
-                    <span class="text-success"
-                      >Généré automatiquement</span
-                    ></label
+                    >Montant du marché (en lettres) - <span class="text-success">Généré automatiquement</span></label
                   >
                   <input
                     type="text"
@@ -439,36 +306,18 @@
 
               <div class="row g-3 mb-3">
                 <div class="col-md-6">
-                  <label class="form-label small fw-bold text-muted"
-                    >Financement</label
-                  >
-                  <input
-                    type="text"
-                    name="financement"
-                    class="form-control"
-                    value="Budget de Fonctionnement"
-                    required
-                  />
+                  <label class="form-label small fw-bold text-muted">Financement</label>
+                  <input type="text" name="financement" class="form-control" value="Budget de Fonctionnement" required />
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label small fw-bold text-muted"
-                    >Comptable assignataire</label
-                  >
-                  <input
-                    type="text"
-                    name="comptable"
-                    class="form-control"
-                    value="Payeur Général du Trésor (PGT)"
-                    required
-                  />
+                  <label class="form-label small fw-bold text-muted">Comptable assignataire</label>
+                  <input type="text" name="comptable" class="form-control" value="Payeur Général du Trésor (PGT)" required />
                 </div>
               </div>
 
               <div class="row g-3 mb-3">
                 <div class="col-md-8">
-                  <label class="form-label small fw-bold text-muted"
-                    >Imputation budgétaire</label
-                  >
+                  <label class="form-label small fw-bold text-muted">Imputation budgétaire</label>
                   <input
                     type="text"
                     name="imputation"
@@ -478,33 +327,14 @@
                   />
                 </div>
                 <div class="col-md-4">
-                  <label class="form-label small fw-bold text-muted"
-                    >Programme</label
-                  >
-                  <input
-                    type="text"
-                    name="programme"
-                    class="form-control"
-                    placeholder="Ex: 1579"
-                    required
-                  />
+                  <label class="form-label small fw-bold text-muted">Programme</label>
+                  <input type="text" name="programme" class="form-control" placeholder="Ex: 1579" required />
                 </div>
               </div>
             </div>
             <div class="modal-footer bg-light border-0">
-              <button
-                type="button"
-                class="btn btn-link text-muted"
-                data-bs-dismiss="modal"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                class="btn btn-primary px-5 fw-bold rounded-pill"
-              >
-                Générer le Contrat
-              </button>
+              <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+              <button type="submit" class="btn btn-primary px-5 fw-bold rounded-pill">Générer le Contrat</button>
             </div>
           </form>
         </div>
@@ -516,9 +346,7 @@
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         const montantInput = document.getElementById("montantInput");
-        const montantLettresInput = document.getElementById(
-          "montantLettresInput",
-        );
+        const montantLettresInput = document.getElementById("montantLettresInput");
 
         function numberToWords(number) {
           let n = parseInt(number.toString().replace(/[\s\D]/g, ""), 10);
@@ -547,18 +375,7 @@
             "dix-huit",
             "dix-neuf",
           ];
-          const tens = [
-            "",
-            "",
-            "vingt",
-            "trente",
-            "quarante",
-            "cinquante",
-            "soixante",
-            "soixante-dix",
-            "quatre-vingt",
-            "quatre-vingt-dix",
-          ];
+          const tens = ["", "", "vingt", "trente", "quarante", "cinquante", "soixante", "soixante-dix", "quatre-vingt", "quatre-vingt-dix"];
 
           function convertLess1000(num) {
             let res = "";
@@ -577,8 +394,7 @@
                 if (d === 7 || d === 9) {
                   res += tens[d - 1] + "-" + units[10 + u] + " ";
                 } else {
-                  res +=
-                    tens[d] + (u === 1 && d !== 8 ? " et " : u > 0 ? "-" : " ");
+                  res += tens[d] + (u === 1 && d !== 8 ? " et " : u > 0 ? "-" : " ");
                   if (u > 0 && !(u === 1 && d !== 8)) res += units[u] + " ";
                   else if (u === 1 && d !== 8) res += "un ";
                 }
@@ -596,14 +412,10 @@
           n %= 1000;
 
           if (billions > 0) {
-            result +=
-              convertLess1000(billions) +
-              (billions > 1 ? "milliards " : "milliard ");
+            result += convertLess1000(billions) + (billions > 1 ? "milliards " : "milliard ");
           }
           if (millions > 0) {
-            result +=
-              convertLess1000(millions) +
-              (millions > 1 ? "millions " : "million ");
+            result += convertLess1000(millions) + (millions > 1 ? "millions " : "million ");
           }
           if (thousands > 0) {
             if (thousands === 1) result += "mille ";
@@ -633,54 +445,21 @@
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow">
           <div class="modal-header bg-warning">
-            <h5 class="modal-title fw-bold text-dark">
-              Joindre le contrat signé
-            </h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-            ></button>
+            <h5 class="modal-title fw-bold text-dark">Joindre le contrat signé</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
 
-          <form
-            action="{{ url_for('main.uploader_scan') }}"
-            method="POST"
-            enctype="multipart/form-data"
-          >
+          <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
             <div class="modal-body p-4">
               <input type="hidden" name="type_doc" value="contrat" />
               <input type="hidden" name="doc_id" value="{{ contrat.id }}" />
-              <input
-                type="hidden"
-                name="page_retour"
-                value="main.creer_contrat"
-              />
-              <label class="form-label fw-bold"
-                >Sélectionnez le contrat scanné (PDF/Image) :</label
-              >
-              <input
-                type="file"
-                name="scan_file"
-                class="form-control"
-                accept=".pdf,.png,.jpg,.jpeg"
-                required
-              />
+              <input type="hidden" name="page_retour" value="main.creer_contrat" />
+              <label class="form-label fw-bold">Sélectionnez le contrat scanné (PDF/Image) :</label>
+              <input type="file" name="scan_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required />
             </div>
             <div class="modal-footer bg-light border-0">
-              <button
-                type="button"
-                class="btn btn-link text-muted"
-                data-bs-dismiss="modal"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                class="btn btn-warning px-4 rounded-pill fw-bold"
-              >
-                Uploader le Scan
-              </button>
+              <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+              <button type="submit" class="btn btn-warning px-4 rounded-pill fw-bold">Uploader le Scan</button>
             </div>
           </form>
         </div>

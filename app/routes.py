@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import io
 from app.models import ArchiveDocument
 from app.models import Bordereau 
-from app.models import LettreNotification, LettreInvitation, Contrat, LettreInformation
+from app.models import LettreNotification, LettreInvitation, Contrat, LettreInformation, LogAction
 from app.models import Candidat, LettreNotification, ProcesVerbal
 from app.utils import generer_pdf_bordereau, generer_pdf_contrat
 from app.utils import generer_pdf_pv_attribution
@@ -967,6 +967,40 @@ def supprimer_bordereau(id):
     flash('Bordereau et ses fichiers associés supprimés.', 'success')
     return redirect(url_for('main.liste_bordereaux'))
 
+# NOUVEAU : La route attend maintenant le numéro du bordereau ET l'immatriculation
+@main.route('/api/get_infos_bordereau')
+@login_required
+def get_infos_bordereau():
+    # 1. On récupère les informations envoyées par le JavaScript de manière sécurisée
+    numero_bordereau = request.args.get('bordereau', '').strip()
+    immatriculation = request.args.get('immat', '').strip()
+    
+    tous_les_bordereaux = Bordereau.query.all()
+    
+    for bordereau in tous_les_bordereaux:
+        # 2. On compare en nettoyant les espaces superflus avec .strip()
+        if str(bordereau.numero).strip() == numero_bordereau:
+            dossiers = bordereau.get_dossiers() 
+            
+            for dossier in dossiers:
+                # 3. Dans votre HTML, vous aviez appelé ça "immatriculation" et "label"
+                ref_dossier = str(dossier.get('immatriculation', '') or dossier.get('ref', '')).strip()
+                
+                if ref_dossier == immatriculation:
+                    # BINGO ! On récupère le texte ("label" ou "objet")
+                    texte_objet = dossier.get('label', '') or dossier.get('objet', '')
+                    
+                    return jsonify({
+                        "success": True,
+                        "objet": texte_objet,
+                        "numero_bordereau": bordereau.numero,
+                        "service_ref": bordereau.service_ref, 
+                        "direction_name": bordereau.direction_name 
+                    })
+                
+    # Si on parcourt tout sans rien trouver :
+    return jsonify({"success": False, "message": "Dossier non trouvé"})
+
 @main.route('/bordereaux/export')
 @login_required
 def exporter_bordereaux():
@@ -1013,53 +1047,218 @@ def get_adresse(id):
 def liste_notifications():
     notifications = LettreNotification.query.order_by(LettreNotification.id.desc()).all()
     candidats = Candidat.query.order_by(Candidat.nom_entreprise).all()
-    return render_template('liste_notifications.html', notifications=notifications, candidats=candidats)
+    
+    # --- NOUVEAU : On prépare la liste des Lettres d'Invitation pour le menu déroulant ---
+    invitations_brutes = LettreInvitation.query.order_by(LettreInvitation.id.desc()).all()
+    lettres_invitation = []
+    
+    for inv in invitations_brutes:
+        if inv.form_data:
+            try:
+                data = json.loads(inv.form_data)
+                # On récupère le num_ordre (Réf) depuis le JSON
+                num_ordre = data.get('num_ordre', 'Sans Réf')
+                lettres_invitation.append({
+                    'immatriculation': inv.immatriculation,
+                    'num_ordre': num_ordre,
+                    'objet': inv.objet_marche
+                })
+            except:
+                pass
+
+    return render_template('liste_notifications.html', 
+                           notifications=notifications, 
+                           candidats=candidats, 
+                           lettres_invitation=lettres_invitation) # On envoie la liste au HTML
+
+@main.route('/api/get_infos_invitation')
+@login_required
+def get_infos_invitation():
+    immatriculation = request.args.get('immat', '').strip()
+    
+    if not immatriculation:
+        return jsonify({"success": False, "message": "Immatriculation vide."})
+
+    lettre = LettreInvitation.query.filter_by(immatriculation=immatriculation).first()
+    
+    if lettre and lettre.form_data:
+        try:
+            data = json.loads(lettre.form_data)
+            
+            # --- CORRECTION : NETTOYAGE DE LA DIRECTION ---
+            nom_direction = data.get('direction_nom') or data.get('direction_name') or data.get('nom_direction') or data.get('direction') or data.get('direction_beneficiaire') or data.get('direction_retrait_pv')
+        
+            if isinstance(nom_direction, str):
+                nom_direction = nom_direction.strip() # Retire les espaces fantômes
+                
+            if not nom_direction:
+                nom_direction = "La Direction de l'Administration Générale et de l'Equipement"
+            # -----------------------------------------------
+            
+            # --- CORRECTION : NETTOYAGE DES PRESTATAIRES ---
+            prestataires_bruts = data.get('prestataires', [])
+            prestataires_propres = []
+            
+            for p in prestataires_bruts:
+                nom = p.get('nom_entreprise') or p.get('nom')
+                p_id = p.get('id') or p.get('candidat_id') or p.get('prestataire_id')
+                
+                # Si on n'a pas l'ID mais qu'on a le nom, on cherche l'ID dans la base de données !
+                if not p_id and nom:
+                    candidat_db = Candidat.query.filter(Candidat.nom_entreprise.ilike(f"%{nom}%")).first()
+                    if candidat_db:
+                        p_id = candidat_db.id
+                
+                # On n'ajoute que les prestataires qui ont bien un ID et un Nom valides
+                if nom and p_id:
+                    prestataires_propres.append({
+                        "id": p_id,
+                        "nom": nom
+                    })
+            # -----------------------------------------------
+            
+            return jsonify({
+                "success": True,
+                "objet": lettre.objet_marche,
+                "num_ordre": data.get('num_ordre', ''), 
+                "ref_service": data.get('ref_service', ''),
+                "direction_name": nom_direction, 
+                "prestataires": prestataires_propres 
+            })
+        except json.JSONDecodeError:
+            return jsonify({"success": False, "message": "Erreur JSON."})
+            
+    return jsonify({"success": False, "message": "Aucune lettre trouvée."})
+
+@main.route('/info_depuis_notif/<path:immatriculation>')
+@login_required
+def info_depuis_notif(immatriculation):
+    # On cherche la lettre d'information qui correspond à cette immatriculation
+    lettre_info = LettreInformation.query.filter_by(immatriculation=immatriculation).order_by(LettreInformation.id.desc()).first()
+    
+    if lettre_info:
+        # Si on la trouve, on lance le téléchargement direct !
+        return redirect(url_for('main.telecharger_lettre_information', id=lettre_info.id))
+    else:
+        # Sinon, on affiche le message d'erreur
+        flash("Aucune lettre d'information n'a été générée pour ce marché (peut-être qu'il n'y avait pas de perdants).", "warning")
+        return redirect(url_for('main.liste_notifications'))
 
 @main.route('/notifications/ajouter', methods=['POST'])
 @login_required
 def ajouter_notification():
+    immatriculation = request.form.get('immatriculation')
     prestataire_id = request.form.get('prestataire_id_notif')
-    destinataire_nom = "Non renseignée"
-    destinataire_adresse = ""
-    destinataire_tel = ""
     
-    if prestataire_id:
-        candidat = db.session.get(Candidat, int(prestataire_id))
-        if candidat:
-            destinataire_nom = candidat.nom_entreprise
-            lieu = f"{candidat.adresse or ''} {candidat.ville or ''}".strip()
-            destinataire_adresse = lieu if lieu else "Adresse non renseignée"
-            destinataire_tel = candidat.telephone or "Non renseigné"
+    # --- LOGS DE DÉBUT ---
+    print("\n" + "="*50)
+    print(f"🛠️ DEBUG - GÉNÉRATION TRIPLE (NOTIF + INFO + PV) POUR : {immatriculation}")
+    
+    if not prestataire_id or prestataire_id == 'undefined':
+        flash("Erreur : L'entreprise gagnante n'a pas d'ID valide.", "danger")
+        return redirect(url_for('main.liste_notifications'))
 
-    data = {
+    # --- 1. RÉCUPÉRATION DES DONNÉES DU GAGNANT ---
+    candidat_gagnant = db.session.get(Candidat, int(prestataire_id))
+    destinataire_nom = candidat_gagnant.nom_entreprise if candidat_gagnant else "Non renseigné"
+    
+    # Préparation des données communes
+    objet_marche = request.form.get('objet_marche')
+    direction_name = request.form.get('direction_name')
+    date_commission = request.form.get('date_commission')
+    num_ordre = request.form.get('num_ordre', '............')
+    date_lettre = request.form.get('date_lettre')
+    signataire = request.form.get('signataire', 'Le Directeur,')
+    
+    # 👇 NOUVEAU : On récupère les deux nouveaux champs du formulaire web 👇
+    adresse_direction = request.form.get('adresse_direction', 'Route des Almadies, Dakar')
+    signataire_bas = request.form.get('signataire_bas', "Le Directeur de l'Administration\nGénérale et de l'Equipement")
+
+    # --- 2. CRÉATION DE LA NOTIFICATION (Gagnant) ---
+    data_notif = {
         'ref_service': request.form.get('ref_service'),
-        'direction_name': request.form.get('direction_name'),
-        'signataire': request.form.get('signataire'),
-        'civilite_representant': request.form.get('civilite_representant', 'Monsieur le Directeur Général'),
-        'objet_marche': request.form.get('objet_marche'),
-        'immatriculation': request.form.get('immatriculation'),
-        'date_commission': request.form.get('date_commission'),
-        'num_ordre': request.form.get('num_ordre', '............'),
-        'date_lettre': request.form.get('date_lettre'),
+        'direction_name': direction_name,
+        'signataire': signataire,
+        'civilite_representant': request.form.get('civilite_representant'),
+        'objet_marche': objet_marche,
+        'immatriculation': immatriculation,
+        'date_commission': date_commission,
+        'num_ordre': num_ordre,
+        'date_lettre': date_lettre,
         'destinataire_nom': destinataire_nom,
-        'destinataire_adresse': destinataire_adresse,
-        'destinataire_tel': destinataire_tel
+        'destinataire_adresse': f"{candidat_gagnant.adresse or ''} {candidat_gagnant.ville or ''}".strip(),
+        'destinataire_tel': candidat_gagnant.telephone or "Non renseigné"
     }
-
     nouvelle_notif = LettreNotification(
-        immatriculation=data['immatriculation'],
-        objet_marche=data['objet_marche'],
+        immatriculation=immatriculation,
+        objet_marche=objet_marche,
         entreprise=destinataire_nom,
-        form_data=json.dumps(data)
+        form_data=json.dumps(data_notif)
     )
     db.session.add(nouvelle_notif)
-    log_action("Ajout Notification", data['immatriculation'])
-    db.session.commit()
+
+   # --- 3. CRÉATION AUTOMATIQUE DU PV D'ATTRIBUTION ---
+    data_pv = {
+        'direction_name': direction_name,
+        'num_ordre': num_ordre,
+        'ref_service': data_notif['ref_service'],
+        'date_lettre': date_lettre,
+        'signataire': signataire,
+        'date_commission': date_commission,
+        'entreprise_nom': destinataire_nom, 
+        'immatriculation': immatriculation,
+        'objet_marche': objet_marche,
+        
+        # 👇 MISE À JOUR : On utilise les variables qu'on a récupérées en haut 👇
+        'adresse_direction': adresse_direction, 
+        'signataire_bas': signataire_bas 
+    }
     
-    # --- LA MODIFICATION EST ICI ---
-    flash("Lettre de notification enregistrée avec succès !", "success")
+    nouveau_pv = ProcesVerbal(
+        numero_drp=immatriculation,
+        objet=objet_marche,
+        entreprise=destinataire_nom,
+        form_data=json.dumps(data_pv)
+    )
+    db.session.add(nouveau_pv)
+    print(f"✅ DEBUG - PV d'Attribution créé pour {destinataire_nom}")
+    
+    # --- 4. GESTION DES PERDANTS (LETTRE D'INFORMATION) ---
+    lettre_invit = LettreInvitation.query.filter_by(immatriculation=immatriculation).first()
+    candidats_perdants_pdf = []
+    if lettre_invit and lettre_invit.form_data:
+        invit_data = json.loads(lettre_invit.form_data)
+        prestataires_invites = invit_data.get('prestataires', [])
+        for p in prestataires_invites:
+            nom_p = p.get('nom')
+            if nom_p and nom_p != destinataire_nom:
+                candidats_perdants_pdf.append({
+                    'nom_entreprise': nom_p,
+                    'adresse': p.get('adresse', ''),
+                    'rc': p.get('rc', 'N/A'),
+                    'ninea': p.get('ninea', 'N/A'),
+                    'tel': p.get('telephone', 'N/A')
+                })
+
+    if candidats_perdants_pdf:
+        data_info = data_pv.copy() # On reprend les bases
+        data_info['perdants'] = candidats_perdants_pdf
+        nouvelle_info = LettreInformation(
+            immatriculation=immatriculation,
+            objet_marche=objet_marche,
+            form_data=json.dumps(data_info)
+        )
+        db.session.add(nouvelle_info)
+        print(f"✅ DEBUG - Lettre d'Information créée ({len(candidats_perdants_pdf)} perdants)")
+
+    # --- FINALISATION ---
+    db.session.commit()
+    log_action("Génération Complète Marché", immatriculation)
+    
+    flash(f"Succès ! Notification, Information et PV d'Attribution générés pour {immatriculation}", "success")
     return redirect(url_for('main.liste_notifications'))
 
+# --- ROUTE PDF NOTIFICATION (Gagnant) - DÉJÀ EXISTANTE ---
 @main.route('/notifications/pdf/<int:id>')
 @login_required
 def download_notification_pdf(id):
@@ -1075,6 +1274,32 @@ def download_notification_pdf(id):
         buffer, 
         as_attachment=True, 
         download_name=f"Lettre_Notification_{notif.immatriculation}.pdf", 
+        mimetype='application/pdf'
+    )
+
+
+# --- NOUVELLE ROUTE PDF INFORMATION (Perdants) ---
+@main.route('/informations/pdf_by_immat/<immatriculation>')
+@login_required
+def download_information_pdf(immatriculation):
+    info = LettreInformation.query.filter_by(immatriculation=immatriculation).order_by(LettreInformation.id.desc()).first()
+    
+    if not info:
+        flash("Aucune lettre d'information trouvée pour ce marché.", "danger")
+        return redirect(url_for('main.liste_notifications'))
+
+    data = json.loads(info.form_data)
+    
+    buffer = io.BytesIO()
+    # ATTENTION : Il faudra créer cette fonction generer_pdf_lettre_information plus tard !
+    from app.utils import generer_pdf_lettre_information 
+    generer_pdf_lettre_information(buffer, data)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer, 
+        as_attachment=True, 
+        download_name=f"Lettre_Information_{info.immatriculation}.pdf", 
         mimetype='application/pdf'
     )
 
@@ -1229,19 +1454,43 @@ def supprimer_pv(id):
 @login_required
 def creer_lettre_invitation():
     import json
-    
+    from datetime import datetime  # <-- NOUVEAU : On importe l'outil pour lire les dates
+
     if request.method == 'POST':
-        # 1. On récupère les informations générales du formulaire
+        # 1. On récupère les informations générales simples
         immatriculation = request.form.get('immatriculation')
         objet_marche = request.form.get('objet_marche')
         num_ordre = request.form.get('num_ordre', '')
         ref_service = request.form.get('ref_service', '')
-        date_lettre = request.form.get('date_lettre', '')
         signataire = request.form.get('signataire', '')
-        date_heure_limite = request.form.get('date_heure_limite')
         adresse_depot = request.form.get('adresse_depot')
         lieu_ouverture = request.form.get('lieu_ouverture')
         direction_nom = request.form.get('direction_nom', "Direction de l'Administration Générale et de l'Equipement")
+
+        # --- NOUVEAU : TRADUCTION DES DATES EN FRANÇAIS ---
+        mois_fr = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+        jours_fr = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+
+        # Traduction de la Date de la lettre (ex: 2026-03-14 -> 14 mars 2026)
+        date_lettre_brute = request.form.get('date_lettre', '')
+        date_lettre = date_lettre_brute
+        if date_lettre_brute:
+            try:
+                dt_lettre = datetime.strptime(date_lettre_brute, '%Y-%m-%d')
+                date_lettre = f"{dt_lettre.day} {mois_fr[dt_lettre.month - 1]} {dt_lettre.year}"
+            except ValueError:
+                pass
+
+        # Traduction de la Date et heure limite (ex: 2026-03-14T10:25 -> samedi 14 mars 2026 à 10 heures 25 minutes)
+        date_limite_brute = request.form.get('date_heure_limite')
+        date_heure_limite = date_limite_brute
+        if date_limite_brute:
+            try:
+                dt_limite = datetime.strptime(date_limite_brute, '%Y-%m-%dT%H:%M')
+                date_heure_limite = f"{jours_fr[dt_limite.weekday()]} {dt_limite.day} {mois_fr[dt_limite.month - 1]} {dt_limite.year} à {dt_limite.hour} heures {dt_limite.minute:02d} minute{'s' if dt_limite.minute > 1 else ''}"
+            except ValueError:
+                pass
+        # --------------------------------------------------
 
         # 2. On récupère la liste des prestataires cochés
         prestataires_ids = request.form.getlist('prestataires_ids')
@@ -1292,7 +1541,9 @@ def creer_lettre_invitation():
         flash("Lettre d'invitation générée avec succès !", "success")
         return redirect(url_for('main.creer_lettre_invitation'))
 
-    # === PARTIE GET (Affichage de la page) ===
+    # === DÉBUT DES MODIFICATIONS POUR LA PARTIE GET ===
+    
+    # 1. On récupère les données habituelles
     candidats = Candidat.query.all()
     lettres_db = LettreInvitation.query.order_by(LettreInvitation.id.desc()).all()
     lettres_pour_tableau = []
@@ -1307,8 +1558,44 @@ def creer_lettre_invitation():
             'date_heure_limite': data.get('date_heure_limite', 'Non défini'),
             'fichier_scanne': lettre.fichier_scanne
         })
-
-    return render_template('creer_lettre_invitation.html', candidats=candidats, lettres=lettres_pour_tableau)
+# 2. --- NOUVEAU : Préparation GROUPÉE par Bordereau ---
+    lettres_db = LettreInvitation.query.all()
+    tous_les_bordereaux = Bordereau.query.order_by(Bordereau.id.desc()).all()
+    
+    immatriculations_deja_utilisees = [lettre.immatriculation.strip() for lettre in lettres_db if lettre.immatriculation]
+    
+    # On va créer une liste de groupes (chaque groupe = 1 bordereau)
+    groupes_bordereaux = [] 
+    
+    for b in tous_les_bordereaux:
+        dossiers = b.get_dossiers()
+        dossiers_a_afficher = [] # Les dossiers restants pour CE bordereau
+        
+        for d in dossiers:
+            ref = d.get('ref')
+            objet_marche = d.get('objet', 'Objet non précisé') # On récupère aussi le nom du marché !
+            
+            if ref:
+                ref = ref.strip()
+                if ref not in immatriculations_deja_utilisees:
+                    # On crée une belle étiquette avec le N° et l'objet
+                    # Exemple: "N°F_DPT_126 - Fourniture Bureaux"
+                    dossiers_a_afficher.append({
+                        'immatriculation': ref,
+                        'label': f"N° {ref} - {objet_marche}"
+                    })
+                    
+        # Si le bordereau contient au moins 1 dossier non traité, on ajoute le groupe entier !
+        if dossiers_a_afficher:
+            groupes_bordereaux.append({
+                'numero_bordereau': b.numero,
+                'nombre_dossiers': len(dossiers_a_afficher),
+                'dossiers': dossiers_a_afficher
+            })
+    return render_template('creer_lettre_invitation.html', 
+                           candidats=candidats, 
+                           lettres=lettres_pour_tableau, # (ou juste 'lettres' selon votre ancien code)
+                           groupes_bordereaux=groupes_bordereaux)
 
 @main.route('/telecharger_lettre/<int:id>')
 @login_required
@@ -2085,3 +2372,25 @@ def secure_download(folder, filename):
         abort(404)
         
     return send_from_directory(target_dir, filename)
+
+
+@main.route('/vider_logs_securite', methods=['POST'])
+@login_required
+def vider_logs_securite():
+    # 1. Vérification de sécurité stricte
+    if current_user.role != 'superadmin':
+        flash("Action non autorisée.", "danger")
+        return redirect(url_for('main.tableau_de_bord'))
+    
+    try:
+        # 2. On supprime TOUTES les lignes de la table LogAction
+        LogAction.query.delete()
+        db.session.commit()
+        
+        # 3. Message de succès et redirection
+        flash("Tous les logs de sécurité ont été effacés définitivement.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Une erreur est survenue lors du nettoyage : {str(e)}", "danger")
+        
+    return redirect(url_for('main.super_dashboard'))

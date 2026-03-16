@@ -5,14 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tableau de Bord - MCAT</title>
 
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
 
     <style>
       :root {
@@ -195,85 +189,50 @@
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
       <div class="container-fluid px-4">
-        <a
-          class="navbar-brand d-flex align-items-center"
-          href="{{ url_for('main.tableau_de_bord') }}"
-        >
+        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.tableau_de_bord') }}">
           <span style="font-size: 1.5rem; margin-right: 10px">🏛️</span>
           <div style="line-height: 1">
             <div>MCAT</div>
-            <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7">
-              PORTAIL ADMIN
-            </div>
+            <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7">PORTAIL ADMIN</div>
           </div>
         </a>
 
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
           <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div
-          class="collapse navbar-collapse justify-content-center"
-          id="navbarNav"
-        >
+        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
           <ul class="navbar-nav">
             <li class="nav-item">
-              <a
-                class="nav-link active"
-                href="{{ url_for('main.tableau_de_bord') }}"
-                >AGRÉMENTS</a
-              >
+              <a class="nav-link active" href="{{ url_for('main.tableau_de_bord') }}">AGRÉMENTS</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.liste_cotations') }}"
-                >COTATIONS</a
-              >
+              <a class="nav-link" href="{{ url_for('main.liste_cotations') }}">COTATIONS</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('main.drps') }}">DRP</a>
             </li>
             <li class="nav-item">
-              <a
-                class="nav-link fw-bold text-warning"
-                href="{{ url_for('main.page_archives') }}"
-              >
-                🗄️ ARCHIVES GLOBALES
-              </a>
+              <a class="nav-link fw-bold text-warning" href="{{ url_for('main.page_archives') }}"> 🗄️ ARCHIVES GLOBALES </a>
             </li>
           </ul>
         </div>
 
         <div class="d-flex align-items-center">
-          <a
-            href="{{ url_for('main.logout') }}"
-            class="btn btn-outline-light btn-sm rounded-pill px-3"
-          >
-            Déconnexion
-          </a>
+          <a href="{{ url_for('main.logout') }}" class="btn btn-outline-light btn-sm rounded-pill px-3"> Déconnexion </a>
         </div>
       </div>
     </nav>
 
     <div class="container-fluid px-4 mt-4">
-      {% with messages = get_flashed_messages(with_categories=true) %} {% if
-      messages %} {% for category, message in messages %}
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
       <div
         class="alert alert-{{ category if category != 'message' else 'info' }} border-0 shadow-sm alert-dismissible fade show mb-4"
         role="alert"
         style="border-radius: 12px"
       >
         {{ message }}
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="alert"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
       {% endfor %} {% endif %} {% endwith %}
 
@@ -282,37 +241,23 @@
           <div class="card card-stat p-3">
             <div class="d-flex justify-content-between align-items-center">
               <div>
-                <p class="text-muted mb-0 small text-uppercase fw-bold">
-                  Total Dossiers
-                </p>
-                <h4 class="mb-0 fw-bold text-dark mt-1">
-                  {{ candidats|length }}
-                </h4>
+                <p class="text-muted mb-0 small text-uppercase fw-bold">Total Dossiers</p>
+                <h4 class="mb-0 fw-bold text-dark mt-1">{{ candidats|length }}</h4>
               </div>
-              <div class="stat-icon bg-primary bg-opacity-10 text-primary">
-                📂
-              </div>
+              <div class="stat-icon bg-primary bg-opacity-10 text-primary">📂</div>
             </div>
           </div>
         </div>
 
-        {% set nb_attente = 0 %} {% for c in candidats %}{% if "attente" in
-        c.statut %}{% set nb_attente = nb_attente + 1 %}{% endif %}{% endfor %}
+        {% set nb_attente = 0 %} {% for c in candidats %}{% if "attente" in c.statut %}{% set nb_attente = nb_attente + 1 %}{% endif %}{% endfor %}
         <div class="col-xl-3 col-sm-6">
           <div class="card card-stat p-3">
             <div class="d-flex justify-content-between align-items-center">
               <div>
-                <p class="text-muted mb-0 small text-uppercase fw-bold">
-                  En Attente
-                </p>
-                <h4 class="mb-0 fw-bold text-warning mt-1">
-                  {{ candidats | selectattr("statut", "equalto", "En attente") |
-                  list | length }}
-                </h4>
+                <p class="text-muted mb-0 small text-uppercase fw-bold">En Attente</p>
+                <h4 class="mb-0 fw-bold text-warning mt-1">{{ candidats | selectattr("statut", "equalto", "En attente") | list | length }}</h4>
               </div>
-              <div class="stat-icon bg-warning bg-opacity-10 text-warning">
-                ⏳
-              </div>
+              <div class="stat-icon bg-warning bg-opacity-10 text-warning">⏳</div>
             </div>
           </div>
         </div>
@@ -321,31 +266,19 @@
           <div class="card card-stat p-3">
             <div class="d-flex justify-content-between align-items-center">
               <div>
-                <p class="text-muted mb-0 small text-uppercase fw-bold">
-                  Validés
-                </p>
-                <h4 class="mb-0 fw-bold text-success mt-1">
-                  {{ candidats | selectattr("statut", "equalto", "Retenu") |
-                  list | length }}
-                </h4>
+                <p class="text-muted mb-0 small text-uppercase fw-bold">Validés</p>
+                <h4 class="mb-0 fw-bold text-success mt-1">{{ candidats | selectattr("statut", "equalto", "Retenu") | list | length }}</h4>
               </div>
-              <div class="stat-icon bg-success bg-opacity-10 text-success">
-                ✅
-              </div>
+              <div class="stat-icon bg-success bg-opacity-10 text-success">✅</div>
             </div>
           </div>
         </div>
 
         <div class="col-xl-3 col-sm-6">
-          <a
-            href="{{ url_for('main.afficher_formulaire') }}"
-            class="text-decoration-none"
-          >
+          <a href="{{ url_for('main.afficher_formulaire') }}" class="text-decoration-none">
             <div
               class="card card-stat p-3 bg-primary text-white h-100 d-flex justify-content-center align-items-center border-0"
-              style="
-                background: linear-gradient(135deg, #003366 0%, #0056b3 100%);
-              "
+              style="background: linear-gradient(135deg, #003366 0%, #0056b3 100%)"
             >
               <div class="text-center">
                 <span style="font-size: 1.5rem">+</span>
@@ -356,39 +289,22 @@
         </div>
       </div>
 
-      <div
-        class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-3"
-      >
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-3">
         <div>
           <h5 class="fw-bold text-dark m-0">Demandes Récentes</h5>
-          <p class="text-muted small mb-0">
-            Gestion des dossiers de demande d'agrément.
-          </p>
+          <p class="text-muted small mb-0">Gestion des dossiers de demande d'agrément.</p>
         </div>
 
         <div class="search-container">
           <span class="search-icon">🔍</span>
-          <input
-            type="text"
-            id="searchInput"
-            class="form-control search-input"
-            placeholder="Rechercher (Nom, NINEA...)"
-          />
+          <input type="text" id="searchInput" class="form-control search-input" placeholder="Rechercher (Nom, NINEA...)" />
         </div>
-        <a
-          href="{{ url_for('main.exporter_excel') }}"
-          class="btn btn-success btn-sm text-white fw-bold shadow-sm"
-        >
-          📊 Exporter vers Excel</a
-        >
+        <a href="{{ url_for('main.exporter_excel') }}" class="btn btn-success btn-sm text-white fw-bold shadow-sm"> 📊 Exporter vers Excel</a>
       </div>
 
       <div class="card card-table">
         <div class="table-responsive">
-          <table
-            class="table table-hover mb-0 align-middle"
-            id="candidatsTable"
-          >
+          <table class="table table-hover mb-0 align-middle" id="candidatsTable">
             <thead>
               <tr>
                 <th class="ps-4">Candidat</th>
@@ -404,57 +320,32 @@
               <tr>
                 <td class="ps-4">
                   <div class="d-flex align-items-center">
-                    <div class="company-avatar">
-                      {{ candidat.nom_entreprise[:2].upper() }}
-                    </div>
+                    <div class="company-avatar">{{ candidat.nom_entreprise[:2].upper() }}</div>
                     <div>
-                      <div class="fw-bold text-dark">
-                        {{ candidat.nom_entreprise }}
-                      </div>
-                      <div class="small text-muted">
-                        NINEA: {{ candidat.ninea }}
-                      </div>
-                      <div class="small text-muted" style="font-size: 0.7rem">
-                        📅 {{ candidat.date_enregistrement.strftime('%d/%m/%Y')
-                        }}
-                      </div>
+                      <div class="fw-bold text-dark">{{ candidat.nom_entreprise }}</div>
+                      <div class="small text-muted">NINEA: {{ candidat.ninea }}</div>
+                      <div class="small text-muted" style="font-size: 0.7rem">📅 {{ candidat.date_enregistrement.strftime('%d/%m/%Y') }}</div>
                     </div>
                   </div>
                 </td>
 
                 <td>
-                  <div class="fw-semibold text-dark" style="font-size: 0.9rem">
-                    {{ candidat.ville }}
-                  </div>
-                  <div
-                    class="text-muted small text-truncate"
-                    style="max-width: 150px"
-                  >
-                    {{ candidat.adresse }}
-                  </div>
+                  <div class="fw-semibold text-dark" style="font-size: 0.9rem">{{ candidat.ville }}</div>
+                  <div class="text-muted small text-truncate" style="max-width: 150px">{{ candidat.adresse }}</div>
                 </td>
 
                 <td>
-                  <span
-                    class="badge bg-light text-dark border fw-normal text-wrap"
-                    style="max-width: 150px"
-                  >
-                    {{ candidat.position }}
-                  </span>
+                  <span class="badge bg-light text-dark border fw-normal text-wrap" style="max-width: 150px"> {{ candidat.position }} </span>
                 </td>
 
                 <td>
-                  <div class="small fw-bold">
-                    {{ candidat.nom_proprietaire }}
-                  </div>
+                  <div class="small fw-bold">{{ candidat.nom_proprietaire }}</div>
                   <div class="small text-muted">{{ candidat.telephone }}</div>
                 </td>
 
                 <td class="text-center">
                   {% if "attente" in candidat.statut %}
-                  <span class="badge badge-status bg-en-attente"
-                    >En attente</span
-                  >
+                  <span class="badge badge-status bg-en-attente">En attente</span>
                   {% elif "Retenu" in candidat.statut %}
                   <span class="badge badge-status bg-retenu">Validé</span>
                   {% else %}
@@ -519,20 +410,12 @@
                   >
                   {% endif %}
 
-                  <form
-                    action="{{ url_for('main.supprimer', id=candidat.id) }}"
-                    method="POST"
-                    style="display: inline"
-                  >
+                  <form action="{{ url_for('main.supprimer', id=candidat.id) }}" method="POST" style="display: inline">
                     <button
                       type="submit"
                       class="btn btn-danger btn-sm"
                       title="Supprimer"
-                      onclick="
-                        return confirm(
-                          'Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.',
-                        );
-                      "
+                      onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.');"
                     >
                       <i class="fas fa-trash"></i>
                     </button>
@@ -553,118 +436,47 @@
       </div>
     </div>
 
-    <div
-      class="modal fade"
-      id="modalValidation"
-      tabindex="-1"
-      aria-hidden="true"
-    >
+    <div class="modal fade" id="modalValidation" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
           <div class="modal-header bg-success text-white">
             <h5 class="modal-title fw-bold">Valider l'Agrément</h5>
-            <button
-              type="button"
-              class="btn-close btn-close-white"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
 
-          <form
-            action="{{ url_for('main.valider_agrement_final') }}"
-            method="POST"
-          >
+          <form action="{{ url_for('main.valider_agrement_final') }}" method="POST">
             <div class="modal-body p-4">
               <div class="text-center mb-4">
-                <h4
-                  id="displayNomEntreprise"
-                  class="fw-bold text-success mb-0"
-                ></h4>
-                <small class="text-muted"
-                  >Configuration de l'agrément final</small
-                >
+                <h4 id="displayNomEntreprise" class="fw-bold text-success mb-0"></h4>
+                <small class="text-muted">Configuration de l'agrément final</small>
               </div>
               <input type="hidden" name="candidat_id" id="val_candidat_id" />
               <div class="row g-3">
                 <div class="col-12">
-                  <label
-                    class="form-label small fw-bold text-uppercase text-muted"
-                    >Référence</label
-                  >
+                  <label class="form-label small fw-bold text-uppercase text-muted">Référence</label>
                   <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0"
-                      >N°</span
-                    >
-                    <input
-                      type="text"
-                      class="form-control border-start-0"
-                      name="ref_numero"
-                      placeholder="0001"
-                      required
-                    />
-                    <input
-                      type="text"
-                      class="form-control"
-                      name="ref_suffixe"
-                      value="/SG/DAGE/ms"
-                      placeholder="/SG/DAGE/ms"
-                    />
+                    <span class="input-group-text bg-white border-end-0">N°</span>
+                    <input type="text" class="form-control border-start-0" name="ref_numero" placeholder="0001" required />
+                    <input type="text" class="form-control" name="ref_suffixe" value="/SG/DAGE/ms" placeholder="/SG/DAGE/ms" />
                   </div>
                 </div>
                 <div class="col-md-6">
-                  <label
-                    class="form-label small fw-bold text-uppercase text-muted"
-                    >Signataire</label
-                  >
-                  <input
-                    type="text"
-                    class="form-control"
-                    name="titre_signataire"
-                    value="Le Directeur"
-                  />
+                  <label class="form-label small fw-bold text-uppercase text-muted">Signataire</label>
+                  <input type="text" class="form-control" name="titre_signataire" value="Le Directeur" />
                 </div>
                 <div class="col-md-6">
-                  <label
-                    class="form-label small fw-bold text-uppercase text-muted"
-                    >Date Signature</label
-                  >
-                  <input
-                    type="text"
-                    class="form-control"
-                    name="date_signature"
-                    placeholder="jj/mm/aaaa"
-                    required
-                  />
+                  <label class="form-label small fw-bold text-uppercase text-muted">Date Signature</label>
+                  <input type="text" class="form-control" name="date_signature" placeholder="jj/mm/aaaa" required />
                 </div>
                 <div class="col-12">
-                  <label
-                    class="form-label small fw-bold text-uppercase text-muted"
-                    >Réf. Lettre Candidat</label
-                  >
-                  <input
-                    type="text"
-                    class="form-control"
-                    name="ref_lettre_candidat"
-                    placeholder="SR/..."
-                  />
+                  <label class="form-label small fw-bold text-uppercase text-muted">Réf. Lettre Candidat</label>
+                  <input type="text" class="form-control" name="ref_lettre_candidat" placeholder="SR/..." />
                 </div>
               </div>
             </div>
             <div class="modal-footer bg-light border-0">
-              <button
-                type="button"
-                class="btn btn-link text-muted text-decoration-none"
-                data-bs-dismiss="modal"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                class="btn btn-success px-4 rounded-pill fw-bold"
-              >
-                Valider et Envoyer
-              </button>
+              <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Annuler</button>
+              <button type="submit" class="btn btn-success px-4 rounded-pill fw-bold">Valider et Envoyer</button>
             </div>
           </form>
         </div>
@@ -677,17 +489,9 @@
         <div class="modal-content shadow border-0">
           <div class="modal-header bg-primary text-white">
             <h5 class="modal-title fw-bold">Scan de l'agrément signé</h5>
-            <button
-              type="button"
-              class="btn-close btn-close-white"
-              data-bs-dismiss="modal"
-            ></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
-          <form
-            action="{{ url_for('main.uploader_scan') }}"
-            method="POST"
-            enctype="multipart/form-data"
-          >
+          <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
             <div class="modal-body p-4">
               <p class="small text-muted">
                 Uploadez la version scannée de l'agrément pour
@@ -696,34 +500,13 @@
 
               <input type="hidden" name="type_doc" value="agrement" />
               <input type="hidden" name="doc_id" value="{{ candidat.id }}" />
-              <input
-                type="hidden"
-                name="page_retour"
-                value="main.tableau_de_bord"
-              />
+              <input type="hidden" name="page_retour" value="main.tableau_de_bord" />
 
-              <input
-                type="file"
-                name="scan_file"
-                class="form-control"
-                accept=".pdf,.png,.jpg,.jpeg"
-                required
-              />
+              <input type="file" name="scan_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required />
             </div>
             <div class="modal-footer bg-light border-0">
-              <button
-                type="button"
-                class="btn btn-link text-muted text-decoration-none"
-                data-bs-dismiss="modal"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                class="btn btn-primary px-4 rounded-pill fw-bold"
-              >
-                Enregistrer le Scan
-              </button>
+              <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Annuler</button>
+              <button type="submit" class="btn btn-primary px-4 rounded-pill fw-bold">Enregistrer le Scan</button>
             </div>
           </form>
         </div>
@@ -731,14 +514,8 @@
     </div>
     {% endif %} {% endfor %}
 
-    <div
-      id="session-timeout-badge"
-      class="fixed-bottom p-3"
-      style="z-index: 1050; width: fit-content"
-    >
-      <div
-        class="badge bg-dark border border-secondary shadow-sm p-2 opacity-75"
-      >
+    <div id="session-timeout-badge" class="fixed-bottom p-3" style="z-index: 1050; width: fit-content">
+      <div class="badge bg-dark border border-secondary shadow-sm p-2 opacity-75">
         <i class="fas fa-clock text-warning"></i>
         <span id="session-timer">30:00</span>
       </div>
@@ -766,21 +543,19 @@
       });
 
       // 2. Gestion de la Recherche
-      document
-        .getElementById("searchInput")
-        .addEventListener("keyup", function () {
-          var filter = this.value.toLowerCase();
-          var rows = document.querySelectorAll("#candidatsTable tbody tr");
+      document.getElementById("searchInput").addEventListener("keyup", function () {
+        var filter = this.value.toLowerCase();
+        var rows = document.querySelectorAll("#candidatsTable tbody tr");
 
-          rows.forEach(function (row) {
-            var text = row.textContent.toLowerCase();
-            if (text.includes(filter)) {
-              row.style.display = "";
-            } else {
-              row.style.display = "none";
-            }
-          });
+        rows.forEach(function (row) {
+          var text = row.textContent.toLowerCase();
+          if (text.includes(filter)) {
+            row.style.display = "";
+          } else {
+            row.style.display = "none";
+          }
         });
+      });
     </script>
 
     <script>

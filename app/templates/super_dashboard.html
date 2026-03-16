@@ -5,18 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>Super Admin - MCAT</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-    />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 
     <style>
       /* ============================================== */
@@ -97,49 +88,28 @@
   </head>
   <body>
     <div class="container mt-3">
-      {% with messages = get_flashed_messages(with_categories=true) %} {% if
-      messages %} {% for category, message in messages %}
-      <div
-        class="alert alert-{{ category }} alert-dismissible fade show"
-        role="alert"
-      >
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
         {{ message }}
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="alert"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
       {% endfor %} {% endif %} {% endwith %}
     </div>
 
     <div class="header-super shadow">
-      <div
-        class="container d-flex flex-column flex-md-row justify-content-between align-items-center text-center text-md-start"
-      >
+      <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center text-center text-md-start">
         <div class="d-flex align-items-center gap-3 mb-3 mb-md-0">
           <span class="super-icon">⚡</span>
           <div>
             <h3 class="mb-0 fw-bold">CONTRÔLE GÉNÉRAL</h3>
-            <div class="text-white-50 small">
-              Interface Super-Administrateur
-            </div>
+            <div class="text-white-50 small">Interface Super-Administrateur</div>
           </div>
         </div>
         <div>
-          <a
-            href="{{ url_for('main.tableau_de_bord') }}"
-            class="btn btn-outline-light btn-sm me-2 mb-2 mb-md-0"
-          >
+          <a href="{{ url_for('main.tableau_de_bord') }}" class="btn btn-outline-light btn-sm me-2 mb-2 mb-md-0">
             <i class="fas fa-home"></i> Appli
           </a>
-          <a
-            href="{{ url_for('main.logout') }}"
-            class="btn btn-danger btn-sm mb-2 mb-md-0"
-          >
-            <i class="fas fa-sign-out-alt"></i> Déconnexion
-          </a>
+          <a href="{{ url_for('main.logout') }}" class="btn btn-danger btn-sm mb-2 mb-md-0"> <i class="fas fa-sign-out-alt"></i> Déconnexion </a>
         </div>
       </div>
     </div>
@@ -148,53 +118,26 @@
       <div class="row g-4 mb-5">
         <div class="col-12 col-md-4">
           <div class="card card-custom p-4 h-100">
-            <h5 class="fw-bold mb-3">
-              <i class="fas fa-user-plus text-primary"></i> Nouvel Admin
-            </h5>
-            <form
-              action="{{ url_for('main.creer_utilisateur') }}"
-              method="POST"
-            >
+            <h5 class="fw-bold mb-3"><i class="fas fa-user-plus text-primary"></i> Nouvel Admin</h5>
+            <form action="{{ url_for('main.creer_utilisateur') }}" method="POST">
               <div class="mb-3">
-                <label class="form-label small fw-bold text-muted"
-                  >IDENTIFIANT</label
-                >
-                <input
-                  type="text"
-                  name="username"
-                  class="form-control bg-light"
-                  placeholder="Ex: Gestionnaire1"
-                  required
-                />
+                <label class="form-label small fw-bold text-muted">IDENTIFIANT</label>
+                <input type="text" name="username" class="form-control bg-light" placeholder="Ex: Gestionnaire1" required />
               </div>
               <div class="mb-3">
-                <label class="form-label small fw-bold text-muted"
-                  >MOT DE PASSE</label
-                >
-                <input
-                  type="password"
-                  name="password"
-                  class="form-control bg-light"
-                  placeholder="••••••"
-                  required
-                />
+                <label class="form-label small fw-bold text-muted">MOT DE PASSE</label>
+                <input type="password" name="password" class="form-control bg-light" placeholder="••••••" required />
               </div>
-              <button type="submit" class="btn btn-dark w-100 fw-bold py-2">
-                CRÉER LE COMPTE
-              </button>
+              <button type="submit" class="btn btn-dark w-100 fw-bold py-2">CRÉER LE COMPTE</button>
             </form>
           </div>
         </div>
 
         <div class="col-12 col-md-8">
           {% if ips_bloquees %}
-          <div
-            class="card card-custom border-start border-danger border-4 mb-4"
-          >
+          <div class="card card-custom border-start border-danger border-4 mb-4">
             <div class="card-header bg-white border-0 py-3">
-              <h5 class="mb-0 fw-bold text-danger">
-                <i class="fas fa-user-shield"></i> Accès Bloqués (Sécurité IP)
-              </h5>
+              <h5 class="mb-0 fw-bold text-danger"><i class="fas fa-user-shield"></i> Accès Bloqués (Sécurité IP)</h5>
             </div>
             <div class="table-responsive">
               <table class="table table-hover align-middle mb-0">
@@ -209,24 +152,12 @@
                   {% for ban in ips_bloquees %}
                   <tr>
                     <td class="ps-4">
-                      <code class="fw-bold text-danger"
-                        >{{ ban.ip_address }}</code
-                      >
+                      <code class="fw-bold text-danger">{{ ban.ip_address }}</code>
                     </td>
-                    <td class="small text-muted">
-                      {{ ban.last_attempt.strftime('%d/%m/%Y à %H:%M') }}
-                    </td>
+                    <td class="small text-muted">{{ ban.last_attempt.strftime('%d/%m/%Y à %H:%M') }}</td>
                     <td class="text-end pe-4">
-                      <form
-                        action="{{ url_for('main.debloquer_ip', id=ban.id) }}"
-                        method="POST"
-                      >
-                        <button
-                          type="submit"
-                          class="btn btn-success btn-sm fw-bold"
-                        >
-                          <i class="fas fa-unlock"></i> DÉBLOQUER
-                        </button>
+                      <form action="{{ url_for('main.debloquer_ip', id=ban.id) }}" method="POST">
+                        <button type="submit" class="btn btn-success btn-sm fw-bold"><i class="fas fa-unlock"></i> DÉBLOQUER</button>
                       </form>
                     </td>
                   </tr>
@@ -238,9 +169,7 @@
           {% endif %}
           <div class="card card-custom h-100">
             <div class="card-header bg-white border-0 py-3">
-              <h5 class="mb-0 fw-bold">
-                <i class="fas fa-users text-primary"></i> Équipe Active
-              </h5>
+              <h5 class="mb-0 fw-bold"><i class="fas fa-users text-primary"></i> Équipe Active</h5>
             </div>
             <div class="table-responsive">
               <table class="table table-hover align-middle mb-0 text-nowrap">
@@ -257,9 +186,7 @@
                     <td class="ps-4 fw-bold">{{ user.username }}</td>
                     <td>
                       {% if user.role == 'superadmin' %}
-                      <span class="badge bg-danger badge-role"
-                        >SUPER ADMIN</span
-                      >
+                      <span class="badge bg-danger badge-role">SUPER ADMIN</span>
                       {% else %}
                       <span class="badge bg-success badge-role">Admin</span>
                       {% endif %}
@@ -281,23 +208,14 @@
                         action="{{ url_for('main.supprimer_utilisateur', id=user.id) }}"
                         method="POST"
                         style="display: inline"
-                        onsubmit="
-                          return confirm(
-                            'Êtes-vous sûr de vouloir supprimer cet utilisateur ?',
-                          );
-                        "
+                        onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?');"
                       >
-                        <button
-                          type="submit"
-                          class="btn btn-outline-danger btn-sm"
-                        >
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
                           <i class="fas fa-trash"></i>
                         </button>
                       </form>
                       {% else %}
-                      <span class="text-muted small ms-2"
-                        ><i class="fas fa-lock"></i
-                      ></span>
+                      <span class="text-muted small ms-2"><i class="fas fa-lock"></i></span>
                       {% endif %} {% else %}
                       <span class="text-muted small fw-bold">C'est vous</span>
                       {% endif %}
@@ -312,38 +230,26 @@
       </div>
 
       <div class="card card-custom mb-4 border-start border-success border-4">
-        <div
-          class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center"
-        >
-          <h5 class="mb-0 fw-bold">
-            <i class="fas fa-shield-alt text-success"></i> Sécurité & Sauvegarde
-          </h5>
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+          <h5 class="mb-0 fw-bold"><i class="fas fa-shield-alt text-success"></i> Sécurité & Sauvegarde</h5>
         </div>
         <div class="card-body">
           <div class="row align-items-center">
             <div class="col-md-8 mb-3 mb-md-0">
               <p class="text-muted mb-1">
                 Téléchargez une archive compressée
-                <strong>(.zip)</strong> contenant l'intégralité de votre système
-                :
+                <strong>(.zip)</strong> contenant l'intégralité de votre système :
               </p>
               <ul class="text-muted small mb-0">
                 <li>
-                  <i class="fas fa-database text-primary"></i> La base de
-                  données (<strong>mes_marches.db</strong>) avec tous les
-                  historiques et mots de passe.
+                  <i class="fas fa-database text-primary"></i> La base de données (<strong>mes_marches.db</strong>) avec tous les historiques et mots
+                  de passe.
                 </li>
-                <li>
-                  <i class="fas fa-file-pdf text-danger"></i> Tous les documents
-                  scannés stockés dans (<strong>app/static/uploads</strong>).
-                </li>
+                <li><i class="fas fa-file-pdf text-danger"></i> Tous les documents scannés stockés dans (<strong>app/static/uploads</strong>).</li>
               </ul>
             </div>
             <div class="col-md-4 text-md-end">
-              <a
-                href="{{ url_for('main.telecharger_backup_complet') }}"
-                class="btn btn-success fw-bold shadow-sm rounded-pill px-4"
-              >
+              <a href="{{ url_for('main.telecharger_backup_complet') }}" class="btn btn-success fw-bold shadow-sm rounded-pill px-4">
                 <i class="fas fa-cloud-download-alt"></i> Exporter le Système
               </a>
             </div>
@@ -352,24 +258,33 @@
       </div>
 
       <div class="card card-custom">
-        <div
-          class="card-header bg-white border-0 py-3 d-flex flex-column flex-md-row justify-content-between align-items-center border-bottom"
-        >
-          <h5 class="mb-2 mb-md-0 fw-bold">
-            <i class="fas fa-history text-warning"></i> Journal de Surveillance
-          </h5>
-          <span class="badge bg-light text-dark border"
-            >{{ logs|length }} actions enregistrées</span
-          >
+        <div class="card-header bg-white border-0 py-3 d-flex flex-column flex-md-row justify-content-between align-items-center border-bottom">
+          <h5 class="mb-2 mb-md-0 fw-bold"><i class="fas fa-history text-warning"></i> Journal de Surveillance</h5>
+          <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-light text-dark border">{{ logs|length }} actions enregistrées</span>
+
+            <form
+              action="{{ url_for('main.vider_logs_securite') }}"
+              method="POST"
+              class="m-0"
+              onsubmit="
+                return confirm(
+                  '⚠️ ATTENTION ⚠️\nÊtes-vous absolument sûr de vouloir supprimer tous les logs de sécurité ?\nCette action est irréversible !',
+                );
+              "
+            >
+              <button type="submit" class="btn btn-sm btn-outline-danger fw-bold shadow-sm rounded-pill px-3">
+                <i class="fas fa-trash-alt"></i> Vider les Logs
+              </button>
+            </form>
+          </div>
         </div>
 
         <div class="card-body py-3 bg-light border-bottom">
           <div class="row align-items-center g-3">
             <div class="col-12 col-lg-4">
               <div class="input-group input-group-sm shadow-sm">
-                <span class="input-group-text bg-white border-end-0 text-muted"
-                  ><i class="fas fa-search"></i
-                ></span>
+                <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
                 <input
                   type="text"
                   id="champRecherche"
@@ -377,54 +292,21 @@
                   placeholder="Rechercher un agent, document, cible..."
                   onkeyup="rechercherLogs()"
                 />
-                <button
-                  class="btn btn-warning btn-sm ms-2 me-1 mb-1 btn-filter"
-                  onclick="filtrerLogs('Alerte', this)"
-                >
-                  ⚠️ Alertes Sécurité
-                </button>
+                <button class="btn btn-warning btn-sm ms-2 me-1 mb-1 btn-filter" onclick="filtrerLogs('Alerte', this)">⚠️ Alertes Sécurité</button>
               </div>
             </div>
 
             <div class="col-12 col-lg-8 text-lg-end">
-              <button
-                class="btn btn-dark btn-sm me-1 mb-1 btn-filter active-filter"
-                onclick="filtrerLogs('Tous', this)"
-              >
-                📋 Tout
-              </button>
-              <button
-                class="btn btn-danger btn-sm me-1 mb-1 btn-filter"
-                onclick="filtrerLogs('Suppression', this)"
-              >
-                🗑️ Suppressions
-              </button>
-              <button
-                class="btn btn-primary btn-sm me-1 mb-1 btn-filter"
-                onclick="filtrerLogs('Téléchargement', this)"
-              >
-                ⬇️ Téléchargements
-              </button>
-              <button
-                class="btn btn-success btn-sm me-1 mb-1 btn-filter"
-                onclick="filtrerLogs('Création', this)"
-              >
-                ➕ Créations
-              </button>
-              <button
-                class="btn btn-info btn-sm text-white mb-1 btn-filter"
-                onclick="filtrerLogs('Scan', this)"
-              >
-                🖨️ Scans
-              </button>
+              <button class="btn btn-dark btn-sm me-1 mb-1 btn-filter active-filter" onclick="filtrerLogs('Tous', this)">📋 Tout</button>
+              <button class="btn btn-danger btn-sm me-1 mb-1 btn-filter" onclick="filtrerLogs('Suppression', this)">🗑️ Suppressions</button>
+              <button class="btn btn-primary btn-sm me-1 mb-1 btn-filter" onclick="filtrerLogs('Téléchargement', this)">⬇️ Téléchargements</button>
+              <button class="btn btn-success btn-sm me-1 mb-1 btn-filter" onclick="filtrerLogs('Création', this)">➕ Créations</button>
+              <button class="btn btn-info btn-sm text-white mb-1 btn-filter" onclick="filtrerLogs('Scan', this)">🖨️ Scans</button>
             </div>
           </div>
         </div>
         <div class="table-responsive">
-          <table
-            class="table table-striped table-hover mb-0 align-middle text-nowrap"
-            id="tableauLogs"
-          >
+          <table class="table table-striped table-hover mb-0 align-middle text-nowrap" id="tableauLogs">
             <tbody>
               <thead class="table-dark">
                 <tr>
@@ -440,31 +322,22 @@
               {% for log in logs %}
               <tr class="log-row" data-action="{{ log.action }}">
                 <td class="ps-4 text-muted small fw-bold">
-                  {# On simplifie l'affichage de la date sans le test 'is
-                  datetime' #} {{ log.date_action.strftime('%d/%m/%Y à %H:%M')
-                  if log.date_action else 'Date inconnue' }}
+                  {# On simplifie l'affichage de la date sans le test 'is datetime' #} {{ log.date_action.strftime('%d/%m/%Y à %H:%M') if
+                  log.date_action else 'Date inconnue' }}
                 </td>
                 <td>
-                  {# On met en rouge si c'est le bot pour que ça saute aux yeux
-                  #}
-                  <span
-                    class="badge {% if log.utilisateur == 'SYSTÈME / BOT' %}bg-danger{% else %}bg-secondary{% endif %} text-white"
-                  >
+                  {# On met en rouge si c'est le bot pour que ça saute aux yeux #}
+                  <span class="badge {% if log.utilisateur == 'SYSTÈME / BOT' %}bg-danger{% else %}bg-secondary{% endif %} text-white">
                     {{ log.utilisateur }}
                   </span>
                 </td>
 
                 <td>
-                  {% if 'Suppression' in log.action or 'INTERDIT' in log.action
-                  or 'HONEYPOT' in log.action %}
-                  <span class="text-danger fw-bold">
-                    <i class="fas fa-exclamation-triangle"></i> {{ log.action }}
-                  </span>
-                  {% elif 'Validation' in log.action or 'Succès' in log.action
-                  %}
+                  {% if 'Suppression' in log.action or 'INTERDIT' in log.action or 'HONEYPOT' in log.action %}
+                  <span class="text-danger fw-bold"> <i class="fas fa-exclamation-triangle"></i> {{ log.action }} </span>
+                  {% elif 'Validation' in log.action or 'Succès' in log.action %}
                   <span class="text-success fw-bold">{{ log.action }}</span>
-                  {% elif 'Réinitialisation' in log.action or 'Alerte' in
-                  log.action %}
+                  {% elif 'Réinitialisation' in log.action or 'Alerte' in log.action %}
                   <span class="text-warning fw-bold">{{ log.action }}</span>
                   {% else %}
                   <span class="text-dark">{{ log.action }}</span>
@@ -474,9 +347,7 @@
               </tr>
               {% else %}
               <tr>
-                <td colspan="4" class="text-center py-4 text-muted">
-                  Aucune activité pour le moment.
-                </td>
+                <td colspan="4" class="text-center py-4 text-muted">Aucune activité pour le moment.</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -492,50 +363,48 @@
       function filtrerLogs(categorie, boutonClique) {
         // A. Gérer l'aspect visuel des boutons
         if (boutonClique) {
-          // On retire la classe 'active-filter' de TOUS les boutons
           const tousLesBoutons = document.querySelectorAll(".btn-filter");
-          tousLesBoutons.forEach((btn) =>
-            btn.classList.remove("active-filter"),
-          );
-
-          // On l'ajoute UNIQUEMENT au bouton qui vient d'être cliqué
+          tousLesBoutons.forEach((btn) => btn.classList.remove("active-filter"));
           boutonClique.classList.add("active-filter");
         }
 
         // B. On vide le champ de recherche
         document.getElementById("champRecherche").value = "";
 
-        // C. Logique de filtrage du tableau
+        // C. Logique de filtrage du tableau (Corrigée et plus fiable !)
         const lignes = document.querySelectorAll(".log-row");
 
         lignes.forEach((ligne) => {
           const actionText = ligne.getAttribute("data-action").toLowerCase();
+          let doitEtreAffiche = false;
 
           if (categorie === "Tous") {
-            ligne.style.display = "";
-          } else if (
-            categorie === "Téléchargement" &&
-            (actionText.includes("téléchargement") ||
+            doitEtreAffiche = true;
+          } else if (categorie === "Téléchargement") {
+            doitEtreAffiche =
+              actionText.includes("téléchargement") ||
               actionText.includes("export") ||
               actionText.includes("génération") ||
-              actionText.includes("consultation"))
-          ) {
-            ligne.style.display = "";
-          } else if (
-            categorie === "Création" &&
-            (actionText.includes("création") ||
-              actionText.includes("modification") ||
-              actionText.includes("ajout"))
-          ) {
-            ligne.style.display = "";
-          } else if (
-            categorie === "Alerte" &&
-            (actionText.includes("interdit") ||
+              actionText.includes("consultation");
+          } else if (categorie === "Création") {
+            doitEtreAffiche = actionText.includes("création") || actionText.includes("modification") || actionText.includes("ajout");
+          } else if (categorie === "Alerte") {
+            // AJOUT DE TOUS LES MOTS-CLÉS DE SÉCURITÉ ICI 🚨
+            doitEtreAffiche =
+              actionText.includes("alerte") ||
+              actionText.includes("interdit") ||
               actionText.includes("tentative") ||
-              actionText.includes("erreur"))
-          ) {
-            ligne.style.display = "";
-          } else if (actionText.includes(categorie.toLowerCase())) {
+              actionText.includes("erreur") ||
+              actionText.includes("honeypot") ||
+              actionText.includes("bloqué") ||
+              actionText.includes("échoué");
+          } else {
+            // Pour les filtres simples comme "Suppression" ou "Scan"
+            doitEtreAffiche = actionText.includes(categorie.toLowerCase());
+          }
+
+          // On affiche ou on cache la ligne selon le résultat
+          if (doitEtreAffiche) {
             ligne.style.display = "";
           } else {
             ligne.style.display = "none";
@@ -545,9 +414,7 @@
       // Fonction 2 : Filtrer avec la barre de recherche textuelle
       function rechercherLogs() {
         // On récupère ce que l'utilisateur a tapé et on le met en minuscules
-        const texteRecherche = document
-          .getElementById("champRecherche")
-          .value.toLowerCase();
+        const texteRecherche = document.getElementById("champRecherche").value.toLowerCase();
         const lignes = document.querySelectorAll(".log-row");
 
         lignes.forEach((ligne) => {

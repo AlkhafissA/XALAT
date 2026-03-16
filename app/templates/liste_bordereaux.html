@@ -5,18 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mes Bordereaux - MCAT</title>
 
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" />
 
     <style>
       :root {
@@ -143,101 +134,56 @@
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
       <div class="container-fluid px-4">
-        <a
-          class="navbar-brand d-flex align-items-center"
-          href="{{ url_for('main.tableau_de_bord') }}"
-        >
+        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.tableau_de_bord') }}">
           <span style="font-size: 1.5rem; margin-right: 10px">🏛️</span>
           <div style="line-height: 1">
             <div>MCAT</div>
-            <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7">
-              PORTAIL ADMIN
-            </div>
+            <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7">PORTAIL ADMIN</div>
           </div>
         </a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
           <span class="navbar-toggler-icon"></span>
         </button>
-        <div
-          class="collapse navbar-collapse justify-content-center"
-          id="navbarNav"
-        >
+        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
           <ul class="navbar-nav">
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}"
-                >AGRÉMENTS</a
-              >
+              <a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}">AGRÉMENTS</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.liste_cotations') }}"
-                >COTATIONS</a
-              >
+              <a class="nav-link" href="{{ url_for('main.liste_cotations') }}">COTATIONS</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="{{ url_for('main.drps') }}">DRP</a>
             </li>
             <li class="nav-item">
-              <a
-                class="nav-link active"
-                href="{{ url_for('main.liste_bordereaux') }}"
-                >BORDEREAUX</a
-              >
+              <a class="nav-link active" href="{{ url_for('main.liste_bordereaux') }}">BORDEREAUX</a>
             </li>
           </ul>
         </div>
         <div class="d-flex align-items-center">
-          <a
-            href="{{ url_for('main.logout') }}"
-            class="btn btn-outline-light btn-sm rounded-pill px-3"
-            >Déconnexion</a
-          >
+          <a href="{{ url_for('main.logout') }}" class="btn btn-outline-light btn-sm rounded-pill px-3">Déconnexion</a>
         </div>
       </div>
     </nav>
 
     <div class="container-fluid px-4 mt-5">
-      {% with messages = get_flashed_messages(with_categories=true) %} {% if
-      messages %} {% for category, message in messages %}
-      <div
-        class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4"
-        role="alert"
-      >
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4" role="alert">
         {{ message }}
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="alert"
-          aria-label="Close"
-        ></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
       {% endfor %} {% endif %} {% endwith %}
 
-      <div
-        class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3"
-      >
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
         <div>
           <h3 class="fw-bold text-dark mb-1">Bordereaux d'Envoi</h3>
-          <p class="text-muted small mb-0">
-            Gestion et historique des bordereaux générés.
-          </p>
+          <p class="text-muted small mb-0">Gestion et historique des bordereaux générés.</p>
         </div>
 
-        <div
-          class="d-flex gap-2 w-100 w-md-auto justify-content-md-end align-items-center flex-wrap"
-        >
+        <div class="d-flex gap-2 w-100 w-md-auto justify-content-md-end align-items-center flex-wrap">
           <div class="search-container me-2">
             <span class="search-icon">🔍</span>
-            <input
-              type="text"
-              id="searchInput"
-              class="form-control search-input"
-              placeholder="Rechercher..."
-            />
+            <input type="text" id="searchInput" class="form-control search-input" placeholder="Rechercher..." />
           </div>
 
           <a
@@ -248,12 +194,7 @@
             📊 Excel
           </a>
 
-          <button
-            type="button"
-            class="btn btn-nouveau shadow-sm text-nowrap"
-            data-bs-toggle="modal"
-            data-bs-target="#modalNouveauBordereau"
-          >
+          <button type="button" class="btn btn-nouveau shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalNouveauBordereau">
             + Nouveau Bordereau
           </button>
         </div>
@@ -261,10 +202,7 @@
 
       <div class="card card-table">
         <div class="table-responsive">
-          <table
-            class="table table-hover mb-0 align-middle"
-            id="bordereauxTable"
-          >
+          <table class="table table-hover mb-0 align-middle" id="bordereauxTable">
             <thead>
               <tr>
                 <th class="ps-4">Référence</th>
@@ -281,21 +219,13 @@
                   <div class="fw-bold text-dark">N° {{ b.numero }}</div>
                 </td>
                 <td>
-                  <div class="fw-semibold text-dark">
-                    {{ b.date_signature.strftime('%d/%m/%Y') }}
-                  </div>
+                  <div class="fw-semibold text-dark">{{ b.date_signature.strftime('%d/%m/%Y') }}</div>
                 </td>
                 <td>
-                  <span class="badge bg-light text-dark border"
-                    >{{ b.service_ref }}</span
-                  >
+                  <span class="badge bg-light text-dark border">{{ b.service_ref }}</span>
                 </td>
                 <td class="text-center">
-                  <span
-                    class="badge bg-light text-primary border fw-bold rounded-pill px-3"
-                  >
-                    {{ b.get_dossiers()|length }}
-                  </span>
+                  <span class="badge bg-light text-primary border fw-bold rounded-pill px-3"> {{ b.get_dossiers()|length }} </span>
                 </td>
                 <td class="text-end pe-4">
                   <div class="btn-group">
@@ -329,19 +259,11 @@
                     </button>
                     {% endif %}
 
-                    <form
-                      action="{{ url_for('main.supprimer_bordereau', id=b.id) }}"
-                      method="POST"
-                      style="display: inline"
-                    >
+                    <form action="{{ url_for('main.supprimer_bordereau', id=b.id) }}" method="POST" style="display: inline">
                       <button
                         type="submit"
                         class="btn btn-outline-secondary btn-sm ms-1"
-                        onclick="
-                          return confirm(
-                            'Voulez-vous vraiment supprimer ce bordereau ?',
-                          );
-                        "
+                        onclick="return confirm('Voulez-vous vraiment supprimer ce bordereau ?');"
                         title="Supprimer"
                       >
                         <i class="bi bi-trash"></i>
@@ -364,33 +286,19 @@
       </div>
     </div>
 
-    <div
-      class="modal fade"
-      id="modalNouveauBordereau"
-      tabindex="-1"
-      aria-hidden="true"
-    >
+    <div class="modal fade" id="modalNouveauBordereau" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-lg">
         <div class="modal-content border-0 shadow-lg">
           <div class="modal-header bg-primary text-white">
             <h5 class="modal-title fw-bold">Nouveau Bordereau d'Envoi</h5>
-            <button
-              type="button"
-              class="btn-close btn-close-white"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
 
           <form action="{{ url_for('main.ajouter_bordereau') }}" method="POST">
             <div class="modal-body p-4">
-              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
-                1. En-tête
-              </h6>
+              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête</h6>
               <div class="mb-3">
-                <label class="form-label fw-bold text-danger"
-                  >Nom de la Direction</label
-                >
+                <label class="form-label fw-bold text-danger">Nom de la Direction</label>
                 <input
                   type="text"
                   class="form-control"
@@ -402,104 +310,52 @@
               <div class="row g-3 mb-3">
                 <div class="col-md-4">
                   <label class="form-label fw-bold">N° Référence</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    name="numero"
-                    placeholder="Ex: 005"
-                    required
-                  />
+                  <input type="text" class="form-control" name="numero" placeholder="Ex: 005" required />
                 </div>
                 <div class="col-md-4">
                   <label class="form-label fw-bold">Suffixe Service</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    name="service_ref"
-                    value="MTA/DAGE/DFC"
-                    required
-                  />
+                  <input type="text" class="form-control" name="service_ref" value="MTA/DAGE/DFC" required />
                 </div>
                 <div class="col-md-4">
                   <label class="form-label fw-bold">Date</label>
-                  <input
-                    type="date"
-                    class="form-control"
-                    name="date_signature"
-                    required
-                  />
+                  <input type="date" class="form-control" name="date_signature" required />
                 </div>
               </div>
 
-              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">
-                2. Liste des Dossiers
-              </h6>
+              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Liste des Dossiers</h6>
 
               <div id="dossiers-container">
                 <div class="dossier-item card bg-light mb-3 p-3 border-0">
                   <h6 class="fw-bold text-muted">Dossier N°1</h6>
                   <div class="mb-2">
-                    <label class="small text-muted"
-                      >Objet (partie modifiable)</label
-                    >
-                    <textarea
-                      class="form-control"
-                      name="objets[]"
-                      rows="2"
-                      placeholder="Ex: travaux de peinture..."
-                      required
-                    ></textarea>
+                    <label class="small text-muted">Objet (partie modifiable)</label>
+                    <textarea class="form-control" name="objets[]" rows="2" placeholder="Ex: travaux de peinture..." required></textarea>
                   </div>
                   <div class="mb-2">
                     <label class="small text-muted">Référence du dossier</label>
                     <div class="input-group input-group-sm">
                       <span class="input-group-text fw-bold">N°</span>
-                      <input
-                        type="text"
-                        class="form-control"
-                        name="references[]"
-                        placeholder="T_DAGE_202"
-                        required
-                      />
+                      <input type="text" class="form-control" name="references[]" placeholder="T_DAGE_202" required />
                     </div>
                   </div>
                 </div>
               </div>
 
               <div class="text-end mb-3">
-                <button
-                  type="button"
-                  class="btn btn-outline-primary btn-sm"
-                  onclick="ajouterDossier()"
-                >
-                  + Ajouter un dossier
-                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="ajouterDossier()">+ Ajouter un dossier</button>
               </div>
 
               <div class="row g-3">
                 <div class="col-md-12">
                   <label class="form-label fw-bold">Observations</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    name="observations"
-                    value="Pour REVUE"
-                  />
+                  <input type="text" class="form-control" name="observations" value="Pour REVUE" />
                 </div>
               </div>
             </div>
 
             <div class="modal-footer bg-light border-0">
-              <button
-                type="button"
-                class="btn btn-link text-muted"
-                data-bs-dismiss="modal"
-              >
-                Annuler
-              </button>
-              <button type="submit" class="btn btn-primary px-4 rounded-pill">
-                Enregistrer et Générer
-              </button>
+              <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+              <button type="submit" class="btn btn-primary px-4 rounded-pill">Enregistrer et Générer</button>
             </div>
           </form>
         </div>
@@ -509,16 +365,14 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
       // Script de recherche
-      document
-        .getElementById("searchInput")
-        .addEventListener("keyup", function () {
-          var filter = this.value.toLowerCase();
-          var rows = document.querySelectorAll("#bordereauxTable tbody tr");
-          rows.forEach(function (row) {
-            var text = row.textContent.toLowerCase();
-            row.style.display = text.includes(filter) ? "" : "none";
-          });
+      document.getElementById("searchInput").addEventListener("keyup", function () {
+        var filter = this.value.toLowerCase();
+        var rows = document.querySelectorAll("#bordereauxTable tbody tr");
+        rows.forEach(function (row) {
+          var text = row.textContent.toLowerCase();
+          row.style.display = text.includes(filter) ? "" : "none";
         });
+      });
 
       // Script Ajouter Dossier
       function ajouterDossier() {
@@ -548,54 +402,21 @@
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow">
           <div class="modal-header bg-warning">
-            <h5 class="modal-title fw-bold text-dark">
-              Joindre le bordereau signé
-            </h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-            ></button>
+            <h5 class="modal-title fw-bold text-dark">Joindre le bordereau signé</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
 
-          <form
-            action="{{ url_for('main.uploader_scan') }}"
-            method="POST"
-            enctype="multipart/form-data"
-          >
+          <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
             <div class="modal-body p-4">
               <input type="hidden" name="type_doc" value="bordereau" />
               <input type="hidden" name="doc_id" value="{{ b.id }}" />
-              <input
-                type="hidden"
-                name="page_retour"
-                value="main.liste_bordereaux"
-              />
-              <label class="form-label fw-bold"
-                >Sélectionnez le bordereau scanné (PDF/Image) :</label
-              >
-              <input
-                type="file"
-                name="scan_file"
-                class="form-control"
-                accept=".pdf,.png,.jpg,.jpeg"
-                required
-              />
+              <input type="hidden" name="page_retour" value="main.liste_bordereaux" />
+              <label class="form-label fw-bold">Sélectionnez le bordereau scanné (PDF/Image) :</label>
+              <input type="file" name="scan_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required />
             </div>
             <div class="modal-footer bg-light border-0">
-              <button
-                type="button"
-                class="btn btn-link text-muted"
-                data-bs-dismiss="modal"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                class="btn btn-warning px-4 rounded-pill fw-bold"
-              >
-                Uploader le Scan
-              </button>
+              <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+              <button type="submit" class="btn btn-warning px-4 rounded-pill fw-bold">Uploader le Scan</button>
             </div>
           </form>
         </div>
