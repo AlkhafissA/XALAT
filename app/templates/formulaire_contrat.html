@@ -223,51 +223,58 @@
           </div>
           <form method="POST" action="{{ url_for('main.creer_contrat') }}">
             <div class="modal-body p-4">
-              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. Références et Dates</h6>
-              <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                  <label class="form-label small fw-bold text-muted">Numéro</label>
-                  <input type="text" name="numero" class="form-control border-primary" placeholder="ex: 00123" />
+              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4"><i class="bi bi-link-45deg"></i> 1. Lier au Marché Attribué</h6>
+              <div class="row g-3 mb-3 bg-light p-3 rounded border border-primary-subtle">
+                <div class="col-md-12">
+                  <label class="form-label fw-bold text-primary">Sélectionner le PV d'Attribution</label>
+                  <select id="select_attribution" class="form-select border-primary shadow-sm" required>
+                    <option value="">-- Cliquez pour choisir le PV --</option>
+                    {% for pv in pvs %}
+                    <option value="{{ pv.id }}">{{ pv.numero_drp }} - {{ pv.objet[:60] }}... (Gagnant : {{ pv.entreprise }})</option>
+                    {% endfor %}
+                  </select>
+                  <small id="status_attribution" class="text-muted mt-1 d-block">Les informations du contrat s'afficheront automatiquement.</small>
                 </div>
-                <div class="col-md-4">
-                  <label class="form-label small fw-bold text-muted">Réf. Service</label>
-                  <input type="text" name="ref_service" class="form-control border-primary" value="MTA/SG/DAGE/ges" />
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label small fw-bold text-muted">Date de la lettre</label>
-                  <input type="text" name="date_lettre" class="form-control border-primary" placeholder="ex: 12 février 2026" />
-                </div>
-              </div>
 
-              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Sélection du Marché & Titulaire</h6>
-              <div class="row g-3 mb-3">
+                <input type="hidden" name="candidat_id" id="input_candidat_id" required />
+                <input type="hidden" name="objet_marche" id="input_objet_marche" required />
+                <input type="hidden" name="rc_candidat" id="input_rc" />
+                <input type="hidden" name="compte_candidat" id="input_compte" />
+
                 <div class="col-md-6">
-                  <label class="form-label small fw-bold text-muted">Sélectionner le Prestataire (Titulaire)</label>
-                  <select name="candidat_id" class="form-select border-primary" required>
-                    <option value="">-- Choisir une entreprise --</option>
-                    {% for c in candidats %}
-                    <option value="{{ c.id }}">{{ c.nom_entreprise }} (NINEA: {{ c.ninea }})</option>
-                    {% endfor %}
-                  </select>
-                  <small class="text-success" style="font-size: 0.75rem">RC et Compte Bancaire récupérés automatiquement</small>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small fw-bold text-muted">Sélectionner le Marché (Objet)</label>
-                  <select name="marche_id" class="form-select border-primary" required>
-                    <option value="">-- Choisir un marché (Lettre d'invitation) --</option>
-                    {% for m in marches %}
-                    <option value="{{ m.id }}">{{ m.immatriculation }} - {{ m.objet_marche[:50] }}...</option>
-                    {% endfor %}
-                  </select>
+                  <label class="form-label small fw-bold text-success">Titulaire (Gagnant du marché)</label>
+                  <input
+                    type="text"
+                    id="display_nom_gagnant"
+                    class="form-control bg-white text-success fw-bold border-success"
+                    placeholder="Attente de sélection..."
+                    readonly
+                  />
                 </div>
                 <div class="col-md-6">
                   <label class="form-label small fw-bold text-muted">Désigné sous le vocable (Page 2) :</label>
-                  <select name="vocable" class="form-select border-primary" required>
+                  <select name="vocable" class="form-select border-secondary" required>
                     <option value="Prestataire" selected>Prestataire</option>
                     <option value="Fournisseur">Fournisseur</option>
                     <option value="Consultant">Consultant</option>
                     <option value="Entrepreneur">Entrepreneur</option>
                   </select>
+                </div>
+              </div>
+
+              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">2. Références et Dates (Auto-rempli)</h6>
+              <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-muted">Numéro</label>
+                  <input type="text" name="numero" id="input_numero" class="form-control border-primary" placeholder="ex: 00123" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-muted">Réf. Service</label>
+                  <input type="text" name="ref_service" id="input_ref_service" class="form-control border-primary" />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-muted">Date de la lettre</label>
+                  <input type="text" name="date_lettre" id="input_date_lettre" class="form-control border-primary" />
                 </div>
               </div>
 
@@ -345,6 +352,53 @@
 
     <script>
       document.addEventListener("DOMContentLoaded", function () {
+        // =========================================================
+        // 1. NOUVEAU SCRIPT : AUTO-REMPLISSAGE VIA LE PV
+        // =========================================================
+        const selectAttribution = document.getElementById("select_attribution");
+        const statusAttribution = document.getElementById("status_attribution");
+
+        if (selectAttribution) {
+          selectAttribution.addEventListener("change", function () {
+            const pvId = this.value;
+            if (pvId) {
+              statusAttribution.innerHTML = '<span class="text-warning"><i class="bi bi-hourglass"></i> Récupération des données du PV...</span>';
+
+              // On appelle la nouvelle API get_infos_pv
+              fetch(`{{ url_for('main.get_infos_pv') }}?pv_id=${pvId}`)
+                .then((response) => response.json())
+                .then((data) => {
+                  if (data.success) {
+                    // On remplit les cases cachées et l'entreprise
+                    document.getElementById("input_candidat_id").value = data.candidat_id;
+                    document.getElementById("display_nom_gagnant").value = data.nom_entreprise + " (RC: " + data.rc + ")";
+                    document.getElementById("input_objet_marche").value = data.objet_marche;
+                    document.getElementById("input_rc").value = data.rc;
+                    document.getElementById("input_compte").value = data.compte;
+
+                    // On remplit les Références et la Date !
+                    document.getElementById("input_numero").value = data.num_ordre || "";
+                    document.getElementById("input_ref_service").value = data.ref_service || "";
+                    document.getElementById("input_date_lettre").value = data.date_lettre || "";
+
+                    statusAttribution.innerHTML =
+                      '<span class="text-success"><i class="bi bi-check-circle"></i> Références, Gagnant et données financières verrouillés !</span>';
+                  } else {
+                    statusAttribution.innerHTML = '<span class="text-danger">Erreur lors de la récupération du PV.</span>';
+                  }
+                });
+            } else {
+              // Si on désélectionne le PV, on remet le message par défaut
+              statusAttribution.innerHTML =
+                '<span class="text-muted mt-1 d-block">Les informations du contrat s\'afficheront automatiquement.</span>';
+              document.getElementById("display_nom_gagnant").value = "";
+            }
+          });
+        }
+
+        // =========================================================
+        // 2. TON ANCIEN SCRIPT : CONVERSION DU MONTANT EN LETTRES
+        // =========================================================
         const montantInput = document.getElementById("montantInput");
         const montantLettresInput = document.getElementById("montantLettresInput");
 

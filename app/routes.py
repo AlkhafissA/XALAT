@@ -1647,28 +1647,12 @@ def supprimer_lettre(id):
 @login_required
 def creer_contrat():
     import json
-    candidats = Candidat.query.all()
-    marches = LettreInvitation.query.all()
     
-    # --- LA CORRECTION EST ICI ---
-    # 1. On récupère les contrats bruts
-    contrats_bruts = Contrat.query.order_by(Contrat.id.desc()).all()
-    
-    # 2. On attache manuellement le nom de l'entreprise à chaque contrat
-    contrats_sauvegardes = []
-    for c in contrats_bruts:
-        cand = db.session.get(Candidat, c.candidat_id)
-        # On lui invente un attribut temporaire qu'on pourra lire dans le HTML
-        c.entreprise_nom = cand.nom_entreprise if cand else "Entreprise inconnue"
-        contrats_sauvegardes.append(c)
-    # -----------------------------
     if request.method == 'POST':
         candidat_id = request.form.get('candidat_id')
-        candidat_gagnant = Candidat.query.get(candidat_id)
+        candidat_gagnant = db.session.get(Candidat, int(candidat_id)) if candidat_id else None
         
-        marche_id = request.form.get('marche_id')
-        marche_choisi = LettreInvitation.query.get(marche_id)
-        
+        objet_marche = request.form.get('objet_marche')
         gestion_annee = request.form.get('gestion_annee', '2025')
         montant = request.form.get('montant')
         montant_lettres = request.form.get('montant_lettres', '') 
@@ -1677,37 +1661,22 @@ def creer_contrat():
         programme = request.form.get('programme')
         comptable = request.form.get('comptable', 'Payeur Général du Trésor (PGT)')
         vocable = request.form.get('vocable', 'Prestataire')
-        
         numero = request.form.get('numero')
         ref_service = request.form.get('ref_service')
         date_lettre = request.form.get('date_lettre')
+        
+        # Récupérés automatiquement via notre nouvelle API cachée dans le formulaire
+        rc_final = request.form.get('rc_candidat', '........................')
+        compte_final = request.form.get('compte_candidat', '...................................')
 
-        # Extraction du RC et Compte depuis la lettre d'invitation
-        lettre_data = {}
-        if marche_choisi and marche_choisi.form_data:
-            try:
-                lettre_data = json.loads(marche_choisi.form_data)
-            except:
-                pass
+        if not candidat_gagnant:
+            flash("Erreur : Impossible de retrouver le prestataire.", "danger")
+            return redirect(url_for('main.creer_contrat'))
 
-        rc_final = '........................'
-        compte_final = '...................................'
-
-        prestataires_lettre = lettre_data.get('prestataires', [])
-        for p in prestataires_lettre:
-            if p.get('nom') == candidat_gagnant.nom_entreprise:
-                if p.get('rc') and p.get('rc') != 'Non renseigné':
-                    rc_final = p.get('rc')
-                if p.get('compte'):
-                    compte_final = p.get('compte')
-                break
-
-        # -------------------------------------------------------------
-        # 2. ON SAUVEGARDE LE CONTRAT DANS LA BASE DE DONNÉES
-        # -------------------------------------------------------------
+        # 1. ON SAUVEGARDE LE CONTRAT DANS LA BASE DE DONNÉES
         nouveau_contrat = Contrat(
             candidat_id=candidat_gagnant.id,
-            objet_marche=marche_choisi.objet_marche,
+            objet_marche=objet_marche,
             gestion_annee=gestion_annee,
             montant_chiffres=montant,
             montant_lettres=montant_lettres,
@@ -1722,39 +1691,69 @@ def creer_contrat():
         log_action("Ajout Contrat", candidat_gagnant.nom_entreprise)
         db.session.commit()
 
-        # -------------------------------------------------------------
-        # 3. ON GÉNÈRE LE PDF
-        # -------------------------------------------------------------
-        data_contrat = {
-            'titulaire': candidat_gagnant.nom_entreprise or '........................',
-            'ninea': candidat_gagnant.ninea or '........................',
-            'rc': rc_final,                       
-            'compte_bancaire': compte_final, 
-            'adresse_candidat': getattr(candidat_gagnant, 'adresse', '........................'),   
-            'tel_candidat': getattr(candidat_gagnant, 'telephone', '..........'),      
-            'objet_marche': marche_choisi.objet_marche or '........................',      
-            'gestion_annee': gestion_annee,
-            'montant': montant,
-            'montant_lettres': montant_lettres,
-            'financement': financement,
-            'imputation': imputation,
-            'programme': programme,
-            'comptable': comptable,
-            'vocable': vocable,
-            'numero': numero,
-            'ref_service': ref_service,
-            'date_lettre': date_lettre,
-        }
-
-        from app.utils import generer_pdf_contrat
-        chemin_pdf = generer_pdf_contrat(data_contrat)
-        nom_fichier = f"Contrat_{candidat_gagnant.nom_entreprise.replace(' ', '_')}.pdf"
-        # --- NOUVEAU CODE À METTRE À LA PLACE ---
+        # 2. ON PRÉPARE LES DONNÉES POUR LE PDF (Optionnel ici si téléchargé via le tableau)
         flash("Contrat généré et sauvegardé avec succès !", "success")
         return redirect(url_for('main.creer_contrat'))
 
-    # 4. On envoie les données au fichier HTML (Partie GET, on ne touche pas)
-    return render_template('formulaire_contrat.html', candidats=candidats, marches=marches, contrats=contrats_sauvegardes)
+    # === DÉBUT PARTIE GET ===
+    # On récupère tous les PV d'attribution
+    liste_pvs = ProcesVerbal.query.order_by(ProcesVerbal.id.desc()).all()
+    
+    contrats_bruts = Contrat.query.order_by(Contrat.id.desc()).all()
+    contrats_sauvegardes = []
+    for c in contrats_bruts:
+        cand = db.session.get(Candidat, c.candidat_id)
+        c.entreprise_nom = cand.nom_entreprise if cand else "Entreprise inconnue"
+        contrats_sauvegardes.append(c)
+
+    return render_template('formulaire_contrat.html', pvs=liste_pvs, contrats=contrats_sauvegardes)
+
+
+# === PARTIE 2 : LA NOUVELLE API MAGIQUE POUR LE PV ===
+@main.route('/api/get_infos_pv')
+@login_required
+def get_infos_pv():
+    import json
+    pv_id = request.args.get('pv_id')
+    pv = ProcesVerbal.query.get(pv_id)
+    
+    if not pv:
+        return jsonify({"success": False})
+        
+    candidat = Candidat.query.filter_by(nom_entreprise=pv.entreprise).first()
+    
+    # 1. On extrait les données du PV (Réf, Date, N° Ordre)
+    data_pv = json.loads(pv.form_data) if pv.form_data else {}
+    immatriculation = pv.numero_drp
+    
+    # 2. On va chercher le RC et le Compte bancaire dans la lettre d'invitation d'origine
+    invit = LettreInvitation.query.filter_by(immatriculation=immatriculation).first()
+    rc = "Non renseigné"
+    compte = "Non renseigné"
+    
+    if invit and invit.form_data:
+        try:
+            data_invit = json.loads(invit.form_data)
+            for p in data_invit.get('prestataires', []):
+                if p.get('nom') == pv.entreprise:
+                    rc = p.get('rc', 'Non renseigné')
+                    compte = p.get('compte', 'Non renseigné')
+                    break
+        except:
+            pass
+            
+    # On renvoie TOUT au formulaire HTML !
+    return jsonify({
+        "success": True,
+        "candidat_id": candidat.id if candidat else "",
+        "nom_entreprise": pv.entreprise,
+        "objet_marche": pv.objet,
+        "ref_service": data_pv.get('ref_service', ''),
+        "date_lettre": data_pv.get('date_lettre', ''),
+        "num_ordre": data_pv.get('num_ordre', ''),
+        "rc": rc,
+        "compte": compte
+    })
 
 
 @main.route('/telecharger_contrat/<int:id>')
@@ -1762,17 +1761,15 @@ def creer_contrat():
 def telecharger_contrat(id):
     from app.utils import generer_pdf_contrat
     contrat = Contrat.query.get_or_404(id)
-    # --- CORRECTION ICI AUSSI ---
     candidat = db.session.get(Candidat, contrat.candidat_id)
-    # ----------------------------
     
     data_contrat = {
-        'titulaire': candidat.nom_entreprise,
-        'ninea': candidat.ninea,
+        'titulaire': candidat.nom_entreprise if candidat else 'Inconnu',
+        'ninea': getattr(candidat, 'ninea', 'N/A'),
         'rc': contrat.rc_candidat,                       
         'compte_bancaire': contrat.compte_bancaire, 
-        'adresse_candidat': candidat.adresse,   
-        'tel_candidat': candidat.telephone,      
+        'adresse_candidat': getattr(candidat, 'adresse', 'N/A'),   
+        'tel_candidat': getattr(candidat, 'telephone', 'N/A'),      
         'objet_marche': contrat.objet_marche,      
         'gestion_annee': contrat.gestion_annee,
         'montant': contrat.montant_chiffres,
@@ -1788,13 +1785,11 @@ def telecharger_contrat(id):
     }
     
     chemin_pdf = generer_pdf_contrat(data_contrat)
-   # Sécurité au cas où l'entreprise n'est pas trouvée
     nom_safe = candidat.nom_entreprise.replace(' ', '_') if candidat else 'Inconnu'
     nom_fichier = f"Contrat_{nom_safe}.pdf"
     return send_file(chemin_pdf, as_attachment=True, download_name=nom_fichier)
 
 
-# --- NOUVEAU : ROUTE POUR VOIR LE SCAN DU CONTRAT ---
 @main.route('/contrat/voir_scan/<int:id>')
 @login_required
 def voir_scan_contrat(id):
@@ -1810,29 +1805,21 @@ def voir_scan_contrat(id):
 @login_required
 def supprimer_contrat(id):
     contrat = Contrat.query.get_or_404(id)
-    
-    # --- LA CORRECTION EST ICI ---
-    # On va chercher le nom de l'entreprise manuellement pour le mouchard
     candidat = db.session.get(Candidat, contrat.candidat_id)
     nom_entreprise = candidat.nom_entreprise if candidat else f"Entreprise ID {contrat.candidat_id}"
-    # -----------------------------
 
-    # Suppression du fichier physique si existant
     if contrat.fichier_scanne:
         basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
         chemin_fichier = os.path.join(basedir, 'stockage_prive', 'scans', contrat.fichier_scanne)
         if os.path.exists(chemin_fichier):
             os.remove(chemin_fichier)
             
-    # On utilise notre variable sécurisée pour le log
     log_action("Suppression Contrat", nom_entreprise)
-    
     db.session.delete(contrat)
     db.session.commit()
-    
     flash("Le contrat et ses fichiers associés ont été supprimés avec succès.", "success")
     return redirect(url_for('main.creer_contrat'))
-    
+
 # ==========================================
 # --- ROUTES : LETTRES D'INFORMATION ---
 # ==========================================
