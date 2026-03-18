@@ -282,7 +282,8 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 
-                <form action="{{ url_for('main.ajouter_bordereau') }}" method="POST"></form>
+                <form action="{{ url_for('main.ajouter_bordereau') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     <div class="modal-body p-4">
                         <input type="hidden" name="type_document" value="bordereau">
 
@@ -357,27 +358,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="modalCahier" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content shadow">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Cahier de Charges</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form action="/drps" method="POST">
-                    <div class="modal-body p-4">
-                        <input type="hidden" name="type_document" value="cahier_charges">
-                        <label class="form-label fw-bold">Titre du marché</label>
-                        <input type="text" name="titre" class="form-control" required>
-                    </div>
-                    <div class="modal-footer bg-light border-0">
-                        <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary px-4 rounded-pill">Générer</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+    
 
     <div class="modal fade" id="modalInvitation" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -387,6 +368,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="/drps" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     <div class="modal-body p-4">
                         <input type="hidden" name="type_document" value="invitation">
                         <label class="form-label fw-bold">Destinataire (Entreprise)</label>
@@ -409,6 +391,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="{{ url_for('main.drps') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                      <div class="modal-body p-4">
                         <input type="hidden" name="type_document" value="information">
 
@@ -515,7 +498,8 @@
                     <h5 class="modal-title fw-bold">Lettre de Notification (Attributaire)</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="{{ url_for('main.ajouter_notification') }}" method="POST"></form>
+                <form action="{{ url_for('main.ajouter_notification') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     <div class="modal-body p-4">
                         <input type="hidden" name="type_document" value="notification">
 
@@ -595,6 +579,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="{{ url_for('main.ajouter_pv') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     <div class="modal-body p-4">
                         <input type="hidden" name="type_document" value="pv_attribution">
 

@@ -147,9 +147,11 @@
           <p class="text-muted small mb-0">Historique des lettres d'invitation générées.</p>
         </div>
         <div>
+          {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
           <button class="btn btn-nouveau shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalNouvelleLettre">
             + Nouvelle Lettre d'Invitation
           </button>
+          {% endif %}
         </div>
       </div>
 
@@ -183,6 +185,7 @@
                     >
                       📄 PDF
                     </a>
+
                     {% if lettre.fichier_scanne %}
                     <a
                       href="{{ url_for('main.voir_scan_lettre', id=lettre.id) }}"
@@ -192,7 +195,7 @@
                     >
                       👁️ Voir Scan
                     </a>
-                    {% else %}
+                    {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
                     <button
                       type="button"
                       class="btn btn-sm btn-outline-warning"
@@ -202,15 +205,17 @@
                     >
                       📤 Joindre Scan
                     </button>
-                    {% endif %}
+                    {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
                     <form
                       action="{{ url_for('main.supprimer_lettre', id=lettre.id) }}"
                       method="POST"
                       class="d-inline"
                       onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette lettre ?');"
                     >
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                       <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">🗑️</button>
                     </form>
+                    {% endif %}
                   </div>
                 </td>
               </tr>
@@ -238,6 +243,7 @@
           </div>
 
           <form method="POST" action="{{ url_for('main.creer_lettre_invitation') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="modal-body p-4">
               <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête de la lettre</h6>
               <div class="row g-3 mb-4">
@@ -387,6 +393,7 @@
           </div>
 
           <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="modal-body p-4">
               <input type="hidden" name="type_doc" value="lettre_invitation" />
               <input type="hidden" name="doc_id" value="{{ lettre.id }}" />

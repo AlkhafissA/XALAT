@@ -354,7 +354,7 @@
                 </td>
 
                 <td class="text-end pe-4">
-                  {% if "Retenu" not in candidat.statut %}
+                  {% if current_user.role in ['superadmin', 'admin'] %} {% if "Retenu" not in candidat.statut %}
                   <button
                     type="button"
                     class="btn btn-action btn-light text-success"
@@ -366,7 +366,7 @@
                   >
                     ✓
                   </button>
-                  {% endif %} {% if candidat.fichier_scanne %}
+                  {% endif %} {% endif %} {% if candidat.fichier_scanne %}
                   <a
                     href="{{ url_for('main.voir_scan', nom_fichier=candidat.fichier_scanne) }}"
                     target="_blank"
@@ -375,7 +375,7 @@
                   >
                     👁️
                   </a>
-                  {% else %}
+                  {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
                   <button
                     type="button"
                     class="btn btn-action btn-light text-warning"
@@ -385,14 +385,14 @@
                   >
                     📤
                   </button>
-                  {% endif %}
-
+                  {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
                   <a
                     href="{{ url_for('main.decision', id=candidat.id, type_decision='refuser') }}"
                     class="btn btn-action btn-light text-warning"
                     title="Rejeter"
                     >✕</a
                   >
+                  {% endif %}
 
                   <a
                     href="{{ url_for('main.telecharger_agrement_vierge', id=candidat.id) }}"
@@ -408,9 +408,9 @@
                     title="Télécharger Final"
                     >📥</a
                   >
-                  {% endif %}
-
+                  {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
                   <form action="{{ url_for('main.supprimer', id=candidat.id) }}" method="POST" style="display: inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     <button
                       type="submit"
                       class="btn btn-danger btn-sm"
@@ -420,6 +420,7 @@
                       <i class="fas fa-trash"></i>
                     </button>
                   </form>
+                  {% endif %}
                 </td>
               </tr>
               {% else %}
@@ -445,6 +446,7 @@
           </div>
 
           <form action="{{ url_for('main.valider_agrement_final') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="modal-body p-4">
               <div class="text-center mb-4">
                 <h4 id="displayNomEntreprise" class="fw-bold text-success mb-0"></h4>
@@ -492,6 +494,7 @@
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="modal-body p-4">
               <p class="small text-muted">
                 Uploadez la version scannée de l'agrément pour

@@ -185,7 +185,7 @@
                     >
                       👁️ Voir Scan
                     </a>
-                    {% else %}
+                    {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
                     <button
                       type="button"
                       class="btn btn-sm btn-outline-warning ms-1"
@@ -195,9 +195,9 @@
                     >
                       📤 Joindre Scan
                     </button>
-                    {% endif %}
-
+                    {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
                     <form action="{{ url_for('main.supprimer_pv', id=pv.id) }}" method="POST" style="display: inline">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                       <button
                         type="submit"
                         class="btn btn-outline-secondary btn-sm ms-1"
@@ -207,6 +207,7 @@
                         <i class="bi bi-trash"></i>
                       </button>
                     </form>
+                    {% endif %}
                   </div>
                 </td>
               </tr>
@@ -232,6 +233,7 @@
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <form action="{{ url_for('main.ajouter_pv') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="modal-body p-4">
               <input type="hidden" name="type_document" value="pv_attribution" />
 
@@ -329,6 +331,7 @@ Générale et de l'Equipement</textarea
           </div>
 
           <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="modal-body p-4">
               <input type="hidden" name="type_doc" value="pv_attribution" />
               <input type="hidden" name="doc_id" value="{{ pv.id }}" />

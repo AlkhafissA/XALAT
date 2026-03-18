@@ -194,9 +194,11 @@
             📊 Excel
           </a>
 
+          {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
           <button type="button" class="btn btn-nouveau shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalNouveauBordereau">
             + Nouveau Bordereau
           </button>
+          {% endif %}
         </div>
       </div>
 
@@ -247,7 +249,7 @@
                     >
                       👁️ Voir Scan
                     </a>
-                    {% else %}
+                    {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
                     <button
                       type="button"
                       class="btn btn-sm btn-outline-warning ms-1"
@@ -257,9 +259,9 @@
                     >
                       📤 Joindre Scan
                     </button>
-                    {% endif %}
-
+                    {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
                     <form action="{{ url_for('main.supprimer_bordereau', id=b.id) }}" method="POST" style="display: inline">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                       <button
                         type="submit"
                         class="btn btn-outline-secondary btn-sm ms-1"
@@ -269,6 +271,7 @@
                         <i class="bi bi-trash"></i>
                       </button>
                     </form>
+                    {% endif %}
                   </div>
                 </td>
               </tr>
@@ -295,6 +298,7 @@
           </div>
 
           <form action="{{ url_for('main.ajouter_bordereau') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="modal-body p-4">
               <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête</h6>
               <div class="mb-3">
@@ -407,6 +411,7 @@
           </div>
 
           <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="modal-body p-4">
               <input type="hidden" name="type_doc" value="bordereau" />
               <input type="hidden" name="doc_id" value="{{ b.id }}" />

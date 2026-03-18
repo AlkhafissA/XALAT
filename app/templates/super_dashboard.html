@@ -105,6 +105,34 @@
             <div class="text-white-50 small">Interface Super-Administrateur</div>
           </div>
         </div>
+        <button type="button" class="btn btn-danger shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCleSecurite">
+          <i class="bi bi-shield-lock"></i> Accès Réglages Sensibles
+        </button>
+
+        <div class="modal fade" id="modalCleSecurite" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-key-fill"></i> Clé de déverrouillage requise</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+              </div>
+
+              <form method="POST" action="{{ url_for('main.verifier_cle_securite') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div class="modal-body p-4">
+                  <p class="text-muted">Veuillez saisir la clé de sécurité maître pour continuer.</p>
+                  <div class="mb-3">
+                    <input type="password" name="cle_saisie" class="form-control border-danger text-center fs-5" placeholder="••••••••" required />
+                  </div>
+                </div>
+                <div class="modal-footer bg-light">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                  <button type="submit" class="btn btn-danger">Valider la clé</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
         <div>
           <a href="{{ url_for('main.tableau_de_bord') }}" class="btn btn-outline-light btn-sm me-2 mb-2 mb-md-0">
             <i class="fas fa-home"></i> Appli
@@ -118,8 +146,9 @@
       <div class="row g-4 mb-5">
         <div class="col-12 col-md-4">
           <div class="card card-custom p-4 h-100">
-            <h5 class="fw-bold mb-3"><i class="fas fa-user-plus text-primary"></i> Nouvel Admin</h5>
+            <h5 class="fw-bold mb-3"><i class="fas fa-user-plus text-primary"></i> Nouvel Utilisateur</h5>
             <form action="{{ url_for('main.creer_utilisateur') }}" method="POST">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
               <div class="mb-3">
                 <label class="form-label small fw-bold text-muted">IDENTIFIANT</label>
                 <input type="text" name="username" class="form-control bg-light" placeholder="Ex: Gestionnaire1" required />
@@ -127,6 +156,15 @@
               <div class="mb-3">
                 <label class="form-label small fw-bold text-muted">MOT DE PASSE</label>
                 <input type="password" name="password" class="form-control bg-light" placeholder="••••••" required />
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label small fw-bold text-muted">NIVEAU D'HABILITATION</label>
+                <select class="form-select bg-light" name="role" required>
+                  <option value="admin">Administrateur (Chef)</option>
+                  <option value="agent" selected>Agent (Opérationnel)</option>
+                  <option value="stagiaire">Stagiaire (Lecture seule)</option>
+                </select>
               </div>
               <button type="submit" class="btn btn-dark w-100 fw-bold py-2">CRÉER LE COMPTE</button>
             </form>
@@ -157,6 +195,7 @@
                     <td class="small text-muted">{{ ban.last_attempt.strftime('%d/%m/%Y à %H:%M') }}</td>
                     <td class="text-end pe-4">
                       <form action="{{ url_for('main.debloquer_ip', id=ban.id) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                         <button type="submit" class="btn btn-success btn-sm fw-bold"><i class="fas fa-unlock"></i> DÉBLOQUER</button>
                       </form>
                     </td>
@@ -187,13 +226,18 @@
                     <td>
                       {% if user.role == 'superadmin' %}
                       <span class="badge bg-danger badge-role">SUPER ADMIN</span>
+                      {% elif user.role == 'admin' %}
+                      <span class="badge bg-success badge-role">ADMIN</span>
+                      {% elif user.role == 'agent' %}
+                      <span class="badge bg-primary badge-role">AGENT</span>
+                      {% elif user.role == 'stagiaire' %}
+                      <span class="badge bg-secondary badge-role">STAGIAIRE</span>
                       {% else %}
-                      <span class="badge bg-success badge-role">Admin</span>
+                      <span class="badge bg-dark badge-role">{{ user.role|upper }}</span>
                       {% endif %}
                     </td>
                     <td class="text-end pe-4">
                       {% if user.id != current_user.id %}
-
                       <a
                         href="{{ url_for('main.reset_password', id=user.id) }}"
                         class="btn btn-outline-warning btn-sm me-1"
@@ -210,6 +254,7 @@
                         style="display: inline"
                         onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?');"
                       >
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                         <button type="submit" class="btn btn-outline-danger btn-sm">
                           <i class="fas fa-trash"></i>
                         </button>
@@ -273,6 +318,7 @@
                 );
               "
             >
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
               <button type="submit" class="btn btn-sm btn-outline-danger fw-bold shadow-sm rounded-pill px-3">
                 <i class="fas fa-trash-alt"></i> Vider les Logs
               </button>

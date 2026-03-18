@@ -1,6 +1,7 @@
 import os
 import zipfile
 import json
+from functools import wraps
 from werkzeug.utils import secure_filename
 from flask import send_file, make_response, abort
 from flask import send_from_directory, abort
@@ -23,7 +24,6 @@ from fpdf import FPDF
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app, jsonify, session
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_mail import Message
 
 from app.extensions import db, mail
 from app.models import User, Candidat, Cotation, Offre, Historique, LoginAttempt, LogAction
@@ -31,6 +31,23 @@ from app.utils import clean_text, generer_lettre_agrement, num2words_fr, dessine
 
 # Création du "Blueprint"
 main = Blueprint('main', __name__)
+
+def role_requis(*roles_autorises):
+    """
+    Décorateur moderne (RBAC) : Bloque l'accès si l'utilisateur n'a pas le bon rôle.
+    Utilisation : @role_requis('superadmin', 'admin')
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Si l'utilisateur n'est pas dans la liste des rôles autorisés
+            if current_user.role not in roles_autorises:
+                flash("Accès refusé : Votre niveau d'habilitation est insuffisant pour cette action.", "danger")
+                # On le renvoie à l'accueil
+                return redirect(url_for('main.tableau_de_bord'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 # Seuls les PDF et les images sont acceptés !
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'}
@@ -162,11 +179,13 @@ def tableau_de_bord():
 
 @main.route('/ajouter')
 @login_required
+@role_requis('superadmin', 'admin', 'agent') # 🛡️ Le Stagiaire est bloqué ici
 def afficher_formulaire():
     return render_template('ajouter.html')
 
 @main.route('/sauvegarder', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin', 'agent') # 🛡️ Le Stagiaire est bloqué ici
 def sauvegarder():
     nouveau = Candidat(
         nom_entreprise=request.form.get('nom_entreprise'),
@@ -199,29 +218,38 @@ def telecharger_agrement_vierge(id):
 @main.route('/telecharger_agrement_final/<int:id>')
 @login_required
 def telecharger_agrement_final(id):
-    print("\n--- 🛠️ DEBUG : TENTATIVE DE TELECHARGEMENT ---")
+    # Les flush=True sont là pour forcer l'affichage immédiat dans le terminal !
+    print("\n--- 🛠️ DEBUG : TENTATIVE DE TELECHARGEMENT ---", flush=True)
+    
     candidat = db.session.get(Candidat, id)
     
-    print(f"Analyse du candidat en base -> Statut: '{candidat.statut}', Réf: '{candidat.ref_interne}'")
+    # Sécurité anti-crash
+    if not candidat:
+        print("❌ ERREUR : Aucun candidat trouvé avec cet ID !", flush=True)
+        flash("Candidat introuvable.", "danger")
+        return redirect(url_for('main.tableau_de_bord'))
+        
+    print(f"Analyse du candidat en base -> Statut: '{candidat.statut}', Réf: '{candidat.ref_interne}'", flush=True)
     
     if candidat.statut == "Retenu" and candidat.ref_interne:
-        print("✅ Conditions OK. Lancement du téléchargement.")
+        print("✅ Conditions OK. Lancement du téléchargement.", flush=True)
         nom_fichier_relatif = generer_lettre_agrement(candidat, mode='final')
         filename = os.path.basename(nom_fichier_relatif)
         return redirect(url_for('main.secure_download', folder='agreement', filename=filename))
     else:
-        print("❌ Conditions NON remplies. Pourquoi ?")
+        print("❌ Conditions NON remplies. Pourquoi ?", flush=True)
         if candidat.statut != "Retenu":
-            print(f"  -> Le statut est '{candidat.statut}' au lieu de 'Retenu'")
+            print(f"  -> Le statut est '{candidat.statut}' au lieu de 'Retenu'", flush=True)
         if not candidat.ref_interne:
-            print(f"  -> La ref_interne est vide (None ou '')")
-        print("----------------------------------------------\n")
+            print(f"  -> La ref_interne est vide (None ou '')", flush=True)
+        print("----------------------------------------------\n", flush=True)
         
         flash("Ce dossier n'est pas encore validé.", "danger")
         return redirect(url_for('main.tableau_de_bord'))
-
+    
 @main.route('/valider_agrement_final', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin') # 🛡️ SEULS LES CHEFS : L'Agent et le Stagiaire sont bloqués !
 def valider_agrement_final():
     candidat_id = request.form.get('candidat_id')
     if not candidat_id: return redirect(url_for('main.tableau_de_bord'))
@@ -244,6 +272,7 @@ def valider_agrement_final():
         candidat.ref_lettre_candidat = request.form.get('ref_lettre_candidat')
         # -----------------------------
 
+        # ... (début de ta fonction inchangé) ...
         candidat.statut = "Retenu"
         db.session.commit()
         
@@ -251,30 +280,15 @@ def valider_agrement_final():
         pdf_path_relatif = generer_lettre_agrement(candidat, mode='final')
         filename = os.path.basename(pdf_path_relatif)
         
-        # 👇 CHEMIN VERS LE COFFRE-FORT POUR LA PIÈCE JOINTE
-        basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
-        chemin_absolu = os.path.join(basedir, 'stockage_prive', 'agreement', filename)
-        
-        try:
-            msg = Message()
-            msg.recipients = [candidat.email]
-            msg.subject = "Félicitations : Votre Agrément (Validé)"
-            msg.body = f"Bonjour,\n\nVotre demande a été validée.\nRef: {candidat.ref_interne}."
-            
-            with open(chemin_absolu, 'rb') as fp:
-                msg.attach(f"Agrement_{candidat.nom_entreprise}.pdf", "application/pdf", fp.read())
-            
-            mail.send(msg)
-            log_action("Validation Agrément & Email", candidat.nom_entreprise)
-            flash("Dossier validé et agrément envoyé par email !", "success")
-        except Exception as e:
-            print(f"Erreur Mail: {str(e)}")
-            flash("Dossier validé, mais l'envoi de l'email a échoué.", "warning")
+        # --- NOUVEAU BLOC SANS L'EMAIL ---
+        log_action("Validation Agrément", candidat.nom_entreprise)
+        flash("Dossier validé et agrément généré avec succès !", "success")
             
     return redirect(url_for('main.tableau_de_bord'))
 
 @main.route('/decision/<int:id>/<type_decision>')
 @login_required
+@role_requis('superadmin', 'admin') # 🛡️ SEULS LES CHEFS : L'Agent et le Stagiaire ne peuvent pas refuser un dossier
 def decision(id, type_decision):
     candidat = db.session.get(Candidat, id)
     if candidat and type_decision == 'refuser':
@@ -285,6 +299,7 @@ def decision(id, type_decision):
 
 @main.route('/supprimer/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
 @login_required
+@role_requis('superadmin', 'admin') # 🛡️ SEULS LES CHEFS : Destruction de données interdite aux Agents/Stagiaires
 def supprimer(id):
     candidat = db.session.get(Candidat, id)
     if candidat:
@@ -303,12 +318,14 @@ def liste_cotations():
 
 @main.route('/nouvelle_cotation')
 @login_required
+@role_requis('superadmin', 'admin', 'agent') # 🛡️ Stagiaire bloqué (Lecture seule)
 def nouvelle_cotation():
     candidats = Candidat.query.order_by(Candidat.nom_entreprise).all()
     return render_template('cotations_form.html', candidats=candidats, cotation=None)
 
 @main.route('/modifier_cotation/<int:id>')
 @login_required
+@role_requis('superadmin', 'admin', 'agent') # 🛡️ Stagiaire bloqué
 def modifier_cotation(id):
     cotation = db.session.get(Cotation, id)
     candidats = Candidat.query.order_by(Candidat.nom_entreprise).all()
@@ -316,6 +333,7 @@ def modifier_cotation(id):
 
 @main.route('/sauvegarder_cotation', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin', 'agent') # 🛡️ Stagiaire bloqué
 def sauvegarder_cotation():
     cotation_id = request.form.get('cotation_id')
     def get_date(f): 
@@ -354,6 +372,7 @@ def sauvegarder_cotation():
 
 @main.route('/supprimer_cotation/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
 @login_required
+@role_requis('superadmin', 'admin') # 🛡️ ACTION CRITIQUE : Seuls les chefs peuvent supprimer !
 def supprimer_cotation(id):
     c = db.session.get(Cotation, id)
     if c: 
@@ -584,13 +603,12 @@ def download_backup():
     db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
     return send_file(db_path, as_attachment=True, download_name='backup_mcat.db')
 
+# N'oublie pas que tu dois avoir importé ou créé ta fonction role_requis en haut du fichier !
+
 @main.route('/super_dashboard')
 @login_required
+@role_requis('superadmin') # 🛡️ On remplace le 'if' par le badge !
 def super_dashboard():
-    if current_user.role != 'superadmin': 
-        flash("Accès réservé.", "danger")
-        return redirect(url_for('main.tableau_de_bord'))
-    
     users = User.query.all()
     
     # 1. On récupère les logs de sécurité
@@ -627,31 +645,35 @@ def super_dashboard():
 
 @main.route('/creer_utilisateur', methods=['POST'])
 @login_required
+@role_requis('superadmin') # 🛡️ Seul le SuperAdmin peut créer des comptes
 def creer_utilisateur():
-    if current_user.role != 'superadmin': 
-        return redirect(url_for('main.tableau_de_bord'))
-    
     username = request.form.get('username')
     password = request.form.get('password')
+    # 👇 NOUVEAU : On récupère le rôle depuis le formulaire HTML !
+    role_choisi = request.form.get('role', 'agent') # Par défaut, on met 'agent' par sécurité
     
+    # Sécurité : On s'assure que personne ne bidouille le formulaire pour créer un faux superadmin
+    roles_valides = ['admin', 'agent', 'stagiaire']
+    if role_choisi not in roles_valides:
+        role_choisi = 'agent' 
+        
     if User.query.filter_by(username=username).first():
         flash("Cet utilisateur existe déjà.", "warning")
     else:
         hashed_pw = generate_password_hash(password, method='pbkdf2:sha256')
-        new_user = User(username=username, password_hash=hashed_pw, role='admin')
+        # 👇 NOUVEAU : On applique le rôle choisi !
+        new_user = User(username=username, password_hash=hashed_pw, role=role_choisi)
         db.session.add(new_user)
-        log_action("Création Utilisateur", username)
+        log_action(f"Création Utilisateur ({role_choisi})", username)
         db.session.commit()
-        flash(f"Utilisateur {username} créé avec succès.", "success")
+        flash(f"Utilisateur {username} créé avec succès en tant que {role_choisi.capitalize()}.", "success")
         
     return redirect(url_for('main.super_dashboard'))
 
-@main.route('/supprimer_utilisateur/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
+@main.route('/supprimer_utilisateur/<int:id>', methods=['POST']) 
 @login_required
+@role_requis('superadmin') # 🛡️
 def supprimer_utilisateur(id):
-    if current_user.role != 'superadmin': 
-        return redirect(url_for('main.tableau_de_bord'))
-    
     user_to_delete = db.session.get(User, id)
     if user_to_delete:
         if user_to_delete.role == 'superadmin':
@@ -714,8 +736,14 @@ def forcer_changement_mdp():
 # --- ROUTE POUR LA PAGE DRPS  ---
 @main.route('/drps', methods=['GET', 'POST'])
 @login_required
+# On utilise une logique différente ici car la route fait les DEUX (affichage et génération POST)
 def drps():
     if request.method == 'POST':
+        # 🛡️ SÉCURITÉ : Le Stagiaire ne peut pas générer de documents via POST
+        if current_user.role not in ['superadmin', 'admin', 'agent']:
+            flash("Accès refusé : Vous n'avez pas l'autorisation de générer ces documents.", "danger")
+            return redirect(url_for('main.drps'))
+
         # On récupère le type de document avec un seul nom de variable
         type_document = request.form.get('type_document')
 
@@ -827,18 +855,14 @@ def drps():
             return ajouter_notification()
 
     # =========================================================
-    # Affichage normal de la page (quand on clique sur l'onglet)
+    # Affichage normal de la page (quand on clique sur l'onglet) -> TOUT LE MONDE PEUT VOIR
     # =========================================================
     
     candidats = Candidat.query.order_by(Candidat.nom_entreprise).all()
-    
-    # 1. On récupère les lettres depuis la base de données
     lettres_db = LettreInvitation.query.order_by(LettreInvitation.id.desc()).all()
     
-    # ---> LE FAMEUX MOUCHARD EST ICI <---
     print(f"\n\n==== DIAGNOSTIC ==== j'ai trouvé {len(lettres_db)} lettres d'invitation dans la base !\n\n")
     
-    # 2. On déballe le texte JSON pour que le tableau HTML puisse lire les dates et numéros
     lettres_pour_tableau = []
     for lettre in lettres_db:
         data = json.loads(lettre.form_data) if lettre.form_data else {}
@@ -850,7 +874,6 @@ def drps():
             'date_heure_limite': data.get('date_heure_limite', 'Non défini')
         })
 
-    # 3. On envoie TOUT au fichier HTML (les candidats ET les lettres)
     return render_template('drps.html', candidats=candidats, lettres=lettres_pour_tableau)
 
 # ==========================================
@@ -859,12 +882,14 @@ def drps():
 
 @main.route('/bordereaux')
 @login_required
+# Pas de blocage : Tout le monde peut voir la liste
 def liste_bordereaux():
     bordereaux = Bordereau.query.order_by(Bordereau.id.desc()).all()
     return render_template('liste_bordereaux.html', bordereaux=bordereaux)
 
 @main.route('/bordereaux/ajouter', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin', 'agent') # 🛡️ Stagiaire bloqué
 def ajouter_bordereau():
     import json
     from datetime import datetime
@@ -890,7 +915,6 @@ def ajouter_bordereau():
             'ref': liste_refs[i]
         })
     
-    # On sauvegarde dans la base de données
     nouveau_bordereau = Bordereau(
         direction_name=direction_name,
         numero=numero,
@@ -904,13 +928,12 @@ def ajouter_bordereau():
     log_action("Ajout Bordereau", f"N° {numero}")
     db.session.commit()
     
-    # --- MODIFICATION ICI ---
     flash("Bordereau enregistré avec succès !", "success")
-    # On redirige vers le tableau des bordereaux au lieu du téléchargement PDF
     return redirect(url_for('main.liste_bordereaux'))
 
 @main.route('/bordereaux/pdf/<int:id>')
 @login_required
+# Pas de blocage : Tout le monde peut télécharger
 def download_bordereau_pdf(id):
     bordereau = Bordereau.query.get_or_404(id)
     buffer = io.BytesIO()
@@ -924,7 +947,6 @@ def download_bordereau_pdf(id):
         'observations': bordereau.observations
     }
     
-    # On génère le PDF à la volée (en mémoire RAM)
     from app.utils import generer_pdf_bordereau
     generer_pdf_bordereau(buffer, data)
     buffer.seek(0)
@@ -936,13 +958,12 @@ def download_bordereau_pdf(id):
         mimetype='application/pdf'
     )
 
-# --- NOUVEAU : ROUTE POUR VOIR LE SCAN DU BORDEREAU ---
 @main.route('/bordereaux/voir_scan/<int:id>')
 @login_required
+# Pas de blocage : Tout le monde peut voir
 def voir_scan_bordereau(id):
     bordereau = Bordereau.query.get_or_404(id)
     if bordereau.fichier_scanne:
-        # On utilise notre super route sécurisée pour aller chercher le document !
         return redirect(url_for('main.secure_download', folder='scans', filename=bordereau.fichier_scanne))
     else:
         flash("Aucun fichier scanné n'a été uploadé pour ce bordereau.", "warning")
@@ -950,10 +971,10 @@ def voir_scan_bordereau(id):
 
 @main.route('/bordereaux/supprimer/<int:id>', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin') # 🛡️ ACTION CRITIQUE : Seuls les chefs peuvent supprimer !
 def supprimer_bordereau(id):
     bordereau = Bordereau.query.get_or_404(id)
     
-    # OPTIONNEL MAIS CONSEILLÉ : Supprimer le fichier physique du scan s'il existe
     if bordereau.fichier_scanne:
         basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
         chemin_fichier = os.path.join(basedir, 'stockage_prive', 'scans', bordereau.fichier_scanne)
@@ -966,6 +987,9 @@ def supprimer_bordereau(id):
     
     flash('Bordereau et ses fichiers associés supprimés.', 'success')
     return redirect(url_for('main.liste_bordereaux'))
+
+
+
 
 # NOUVEAU : La route attend maintenant le numéro du bordereau ET l'immatriculation
 @main.route('/api/get_infos_bordereau')
@@ -1026,8 +1050,6 @@ def exporter_bordereaux():
     db.session.commit()
     return send_file(output, download_name="Export_Bordereaux.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") 
             
-
-
 
 
 @main.route('/api/get_adresse/<int:id>')
@@ -1146,6 +1168,7 @@ def info_depuis_notif(immatriculation):
 
 @main.route('/notifications/ajouter', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin', 'agent') # 🛡️ SÉCURITÉ : Stagiaire bloqué
 def ajouter_notification():
     immatriculation = request.form.get('immatriculation')
     prestataire_id = request.form.get('prestataire_id_notif')
@@ -1317,6 +1340,7 @@ def voir_scan_notification(id):
 
 @main.route('/notifications/supprimer/<int:id>', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin', ) # 🛡️ SÉCURITÉ : Stagiaire et Agent bloqué
 def supprimer_notification(id):
     notif = LettreNotification.query.get_or_404(id)
     
@@ -1347,6 +1371,7 @@ def liste_pv():
 
 @main.route('/pv-attribution/ajouter', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin', 'agent') # 🛡️ SÉCURITÉ : Stagiaire bloqué
 def ajouter_pv():
     prestataire_id = request.form.get('prestataire_id_pv')
     entreprise_nom = "Non renseignée"
@@ -1428,6 +1453,7 @@ def voir_scan_pv(id):
 
 @main.route('/pv-attribution/supprimer/<int:id>', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin') # 🛡️ SÉCURITÉ : ACTION CRITIQUE, seuls les chefs peuvent supprimer !
 def supprimer_pv(id):
     pv = db.session.query(ProcesVerbal).get_or_404(id)
     
@@ -1457,6 +1483,11 @@ def creer_lettre_invitation():
     from datetime import datetime  # <-- NOUVEAU : On importe l'outil pour lire les dates
 
     if request.method == 'POST':
+        # 🛡️ SÉCURITÉ : Le Stagiaire peut voir la page (GET) mais ne peut pas valider le formulaire (POST)
+        if current_user.role == 'stagiaire':
+            flash("Accès refusé : Les stagiaires ne sont pas autorisés à générer des lettres.", "danger")
+            return redirect(url_for('main.creer_lettre_invitation'))
+
         # 1. On récupère les informations générales simples
         immatriculation = request.form.get('immatriculation')
         objet_marche = request.form.get('objet_marche')
@@ -1558,7 +1589,8 @@ def creer_lettre_invitation():
             'date_heure_limite': data.get('date_heure_limite', 'Non défini'),
             'fichier_scanne': lettre.fichier_scanne
         })
-# 2. --- NOUVEAU : Préparation GROUPÉE par Bordereau ---
+        
+    # 2. --- NOUVEAU : Préparation GROUPÉE par Bordereau ---
     lettres_db = LettreInvitation.query.all()
     tous_les_bordereaux = Bordereau.query.order_by(Bordereau.id.desc()).all()
     
@@ -1622,6 +1654,7 @@ def voir_scan_lettre(id):
 
 @main.route('/supprimer_lettre/<int:id>', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin') # 🛡️ SÉCURITÉ : Action critique
 def supprimer_lettre(id):
     lettre = LettreInvitation.query.get_or_404(id)
     
@@ -1649,6 +1682,11 @@ def creer_contrat():
     import json
     
     if request.method == 'POST':
+        # 🛡️ SÉCURITÉ : Le Stagiaire peut voir la page (GET) mais ne peut pas générer de contrat (POST)
+        if current_user.role == 'stagiaire':
+            flash("Accès refusé : Les stagiaires ne sont pas autorisés à générer des contrats.", "danger")
+            return redirect(url_for('main.creer_contrat'))
+
         candidat_id = request.form.get('candidat_id')
         candidat_gagnant = db.session.get(Candidat, int(candidat_id)) if candidat_id else None
         
@@ -1803,6 +1841,7 @@ def voir_scan_contrat(id):
 
 @main.route('/supprimer_contrat/<int:id>', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin') # 🛡️ SÉCURITÉ : Action critique, chefs uniquement
 def supprimer_contrat(id):
     contrat = Contrat.query.get_or_404(id)
     candidat = db.session.get(Candidat, contrat.candidat_id)
@@ -1827,6 +1866,11 @@ def supprimer_contrat(id):
 @main.route('/creer_lettre_information', methods=['POST'])
 @login_required
 def creer_lettre_information():
+    # 🛡️ SÉCURITÉ : Le Stagiaire ne peut pas générer de lettre d'information
+    if current_user.role == 'stagiaire':
+        flash("Accès refusé : Les stagiaires ne sont pas autorisés à générer des lettres d'information.", "danger")
+        return redirect(url_for('main.lettres_information'))
+
     import io
     from datetime import datetime
     import json
@@ -1958,6 +2002,7 @@ def voir_scan_lettre_info(id):
 
 @main.route('/supprimer_lettre_information/<int:id>', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin') # 🛡️ SÉCURITÉ : Action critique, chefs uniquement
 def supprimer_lettre_information(id):
     lettre = LettreInformation.query.get_or_404(id)
     
@@ -1974,7 +2019,7 @@ def supprimer_lettre_information(id):
     
     flash("La lettre d'information et ses fichiers associés ont été supprimés avec succès.", "success")
     return redirect(url_for('main.lettres_information'))
-    
+
 # ==========================================
 # --- ROUTES : GESTION DES SCANS ET UPLOADS ---
 # ==========================================
@@ -1986,148 +2031,101 @@ def voir_scan(nom_fichier):
     log_action("Consultation Scan", nom_fichier)
     db.session.commit()
     
-    # On utilise simplement notre route sécurisée universelle
-    # puisque tous les scans vont dans le dossier 'scans'
+    # On délègue tout le travail à la route sécurisée, pas besoin de code mort en dessous !
     return redirect(url_for('main.secure_download', folder='scans', filename=nom_fichier))
     
-    # DEBUG : Copie ce qui s'affiche dans ton terminal pour comparer
-    print(f"--- TENTATIVE DE LECTURE ---")
-    print(f"Fichier cherché : {nom_fichier}")
-    print(f"Chemin complet  : {chemin_complet}")
-    print(f"Existe sur disque ? : {chemin_complet.exists()}")
-    
-    if not chemin_complet.exists():
-        # Si le fichier n'est pas dans /scans, on teste dans /cotations par sécurité
-        chemin_secours = base_path / 'stockage_prive' / 'cotations' / nom_fichier
-        if chemin_secours.exists():
-            return send_from_directory(chemin_secours.parent, nom_fichier)
-        abort(404)
-
-    return send_from_directory(dossier_scans, nom_fichier)
     
 @main.route('/uploader_scan', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin', 'agent') # 🛡️ SÉCURITÉ : Pas de stagiaire !
 def uploader_scan():
     print("--- DÉBUT DE L'UPLOAD ---")
     
     type_doc = request.form.get('type_doc')
     doc_id = request.form.get('doc_id')
-    page_retour = request.form.get('page_retour')
+    page_retour = request.form.get('page_retour', 'main.tableau_de_bord') # Sécurité : fallback par défaut
     
-    if 'scan_file' not in request.files:
+    if 'scan_file' not in request.files or request.files['scan_file'].filename == '':
         flash("Aucun fichier sélectionné.", "danger")
         return redirect(url_for(page_retour))
         
     file = request.files['scan_file']
+
+    # ==========================================================
+    # 👇 LE BOUCLIER DE SÉCURITÉ EST LÀ 👇
+    if not fichier_est_autorise(file.filename):
+        flash("Fichier non autorisé ! Seuls les PDF et images sont acceptés.", "danger")
+        log_action("Alerte Sécurité", f"Tentative d'upload illégal : {file.filename} sur {type_doc} n°{doc_id}")
+        db.session.commit()
+        return redirect(url_for(page_retour))
+    # 👆 FIN DU BOUCLIER 👆
+    # ==========================================================
     
-    if file.filename == '':
-        flash("Aucun fichier sélectionné.", "danger")
+    # 1. Préparation du nom et du dossier
+    filename = secure_filename(file.filename)
+    nouveau_nom = f"{type_doc}_{doc_id}_{filename}"
+    
+    basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+    dossier_sauvegarde = os.path.join(basedir, 'stockage_prive', 'scans')
+    os.makedirs(dossier_sauvegarde, exist_ok=True)
+    
+    # On importe les modèles ici pour éviter les imports circulaires
+    from app.models import (LettreInvitation, Contrat, LettreInformation, 
+                            LettreNotification, Bordereau, ProcesVerbal, 
+                            Cotation, Candidat)
+                            
+    # 2. Dictionnaire de correspondance (beaucoup plus propre que les if/elif)
+    modeles_map = {
+        'lettre_invitation': LettreInvitation,
+        'contrat': Contrat,
+        'lettre_information': LettreInformation,
+        'lettre_notification': LettreNotification,
+        'bordereau': Bordereau,
+        'pv_attribution': ProcesVerbal,
+        'cotation': Cotation,
+        'agrement': Candidat
+    }
+
+    if type_doc not in modeles_map:
+        flash("Type de document invalide.", "danger")
         return redirect(url_for(page_retour))
 
-    if file:
-        # ==========================================================
-        # 👇 LE BOUCLIER DE SÉCURITÉ EST LÀ 👇
-        if not fichier_est_autorise(file.filename):
-            flash("Fichier non autorisé ! Seuls les PDF et images sont acceptés.", "danger")
-            # Le mouchard enregistre la tentative et précise la cible !
-            log_action("Alerte Sécurité", f"Tentative d'upload illégal : {file.filename} sur {type_doc} n°{doc_id}")
-            db.session.commit()
-            return redirect(url_for(page_retour))
-        # 👆 FIN DU BOUCLIER 👆
-        # ==========================================================
-        filename = secure_filename(file.filename)
-        nouveau_nom = f"{type_doc}_{doc_id}_{filename}"
-        
-        # 👇 ON ENREGISTRE MAINTENANT DANS LE DOSSIER PRIVÉ
-        basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
-        dossier_sauvegarde = os.path.join(basedir, 'stockage_prive', 'scans')
-        os.makedirs(dossier_sauvegarde, exist_ok=True)
-        
-        
-        chemin_complet = os.path.join(dossier_sauvegarde, nouveau_nom)
-        file.save(chemin_complet)
-        
-        # --- MISE À JOUR BASE DE DONNÉES ---
-        if type_doc == 'lettre_invitation':
-            from app.models import LettreInvitation
-            doc = LettreInvitation.query.get(doc_id)
-            if doc: 
-                doc.fichier_scanne = nouveau_nom
-                db.session.commit()
-                
-        elif type_doc == 'contrat':
-            from app.models import Contrat
-            doc = Contrat.query.get(doc_id)
-            if doc: 
-                doc.fichier_scanne = nouveau_nom
-                db.session.commit()
-        
-        elif type_doc == 'lettre_information':
-            from app.models import LettreInformation
-            doc = LettreInformation.query.get(doc_id)
-            if doc: 
-                doc.fichier_scanne = nouveau_nom
-                db.session.commit()
-                
-        elif type_doc == 'lettre_notification':
-            from app.models import LettreNotification
-            doc = LettreNotification.query.get(doc_id)
-            if doc: 
-                doc.fichier_scanne = nouveau_nom
-                db.session.commit()
-                
-        elif type_doc == 'bordereau':
-            from app.models import Bordereau
-            doc = Bordereau.query.get(doc_id)
-            if doc: 
-                doc.fichier_scanne = nouveau_nom
-                db.session.commit()
-           
-        elif type_doc == 'pv_attribution':
-            from app.models import ProcesVerbal
-            doc = ProcesVerbal.query.get(doc_id)
-            if doc:
-                doc.fichier_scanne = nouveau_nom
-                db.session.commit()  
-                
-        elif type_doc == 'cotation':
-            from app.models import Cotation
-            doc = Cotation.query.get(doc_id)
-            if doc:
-                doc.fichier_scanne = nouveau_nom
-                db.session.commit()  
-                      
-        elif type_doc == 'agrement':
-            from app.models import Candidat
-            doc = Candidat.query.get(doc_id)
-            if doc:
-                doc.fichier_scanne = nouveau_nom
-                db.session.commit()
-        # =========================================================
-        # --- NOUVEAU : AJOUT AUTOMATIQUE AUX ARCHIVES GLOBALES ---
-        # =========================================================
-        
-        # 1. On récupère la référence du document s'il en a une, sinon on génère un nom par défaut
-        ref_archive = getattr(doc, 'reference', f"{type_doc.upper()}-{doc_id}")
-        
-        # 2. On rend le type joli pour le tableau 
-        type_formate = type_doc.replace('_', ' ').title()
-        
-        # 3. On enregistre dans la table des archives
-        nouvelle_archive = ArchiveDocument(
-            reference=ref_archive,
-            type_document=type_formate,
-            nom_fichier=nouveau_nom
-        )
-        db.session.add(nouvelle_archive)
-        
-        # 👇 ON PLACE LE RADAR JUSTE AVANT LE DERNIER COMMIT 👇
-        log_action("Upload Scan", f"{type_formate} ({ref_archive})")
-        
-        db.session.commit() # Ce commit valide l'archive ET l'historique d'un seul coup
-        
-        flash("Le document scanné a été ajouté avec succès !", "success")
-        
+    # 3. On récupère le document
+    Modele = modeles_map[type_doc]
+    doc = Modele.query.get(doc_id)
+
+    if not doc:
+        flash("Erreur : Le document cible n'existe pas en base de données.", "danger")
+        return redirect(url_for(page_retour))
+
+    # 4. On sauvegarde physiquement le fichier
+    chemin_complet = os.path.join(dossier_sauvegarde, nouveau_nom)
+    file.save(chemin_complet)
+
+    # 5. On met à jour l'objet en mémoire (SANS FAIRE DE COMMIT ICI)
+    doc.fichier_scanne = nouveau_nom
+    
+    # =========================================================
+    # --- AJOUT AUTOMATIQUE AUX ARCHIVES GLOBALES ---
+    # =========================================================
+    
+    ref_archive = getattr(doc, 'reference', getattr(doc, 'immatriculation', f"{type_doc.upper()}-{doc_id}"))
+    type_formate = type_doc.replace('_', ' ').title()
+    
+    nouvelle_archive = ArchiveDocument(
+        reference=ref_archive,
+        type_document=type_formate,
+        nom_fichier=nouveau_nom
+    )
+    db.session.add(nouvelle_archive)
+    
+    # 👇 ON PLACE LE RADAR JUSTE AVANT LE DERNIER COMMIT 👇
+    log_action("Upload Scan", f"{type_formate} ({ref_archive})")
+    
+    # 6. UN SEUL COMMIT POUR TOUT VALIDER D'UN COUP ! 🎯
+    db.session.commit() 
+    
+    flash("Le document scanné a été ajouté avec succès !", "success")
     return redirect(url_for(page_retour))
 
 # ==========================================
@@ -2143,55 +2141,50 @@ def page_archives():
 
 @main.route('/upload_archive', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin', 'agent') # 🛡️ SÉCURITÉ : Stagiaires bloqués
 def upload_archive():
     from app.models import ArchiveDocument
     
-    if 'fichier' not in request.files:
+    if 'fichier' not in request.files or request.files['fichier'].filename == '':
         flash("Aucun fichier sélectionné.", "danger")
         return redirect(url_for('main.page_archives'))
         
     file = request.files['fichier']
-    if file.filename == '':
-        flash("Aucun fichier sélectionné.", "danger")
-        return redirect(url_for('main.page_archives'))
 
-    if file:
     # ==========================================================
-        # 👇 LE BOUCLIER DE SÉCURITÉ EST LÀ 👇
-        if not fichier_est_autorise(file.filename):
-            flash("Fichier non autorisé ! Seuls les PDF et images sont acceptés.", "danger")
-            # Le mouchard enregistre la tentative de piratage
-            log_action("Alerte Sécurité", f"Tentative d'upload illégal : {file.filename}")
-            db.session.commit()
-            # On renvoie le pirate d'où il vient sans sauvegarder le fichier
-            return redirect(url_for('main.page_archives'))
-        # 👆 FIN DU BOUCLIER 👆
-        # ==========================================================
-        filename = secure_filename(file.filename)
-        dossier_sauvegarde = os.path.join(current_app.root_path, '..', 'stockage_prive', 'archives')
-        os.makedirs(dossier_sauvegarde, exist_ok=True)
-        
-        chemin_complet = os.path.join(dossier_sauvegarde, filename)
-        file.save(chemin_complet)
-        
-        # --- CORRECTION ICI : On stocke les infos dans des variables ---
-        reference_saisie = request.form.get('reference')
-        type_doc = request.form.get('type_document')
-        
-        nouvelle_archive = ArchiveDocument(
-            reference=reference_saisie,
-            type_document=type_doc,
-            nom_fichier=filename
-        )
-        db.session.add(nouvelle_archive)
-        
-        # 👇 Maintenant le mouchard comprend les variables ! 👇
-        log_action("Ajout Archive", f"{type_doc} ({reference_saisie})")
-        
+    # 👇 LE BOUCLIER DE SÉCURITÉ EST LÀ 👇
+    if not fichier_est_autorise(file.filename):
+        flash("Fichier non autorisé ! Seuls les PDF et images sont acceptés.", "danger")
+        log_action("Alerte Sécurité", f"Tentative d'upload illégal : {file.filename}")
         db.session.commit()
-        
-        flash("Document archivé avec succès !", "success")
         return redirect(url_for('main.page_archives'))
+    # 👆 FIN DU BOUCLIER 👆
+    # ==========================================================
+    
+    filename = secure_filename(file.filename)
+    
+    # On sauvegarde bien dans le stockage privé
+    dossier_sauvegarde = os.path.abspath(os.path.join(current_app.root_path, '..', 'stockage_prive', 'archives'))
+    os.makedirs(dossier_sauvegarde, exist_ok=True)
+    
+    chemin_complet = os.path.join(dossier_sauvegarde, filename)
+    file.save(chemin_complet)
+    
+    reference_saisie = request.form.get('reference')
+    type_doc = request.form.get('type_document')
+    
+    nouvelle_archive = ArchiveDocument(
+        reference=reference_saisie,
+        type_document=type_doc,
+        nom_fichier=filename
+    )
+    db.session.add(nouvelle_archive)
+    
+    log_action("Ajout Archive", f"{type_doc} ({reference_saisie})")
+    db.session.commit()
+    
+    flash("Document archivé avec succès !", "success")
+    return redirect(url_for('main.page_archives'))
 
 @main.route('/telecharger_archive/<nom_fichier>')
 @login_required
@@ -2199,47 +2192,50 @@ def telecharger_archive(nom_fichier):
     import os
     from flask import send_from_directory, current_app, abort
     
-    # 👇 ON AJOUTE LE RADAR ICI 👇
     log_action("Consultation Archive", nom_fichier)
     db.session.commit()
     
-    dossier_archives = os.path.join(current_app.root_path, 'static', 'uploads', 'archives')
-    dossier_scans = os.path.join(current_app.root_path, 'static', 'uploads', 'scans')
+    # 📁 CORRECTION : On pointe vers les NOUVEAUX dossiers privés
+    basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+    dossier_archives = os.path.join(basedir, 'stockage_prive', 'archives')
+    dossier_scans = os.path.join(basedir, 'stockage_prive', 'scans')
     
-    # 1. On regarde d'abord si le fichier a été uploadé manuellement (dans 'archives')
+    # 1. On regarde d'abord si le fichier a été uploadé manuellement
     if os.path.exists(os.path.join(dossier_archives, nom_fichier)):
         return send_from_directory(dossier_archives, nom_fichier)
         
-    # 2. Sinon, on regarde s'il vient d'un scan automatique (dans 'scans')
+    # 2. Sinon, on regarde s'il vient d'un scan automatique
     elif os.path.exists(os.path.join(dossier_scans, nom_fichier)):
         return send_from_directory(dossier_scans, nom_fichier)
         
-    # 3. Si on ne le trouve nulle part, on affiche une erreur 404
+    # 3. Introuvable
     else:
         abort(404)
         
         
-@main.route('/supprimer_archive/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
+@main.route('/supprimer_archive/<int:id>', methods=['POST'])
 @login_required
+@role_requis('superadmin', 'admin') # 🛡️ SÉCURITÉ : Seuls les chefs peuvent supprimer !
 def supprimer_archive(id):
+    from app.models import ArchiveDocument
+    import os
     
     archive = db.session.get(ArchiveDocument, id)
     if archive:
-        # 1. On cherche si le fichier physique est dans le dossier des archives manuelles
-        dossier_archives = os.path.join(current_app.root_path, 'static', 'uploads', 'archives')
+        # 📁 CORRECTION : On pointe vers le bon dossier privé
+        basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+        dossier_archives = os.path.join(basedir, 'stockage_prive', 'archives')
         chemin_fichier = os.path.join(dossier_archives, archive.nom_fichier)
         
-        # S'il y est, on le supprime physiquement pour libérer de l'espace
+        # Suppression physique (Uniquement si c'est dans 'archives' manuels)
         if os.path.exists(chemin_fichier):
             try:
                 os.remove(chemin_fichier)
             except Exception as e:
                 print(f"Erreur lors de la suppression du fichier physique : {e}")
         
-        # (Si le fichier est dans 'scans', on ne le supprime pas physiquement pour ne pas casser l'agrément d'origine)
-# 👇 AJOUTE CETTE LIGNE (avant de le supprimer) 👇
         log_action("Suppression Archive", f"{archive.type_document} ({archive.reference})")
-        # 2. On supprime la ligne dans la base de données
+        
         db.session.delete(archive)
         db.session.commit()
         
@@ -2248,7 +2244,6 @@ def supprimer_archive(id):
         flash("Archive introuvable.", "danger")
         
     return redirect(url_for('main.page_archives'))
-    
     
 # --- EXPORT EXCEL ---
 @main.route('/exporter_archives_excel')
@@ -2381,3 +2376,70 @@ def vider_logs_securite():
         flash(f"Une erreur est survenue lors du nettoyage : {str(e)}", "danger")
         
     return redirect(url_for('main.super_dashboard'))
+
+@main.route('/verifier_cle_securite', methods=['POST'])
+@login_required
+def verifier_cle_securite():
+    # Seul le superadmin a le droit de tenter sa chance
+    if current_user.role != 'superadmin':
+        flash("Accès interdit.", "danger")
+        return redirect(url_for('main.tableau_de_bord'))
+    
+    # On récupère ce qui a été tapé dans le formulaire
+    cle_saisie = request.form.get('cle_saisie')
+    # On récupère la vraie clé stockée dans le config.py / .env
+    vraie_cle = current_app.config.get('CLE_DE_VERROUILLAGE')
+    
+    # On compare les deux (en direct, sans hachage, car c'est une clé maître d'environnement)
+    if cle_saisie == vraie_cle:
+        # C'est bon ! On donne le passe-droit dans la session
+        session['acces_autorise_page_secrete'] = True
+        return redirect(url_for('main.page_changement_mot_de_passe'))
+    else:
+        # C'est faux
+        flash("Clé de sécurité incorrecte.", "danger")
+        # On redirige vers la page d'où il vient (le referrer)
+        return redirect(request.referrer or url_for('main.super_dashboard'))
+    
+
+@main.route('/page_changement_mot_de_passe', methods=['GET', 'POST'])
+@login_required
+def page_changement_mot_de_passe():
+    # 1. LA BARRIÈRE DE SÉCURITÉ : On vérifie le laissez-passer
+    # Si la personne n'a pas tapé la bonne clé dans le `.env` juste avant, on la bloque !
+    if not session.get('acces_autorise_page_secrete'):
+        flash("Accès refusé. Veuillez utiliser la clé de sécurité pour accéder à cette page.", "danger")
+        return redirect(url_for('main.tableau_de_bord'))
+    
+    # 2. TRAITEMENT DU FORMULAIRE (Quand tu cliques sur Valider)
+    if request.method == 'POST':
+        nouveau_mdp = request.form.get('nouveau_mot_de_passe')
+        confirmation_mdp = request.form.get('confirmation_mot_de_passe')
+        
+        # Vérification 1 : Les champs ne sont pas vides
+        if not nouveau_mdp or not confirmation_mdp:
+            flash("Veuillez remplir tous les champs.", "warning")
+            return redirect(url_for('main.page_changement_mot_de_passe'))
+            
+        # Vérification 2 : Les deux mots de passe sont identiques
+        if nouveau_mdp != confirmation_mdp:
+            flash("Les mots de passe ne correspondent pas. Veuillez réessayer.", "danger")
+            return redirect(url_for('main.page_changement_mot_de_passe'))
+            
+        # Vérification 3 : Le mot de passe est assez long (8 caractères min)
+        if len(nouveau_mdp) < 8:
+            flash("Pour des raisons de sécurité, votre mot de passe doit faire au moins 8 caractères.", "warning")
+            return redirect(url_for('main.page_changement_mot_de_passe'))
+            
+        # TOUT EST BON ! On hache le nouveau mot de passe et on l'enregistre
+        current_user.password_hash = generate_password_hash(nouveau_mdp, method='pbkdf2:sha256')
+        db.session.commit()
+        
+        # ON FERME LA PORTE : On détruit le laissez-passer pour que personne ne puisse réutiliser la page
+        session.pop('acces_autorise_page_secrete', None)
+        
+        flash("Félicitations ! Votre mot de passe Super-Admin a été changé avec succès.", "success")
+        return redirect(url_for('main.tableau_de_bord')) # Redirige où tu veux (ex: la page des utilisateurs)
+        
+    # 3. AFFICHAGE DE LA PAGE (Quand tu arrives sur la page)
+    return render_template('changement_mdp.html')

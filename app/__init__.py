@@ -6,6 +6,9 @@ from flask import Flask, render_template
 from flask_migrate import Migrate
 from config import Config
 from app.extensions import db, mail, login_manager
+from flask_wtf.csrf import CSRFProtect
+# 👇 NOUVEAU 2 : On crée l'objet CSRF (le bouclier)
+csrf = CSRFProtect()
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -24,6 +27,9 @@ def create_app(config_class=Config):
     login_manager.login_view = 'main.login'
     login_manager.login_message = "Votre session a expiré. Veuillez vous reconnecter."
     login_manager.login_message_category = "info"
+
+    # 👇 NOUVEAU 3 : On attache le bouclier à ton application !
+    csrf.init_app(app)
 
     # --- ÉTAPE 1 : CONFIGURATION DU FICHIER LOG ---
     if not app.debug:
@@ -52,7 +58,12 @@ def create_app(config_class=Config):
     def internal_error(error):
         db.session.rollback() # On annule les transactions BDD en cours
         return render_template('errors/500.html'), 500
-
+    
+    # --- NOUVEAU : GESTION DE L'ERREUR DE FICHIER TROP LOURD ---
+    @app.errorhandler(413)
+    def file_too_large(error):
+        return render_template('errors/413.html'), 413
+    
     # Création BDD
     with app.app_context():
         from app import models 

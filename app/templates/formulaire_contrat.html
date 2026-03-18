@@ -142,9 +142,11 @@
           <p class="text-muted small mb-0">Historique des contrats générés.</p>
         </div>
         <div>
+          {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
           <button class="btn btn-nouveau shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalNouveauContrat">
             + Nouveau Contrat
           </button>
+          {% endif %}
         </div>
       </div>
 
@@ -169,6 +171,7 @@
                 <td class="fw-bold text-success">{{ contrat.montant_chiffres }} FCFA</td>
                 <td class="text-end pe-4">
                   <a href="{{ url_for('main.telecharger_contrat', id=contrat.id) }}" class="btn btn-sm btn-outline-danger me-1"> 📄 PDF </a>
+
                   {% if contrat.fichier_scanne %}
                   <a
                     href="{{ url_for('main.voir_scan_contrat', id=contrat.id) }}"
@@ -178,7 +181,7 @@
                   >
                     👁️ Voir Scan
                   </a>
-                  {% else %}
+                  {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
                   <button
                     type="button"
                     class="btn btn-sm btn-outline-warning"
@@ -188,15 +191,17 @@
                   >
                     📤 Joindre Scan
                   </button>
-                  {% endif %}
+                  {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
                   <form
                     action="{{ url_for('main.supprimer_contrat', id=contrat.id) }}"
                     method="POST"
                     class="d-inline"
                     onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce contrat ?');"
                   >
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     <button type="submit" class="btn btn-sm btn-outline-secondary">🗑️</button>
                   </form>
+                  {% endif %}
                 </td>
               </tr>
               {% endfor %} {% else %}
@@ -222,6 +227,7 @@
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <form method="POST" action="{{ url_for('main.creer_contrat') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="modal-body p-4">
               <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4"><i class="bi bi-link-45deg"></i> 1. Lier au Marché Attribué</h6>
               <div class="row g-3 mb-3 bg-light p-3 rounded border border-primary-subtle">
@@ -504,6 +510,8 @@
           </div>
 
           <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
+             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+             <div class="modal-header bg-warning">
             <div class="modal-body p-4">
               <input type="hidden" name="type_doc" value="contrat" />
               <input type="hidden" name="doc_id" value="{{ contrat.id }}" />

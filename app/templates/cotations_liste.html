@@ -207,7 +207,9 @@
             📊 Excel
           </a>
 
+          {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
           <a href="{{ url_for('main.nouvelle_cotation') }}" class="btn btn-nouveau shadow-sm text-nowrap"> + Nouveau Dossier </a>
+          {% endif %}
         </div>
       </div>
 
@@ -263,7 +265,7 @@
                     >
                       👁️
                     </a>
-                    {% else %} ...
+                    {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
                     <button
                       type="button"
                       class="btn btn-action btn-light text-warning"
@@ -273,12 +275,13 @@
                     >
                       📤
                     </button>
-                    {% endif %}
-
+                    {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
                     <a href="{{ url_for('main.modifier_cotation', id=cot.id) }}" class="btn btn-action btn-light text-primary" title="Modifier">
                       ✏️
                     </a>
+                    {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
                     <form action="{{ url_for('main.supprimer_cotation', id=cot.id) }}" method="POST" style="display: inline">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                       <button
                         type="submit"
                         class="btn btn-action btn-light text-danger"
@@ -288,6 +291,7 @@
                         🗑️
                       </button>
                     </form>
+                    {% endif %}
                   </div>
                 </td>
               </tr>
@@ -314,6 +318,7 @@
           </div>
 
           <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="modal-body p-4">
               <input type="hidden" name="type_doc" value="cotation" />
               <input type="hidden" name="doc_id" value="{{ cot.id }}" />
