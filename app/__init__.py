@@ -17,7 +17,6 @@ def create_app(config_class=Config):
     # --- CONFIGURATION SÉCURITÉ SESSION ---
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
     app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SECURE'] = True  # ✅ NOUVEAU : HTTPS only (production)
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # ✅ NOUVEAU : CSRF protection
     # Désactiver en développement local si vous utilisez HTTP
     if os.environ.get('FLASK_ENV') == 'production':
