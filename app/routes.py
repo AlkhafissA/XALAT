@@ -611,7 +611,7 @@ def download_backup():
 
 # N'oublie pas que tu dois avoir importé ou créé ta fonction role_requis en haut du fichier !
 
-@main.route('/super_dashboard')
+@main.route('/dashboard')
 @login_required
 @role_requis('superadmin') # 🛡️ On remplace le 'if' par le badge !
 def super_dashboard():
@@ -738,6 +738,31 @@ def forcer_changement_mdp():
                 return redirect(url_for('main.tableau_de_bord'))
     
     return render_template('change_password.html')
+
+from flask import current_app, request, redirect, url_for, flash
+from werkzeug.security import check_password_hash
+from flask_login import current_user
+
+@main.before_request
+def verifier_mot_de_passe_temporaire():
+    # On vérifie uniquement si l'utilisateur est connecté
+    if current_user.is_authenticated:
+        
+        # Liste des pages qu'il a le droit de visiter avec le mot de passe par défaut
+        # On inclut 'static' pour que le CSS et les images chargent bien
+        pages_autorisees = ['main.forcer_changement_mdp', 'main.logout', 'static']
+        
+        # Si la page qu'il essaie de visiter n'est pas dans la liste autorisée
+        if request.endpoint not in pages_autorisees:
+            
+            # On récupère le mot de passe par défaut
+            mdp_defaut = current_app.config.get('MOT_DE_PASSE_PAR_DEFAUT', 'Mcat@Temp2025')
+            
+            # On vérifie si son mot de passe actuel EST le mot de passe par défaut
+            if check_password_hash(current_user.password_hash, mdp_defaut):
+                flash("Sécurité : Veuillez modifier votre mot de passe temporaire avant de continuer.", "warning")
+                # On le redirige de force !
+                return redirect(url_for('main.forcer_changement_mdp'))
 
 # --- ROUTE POUR LA PAGE DRPS  ---
 @main.route('/drps', methods=['GET', 'POST'])
