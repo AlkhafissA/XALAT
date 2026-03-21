@@ -60,103 +60,84 @@ def log_action(action, cible):
         user_name = current_user.username if current_user.is_authenticated else "Système"
         nouveau_log = Historique(utilisateur=user_name, action=action, cible=cible)
         db.session.add(nouveau_log)
-    except: pass
+    except Exception as e:
+        # On importe current_app ici au cas où
+        from flask import current_app
+        # On écrit l'erreur dans la console pour l'administrateur
+        current_app.logger.error(f"ERREUR SÉCURITÉ - Impossible d'enregistrer le log ({action}) : {str(e)}")
 
 # --- ROUTES AUTHENTIFICATION ---
 
+@main.route('/', methods=['GET', 'POST'])
 @main.route('/login', methods=['GET', 'POST'])
 def login():
-    # 1. On récupère l'IP du visiteur
+    # 1. Si déjà connecté, on redirige vers le bon tableau de bord
+    if current_user.is_authenticated:
+        if current_user.role == 'superadmin':
+            return redirect(url_for('main.super_dashboard'))
+        return redirect(url_for('main.tableau_de_bord'))
+
     user_ip = request.remote_addr 
-    
-    # 2. TA LISTE BLANCHE (Ajoute tes IP ici entre guillemets et séparées par des virgules)
-    IPS_AUTORISEES = [
-        "127.0.0.1",     # Ton propre ordinateur (Localhost)
-        "192.168.1.1",   # Exemple IP Bureau
-        "41.82.10.25",   # Exemple IP Maison
-    ]
-    
-    # 3. Vérification du blocage (On ignore si l'IP est dans la liste blanche)
     record = LoginAttempt.query.filter_by(ip_address=user_ip).first()
     
-    if record and record.is_blocked and (user_ip not in IPS_AUTORISEES):
-        # Vérification du délai de 15 minutes
+    # 2. VÉRIFICATION DU BLOCAGE (Applicable à TOUT LE MONDE, pas d'immunité)
+    if record and record.is_blocked:
         if datetime.utcnow() - record.last_attempt > timedelta(minutes=15):
+            # Déblocage auto après 15 minutes
             record.is_blocked = False
             record.attempts = 0
             db.session.commit()
         else:
-            flash("Votre IP est temporairement restreinte pour sécurité.", "danger")
+            flash("Trop de tentatives échouées. Veuillez réessayer dans 15 minutes.", "danger")
             return render_template('login.html')
 
     if request.method == 'POST':
-        # --- PIÈGE POT DE MIEL DÉBOGAGE ---
+        # --- 3. PIÈGE POT DE MIEL (Sécurisé contre le DoS) ---
         honeypot = request.form.get('confirm_email_address')
         if honeypot:
-            # 1. On gère le record de blocage
-            if not record:
-                record = LoginAttempt(ip_address=user_ip, attempts=5, is_blocked=True)
-                db.session.add(record)
-            else:
-                record.is_blocked = True
-                record.attempts = 5
-            
-            # 2. On écrit le log SANS passer par la fonction log_action (Test direct)
-            from app.models import LogAction # Import local pour être sûr
-            alerte = LogAction(
-                action="ALERTE_HONEYPOT", 
-                details=f"IP: {user_ip} a rempli le champ invisible."
-            )
-            db.session.add(alerte)
-            
-            # 3. On force l'écriture immédiate
-            try:
-                db.session.commit()
-                print("DEBUG: Log Honeypot enregistré avec succès en BDD")
-            except Exception as e:
-                db.session.rollback()
-                print(f"DEBUG ERROR: Échec de l'enregistrement : {e}")
-            
-            return "Accès refusé. Système de sécurité activé.", 403
+            # C'est un bot ! On simule un échec SANS bloquer l'IP pour éviter de bannir des innocents
+            log_action("ALERTE_HONEYPOT", f"Tentative de bot ignorée depuis l'IP {user_ip}")
+            flash("Identifiant ou mot de passe incorrect.", "danger")
+            return render_template('login.html')
+
         username = request.form.get('username')
         password = request.form.get('password')
         user = User.query.filter_by(username=username).first()
 
-        # CAS : SUCCÈS
+        # --- 4. CAS : SUCCÈS DE CONNEXION ---
         if user and check_password_hash(user.password_hash, password):
-            session.pop('attempts', None)
+            # On efface l'historique d'échecs de cette IP
             if record:
                 db.session.delete(record)
-                # --- AJOUT ICI ---
-            session.permanent = True  # Active la limite de temps définie dans la config
-            # ------------------
+                db.session.commit()
             
             login_user(user)
-            db.session.commit()
             
-            # ... (Tes redirections habituelles) ...
-            return redirect(url_for('main.super_dashboard' if user.role == 'superadmin' else 'main.tableau_de_bord'))
+            # Active la limite de temps de session (Point 11 de l'audit)
+            session.permanent = True  
+            
+            log_action("Connexion réussie", f"Utilisateur {user.username}")
+            
+            # Redirection selon le rôle
+            if user.role == 'superadmin':
+                return redirect(url_for('main.super_dashboard'))
+            return redirect(url_for('main.tableau_de_bord'))
 
-        # CAS : ÉCHEC
+        # --- 5. CAS : ÉCHEC DE CONNEXION ---
         else:
-            # IMMUNITÉ : Si c'est un SuperAdmin OU si l'IP est en liste blanche, on ne bloque pas
-            if (user and user.role == 'superadmin') or (user_ip in IPS_AUTORISEES):
-                log_action("Échec Connexion", f"Tentative sur {username} (IP Immunisée)")
-                flash("Identifiant ou mot de passe incorrect.", "danger")
-            
+            if not record:
+                record = LoginAttempt(ip_address=user_ip, attempts=1, last_attempt=datetime.utcnow())
+                db.session.add(record)
             else:
-                # Blocage normal pour les autres
-                if not record:
-                    record = LoginAttempt(ip_address=user_ip, attempts=1)
-                    db.session.add(record)
-                else:
-                    record.attempts += 1
-                    record.last_attempt = datetime.utcnow()
+                record.attempts += 1
+                record.last_attempt = datetime.utcnow()
 
-                if record.attempts >= 5:
-                    record.is_blocked = True
-                    log_action("ALERTE_SECURITE", f"IP {user_ip} BANNIE (Cible: {username})")
-                
+            # On bloque à 5 tentatives (MÊME si c'est le compte admin !)
+            if record.attempts >= 5:
+                record.is_blocked = True
+                log_action("ALERTE_SECURITE", f"IP {user_ip} BANNIE temporairement (Cible: {username})")
+                flash("Compte temporairement bloqué suite à 5 échecs. Attendez 15 minutes.", "danger")
+            else:
                 flash(f"Identifiant ou mot de passe incorrect ({record.attempts}/5).", "danger")
             
             db.session.commit()
@@ -169,7 +150,7 @@ def logout():
     logout_user()
     return redirect(url_for('main.login'))
 
-@main.route('/')
+@main.route('/tableau_de_bord')
 @login_required
 def tableau_de_bord():
     liste = Candidat.query.order_by(Candidat.date_enregistrement.desc()).all()
@@ -397,16 +378,36 @@ def telecharger_pv(id):
     
     def tableau_info(pdf_obj, titre_objet, date_reunion_str, is_attribution=False):
         pdf_obj.set_font("Arial", '', 10)
+        
         def row(lbl, val, bold=False):
             x, y = pdf_obj.get_x(), pdf_obj.get_y()
-            pdf_obj.multi_cell(70, 8, txt=clean_text(lbl), border=1)
-            h = pdf_obj.get_y() - y
-            pdf_obj.set_xy(x+70, y)
-            if bold: pdf_obj.set_font("Arial",'B',10)
-            pdf_obj.multi_cell(0, 8, txt=clean_text(val), border=1)
-            pdf_obj.set_font("Arial",'',10)
-            if pdf_obj.get_y() < y+h: pdf_obj.set_y(y+h)
+            largeur_col2 = pdf_obj.epw - 70
             
+            # 1. Dessine la colonne de gauche (largeur 70)
+            pdf_obj.multi_cell(70, 8, txt=clean_text(lbl), border=1)
+            h_gauche = pdf_obj.get_y() - y
+            
+            # 2. Se décale pour la colonne de droite
+            pdf_obj.set_xy(x + 70, y)
+            if bold: 
+                pdf_obj.set_font("Arial", 'B', 10)
+                
+            # ⚠️ CORRECTION FPDF2 : On décale temporairement la marge gauche
+            # pour éviter que le texte ne revienne s'écraser sur la colonne 1 !
+            marge_gauche_originale = pdf_obj.l_margin
+            pdf_obj.set_left_margin(x + 70)
+            
+            # 3. Dessine la colonne de droite
+            pdf_obj.multi_cell(largeur_col2, 8, txt=clean_text(val), border=1)
+            h_droite = pdf_obj.get_y() - y
+            
+            # 4. On restaure la marge et on se place sous la plus grande cellule
+            pdf_obj.set_left_margin(marge_gauche_originale)
+            pdf_obj.set_font("Arial", '', 10)
+            
+            hauteur_max = max(h_gauche, h_droite)
+            pdf_obj.set_xy(x, y + hauteur_max)
+                
         row("Désignation de l'AC", "MINISTERE DE LA CULTURE, DE L'ARTISANAT ET DU TOURISME")
         row("PRM :", "DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT")
         row("Objet de la COTATION :", clean_text(titre_objet).upper(), bold=True)
@@ -417,15 +418,19 @@ def telecharger_pv(id):
     
     def commission(pdf_obj):
         pdf_obj.set_font("Arial", 'BU', 11); pdf_obj.cell(0, 8, "MEMBRES DE LA COMMISSION :", ln=1)
-        pdf_obj.set_font("Arial", 'B', 10); pdf_obj.cell(50, 8, "Qualité", 1, 0, 'C'); pdf_obj.cell(90, 8, "Noms et Prénoms", 1, 0, 'C'); pdf_obj.cell(50, 8, "Signature", 1, 1, 'C')
+        pdf_obj.set_font("Arial", 'B', 10)
+        pdf_obj.cell(50, 8, "Qualité", 1, 0, 'C')
+        pdf_obj.cell(90, 8, "Noms et Prénoms", 1, 0, 'C')
+        pdf_obj.cell(50, 8, "Signature", 1, 1, 'C')
         pdf_obj.set_font("Arial", '', 10)
+        
         mbs = [("Président", cotation.president), ("Membre", cotation.membre1), ("Membre", cotation.membre2)]
         for q, n in mbs:
-            pdf_obj.cell(50, 10, clean_text(q), 1)
+            pdf_obj.cell(50, 10, clean_text(q), 1, 0) # Ajout du 0 pour rester sur la ligne
             pdf_obj.set_font("Arial", 'B', 10)
-            pdf.cell(90, 10, clean_text(n), 1)
-            pdf.set_font("Arial", '', 10)
-            pdf.cell(50, 10, "", 1, 1)
+            pdf_obj.cell(90, 10, clean_text(n), 1, 0) # pdf_obj au lieu de pdf
+            pdf_obj.set_font("Arial", '', 10)
+            pdf_obj.cell(50, 10, "", 1, 1) # Retour à la ligne (1)s
 
     pdf.add_page(); dessiner_entete_officiel(pdf, afficher_direction=True)
     pdf.set_y(55); pdf.set_font("Arial", 'BU', 12)
@@ -531,7 +536,8 @@ def exporter_excel():
                         if cell.value:
                             length = len(str(cell.value))
                             if length > max_length: max_length = length
-                    except: pass
+                    except Exception as e:
+                        current_app.logger.warning(f"Alerte Excel: Impossible de lire une cellule : {str(e)}")
                 adjusted_width = (max_length + 2)
                 if adjusted_width > 100: adjusted_width = 100
                 worksheet.column_dimensions[column_letter].width = adjusted_width
@@ -814,7 +820,8 @@ def drps():
             try:
                 dt = datetime.strptime(date_commission_raw, '%Y-%m-%d')
                 date_commission_fr = f"{dt.day:02d} {mois_fr[dt.month]} {dt.year}"
-            except:
+            except Exception as e:
+                current_app.logger.warning(f"Erreur de format de date ignorée : {str(e)}")
                 date_commission_fr = date_commission_raw
 
             prestataire_id = request.form.get('prestataire_id_pv')
@@ -1024,32 +1031,6 @@ def get_infos_bordereau():
                 
     # Si on parcourt tout sans rien trouver :
     return jsonify({"success": False, "message": "Dossier non trouvé"})
-
-@main.route('/bordereaux/export')
-@login_required
-def exporter_bordereaux():
-    bordereaux = Bordereau.query.all()
-    data = []
-    for b in bordereaux:
-        data.append({
-            'Numéro': b.numero,
-            'Service': b.service_ref,
-            'Date Signature': b.date_signature.strftime("%d/%m/%Y"),
-            'Nombre Dossiers': len(b.get_dossiers()),
-            'Observations': b.observations
-        })
-    
-    import pandas as pd
-    df = pd.DataFrame(data)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Bordereaux')
-        
-    output.seek(0)
-    log_action("Export Excel", "Liste des Bordereaux")
-    db.session.commit()
-    return send_file(output, download_name="Export_Bordereaux.xlsx", as_attachment=True, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") 
-            
 
 
 @main.route('/api/get_adresse/<int:id>')
@@ -1712,6 +1693,16 @@ def creer_contrat():
             return redirect(url_for('main.creer_contrat'))
 
         # 1. ON SAUVEGARDE LE CONTRAT DANS LA BASE DE DONNÉES
+        
+        # A) On récupère le numéro d'immatriculation du marché grâce au PV
+        immatriculation_marche = numero # Valeur par défaut si rien d'autre
+        pv_id = request.form.get('pv_id')
+        if pv_id:
+            pv_lie = db.session.get(ProcesVerbal, int(pv_id))
+            if pv_lie and pv_lie.numero_drp:
+                immatriculation_marche = pv_lie.numero_drp
+
+        # B) On crée le contrat avec toutes les infos + l'immatriculation !
         nouveau_contrat = Contrat(
             candidat_id=candidat_gagnant.id,
             objet_marche=objet_marche,
@@ -1723,8 +1714,13 @@ def creer_contrat():
             programme=programme,
             comptable_assignataire=comptable,
             rc_candidat=rc_final,
-            compte_bancaire=compte_final
+            compte_bancaire=compte_final,
+            numero=numero,
+            ref_service=ref_service,
+            date_lettre=date_lettre,
+            immatriculation=immatriculation_marche # 👈 LA PIÈCE MANQUANTE EST ICI !
         )
+        
         db.session.add(nouveau_contrat)
         log_action("Ajout Contrat", candidat_gagnant.nom_entreprise)
         db.session.commit()
@@ -2041,7 +2037,7 @@ def voir_scan(nom_fichier):
 def uploader_scan():
     print("--- DÉBUT DE L'UPLOAD ---")
     
-    type_doc = request.form.get('type_doc')
+    type_doc = request.form.get('type_doc').lower()
     doc_id = request.form.get('doc_id')
     page_retour = request.form.get('page_retour', 'main.tableau_de_bord') # Sécurité : fallback par défaut
     
@@ -2105,13 +2101,15 @@ def uploader_scan():
     # 5. On met à jour l'objet en mémoire (SANS FAIRE DE COMMIT ICI)
     doc.fichier_scanne = nouveau_nom
     
-    # =========================================================
-    # --- AJOUT AUTOMATIQUE AUX ARCHIVES GLOBALES ---
-    # =========================================================
-    
-    ref_archive = getattr(doc, 'reference', getattr(doc, 'immatriculation', f"{type_doc.upper()}-{doc_id}"))
+     
+# =========================================================
+# --- AJOUT AUTOMATIQUE AUX ARCHIVES GLOBALES ---
+# =========================================================
+# Correction : on utilise "or" pour forcer le plan de secours si l'attribut est None ou vide
+    ref_archive = getattr(doc, 'reference', None) or getattr(doc, 'immatriculation', None) or f"{type_doc.upper().replace('_', '')}-{doc_id}"
+
     type_formate = type_doc.replace('_', ' ').title()
-    
+
     nouvelle_archive = ArchiveDocument(
         reference=ref_archive,
         type_document=type_formate,
@@ -2211,7 +2209,84 @@ def telecharger_archive(nom_fichier):
     # 3. Introuvable
     else:
         abort(404)
+
+# ==========================================
+# --- ROUTES : SUIVI DES DOSSIERS (TIMELINE) ---
+# ==========================================
+
+@main.route('/suivi_dossiers', methods=['GET'])
+@login_required
+def page_suivi_dossiers():
+    from app.models import LettreInvitation, ProcesVerbal, LettreNotification, LettreInformation, Contrat
+    
+    immatriculations = set()
+    
+    # On récolte toutes les immatriculations
+    for lettre in LettreInvitation.query.all():
+        if lettre.immatriculation:
+            immatriculations.add(lettre.immatriculation)
+            
+    for pv in ProcesVerbal.query.all():
+        if pv.numero_drp: 
+            immatriculations.add(pv.numero_drp)
+
+    dossiers_suivis = []
+# Pour chaque marché, on vérifie l'état d'avancement
+    for immat in immatriculations:
+        doc_invitation = LettreInvitation.query.filter_by(immatriculation=immat).first()
+        doc_pv = ProcesVerbal.query.filter_by(numero_drp=immat).first()
+        doc_notif = LettreNotification.query.filter_by(immatriculation=immat).first()
+        doc_info = LettreInformation.query.filter_by(immatriculation=immat).first()
         
+        objet_du_marche = "Objet non défini"
+        reference_du_pv = None 
+        
+        if doc_invitation and doc_invitation.objet_marche:
+            objet_du_marche = doc_invitation.objet_marche
+            
+        if doc_pv:
+            if doc_pv.objet:
+                objet_du_marche = doc_pv.objet
+            # On extrait la référence (ref_service) qui est cachée dans le JSON du PV
+            if doc_pv.form_data:
+                import json
+                try:
+                    data_pv = json.loads(doc_pv.form_data)
+                    reference_du_pv = data_pv.get('ref_service')
+                except:
+                    pass
+
+        # 👇 RECHERCHE DU CONTRAT GRÂCE AU NUMÉRO DE RÉFÉRENCE 👇
+        doc_contrat = None
+        
+        # 1. On cherche d'abord avec le numéro de référence (Ton idée !)
+        if reference_du_pv:
+            doc_contrat = Contrat.query.filter_by(ref_service=reference_du_pv).first()
+            
+        # 2. Si on ne trouve pas (ou s'il est vide), on tente l'immatriculation
+        if not doc_contrat:
+            doc_contrat = Contrat.query.filter_by(immatriculation=immat).first()
+            
+        # 3. Plan de secours ultime : on lie par l'objet du marché
+        if not doc_contrat and objet_du_marche != "Objet non défini":
+            doc_contrat = Contrat.query.filter_by(objet_marche=objet_du_marche).first()
+        # 👆 FIN DE LA RECHERCHE 👆
+
+        # 👇 C'EST ICI QUE LA MAGIE OPÈRE 👇
+        dossier = {
+            'immatriculation': immat,
+            'objet_marche': objet_du_marche,
+            'etapes': {
+                'etape_1_invitation': True if (doc_invitation and doc_invitation.fichier_scanne) else False,
+                'etape_2_pv': True if (doc_pv and doc_pv.fichier_scanne) else False,
+                'etape_3_notification': True if (doc_notif and doc_notif.fichier_scanne) else False,
+                'etape_4_information': True if (doc_info and doc_info.fichier_scanne) else False,
+                'etape_5_contrat': True if (doc_contrat and doc_contrat.fichier_scanne) else False
+            }
+        }
+        dossiers_suivis.append(dossier)
+
+    return render_template('suivi_dossiers.html', dossiers=dossiers_suivis)
         
 @main.route('/supprimer_archive/<int:id>', methods=['POST'])
 @login_required

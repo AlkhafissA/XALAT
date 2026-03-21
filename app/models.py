@@ -13,7 +13,8 @@ class Historique(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     utilisateur = db.Column(db.String(100))
     action = db.Column(db.String(200))
-    cible = db.Column(db.String(100))
+    # On utilise db.Text pour accepter une longueur illimitée de caractères
+    cible = db.Column(db.Text) 
     date_action = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Candidat(db.Model):
@@ -151,6 +152,7 @@ class Contrat(db.Model):
     
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
     fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
+    immatriculation = db.Column(db.String(100)) # <-- AJOUT POUR L'ARCHIVAGE
 
 
 class LettreInformation(db.Model):

@@ -69,17 +69,25 @@ def create_app(config_class=Config):
         from app import models 
         db.create_all()
         
-        # Admins par défaut
         from werkzeug.security import generate_password_hash
-        if not models.User.query.filter_by(username='Admin').first():
-            hashed = generate_password_hash('@dmin1900', method='pbkdf2:sha256')
-            db.session.add(models.User(username='Admin', password_hash=hashed, role='admin'))
         
+        # --- 🛡️ RÉCUPÉRATION SÉCURISÉE DEPUIS LE .ENV ---
+        # On demande à l'OS de lire les variables d'environnement
+        admin_pass = os.environ.get('ADMIN_DEFAULT_PASSWORD', '@dmin1900')
+        superadmin_pass = os.environ.get('SUPERADMIN_DEFAULT_PASSWORD', 'TAWHID2021!')
+
+        # Création du compte Admin si absent
+        if not models.User.query.filter_by(username='Admin').first():
+            hashed_admin = generate_password_hash(admin_pass, method='pbkdf2:sha256')
+            db.session.add(models.User(username='Admin', password_hash=hashed_admin, role='admin'))
+        
+        # Création du compte SuperAdmin si absent
         if not models.User.query.filter_by(username='SuperAdmin').first():
-            hashed = generate_password_hash('TAWHID2021!', method='pbkdf2:sha256')
-            db.session.add(models.User(username='SuperAdmin', password_hash=hashed, role='superadmin'))
+            hashed_super = generate_password_hash(superadmin_pass, method='pbkdf2:sha256')
+            db.session.add(models.User(username='SuperAdmin', password_hash=hashed_super, role='superadmin'))
         
         db.session.commit()
+    # -----------------------------------------------
 
     return app
 
