@@ -18,7 +18,7 @@ class Config:
     
     # 3. PRIORITÉ : On cherche DATABASE_URL dans le .env. 
     # Si c'est vide, ALORS on utilise SQLite (développement).
-database_url = os.environ.get('DATABASE_URL')
+    database_url = os.environ.get('DATABASE_URL')
     
     # ✅ FIX : Pour PostgreSQL, assurez-vous que l'URL commence par postgresql://
     if database_url and database_url.startswith('postgres://'):
