@@ -1,672 +1,483 @@
-<!doctype html>
-<html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tableau de Bord - MCAT</title>
+{% extends "base.html" %} {% block title %}Tableau de Bord - MCAT{% endblock %} {% block extra_css %}
+<style>
+  /* KPI CARDS */
+  .card-stat {
+    border-radius: 16px;
+    background: white;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+    transition: transform 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-stat:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.05);
+    border-color: var(--primary-color);
+  }
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
 
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  /* TABLEAU */
+  .card-table {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 5px;
+  }
+  .table thead th {
+    background-color: #f8f9fa;
+    color: #8898aa;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 2px solid var(--border-color);
+    padding: 15px 20px;
+  }
+  .table tbody td {
+    padding: 20px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .table-hover tbody tr:hover {
+    background-color: #fafbff;
+  }
+  .company-avatar {
+    width: 40px;
+    height: 40px;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-right: 15px;
+    box-shadow: 0 4px 6px rgba(0, 51, 102, 0.2);
+  }
 
-    <style>
-      :root {
-        --primary-color: #003366;
-        --secondary-bg: #e3e8ee;
-        --border-color: #d0d7de;
-      }
+  /* BADGES */
+  .badge-status {
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .bg-en-attente {
+    background-color: #fff3cd;
+    color: #ffc107;
+    border: 1px solid #ffeeba;
+  }
+  .bg-retenu {
+    background-color: #d1e7dd;
+    color: #198754;
+    border: 1px solid #badbcc;
+  }
+  .bg-refuse {
+    background-color: #f8d7da;
+    color: #dc3545;
+    border: 1px solid #f5c2c7;
+  }
 
-      body {
-        background-color: var(--secondary-bg);
-        font-family: "Poppins", sans-serif;
-        min-height: 100vh;
-        color: #344767;
-        padding-bottom: 50px;
-      }
+  .btn-action {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    margin: 0 2px;
+    transition: all 0.2s;
+  }
+  .btn-action:hover {
+    transform: scale(1.1);
+  }
 
-      /* NAVBAR */
-      .navbar {
-        background-color: var(--primary-color);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        padding: 15px 0;
-      }
-      .navbar-brand {
-        font-weight: 700;
-        letter-spacing: 1px;
-        font-size: 1.2rem;
-      }
-      .nav-link {
-        font-size: 0.85rem;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        padding: 10px 15px !important;
-        border-radius: 8px;
-        transition: all 0.3s;
-        color: rgba(255, 255, 255, 0.8) !important;
-      }
-      .nav-link:hover {
-        color: white !important;
-        background-color: rgba(255, 255, 255, 0.1);
-        transform: translateY(-2px);
-      }
-      .nav-link.active {
-        background-color: rgba(255, 255, 255, 0.2);
-        color: white !important;
-      }
+  /* SEARCH BAR STYLE */
+  .search-container {
+    position: relative;
+    max-width: 300px;
+    width: 100%;
+  }
+  .search-input {
+    border-radius: 50px;
+    padding-left: 40px;
+    border: 1px solid var(--border-color);
+    background-color: white;
+    transition: all 0.3s;
+  }
+  .search-input:focus {
+    box-shadow: 0 0 0 4px rgba(0, 51, 102, 0.1);
+    border-color: var(--primary-color);
+  }
+  .search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+    pointer-events: none;
+  }
+  #session-timeout-badge {
+    left: 20px;
+    pointer-events: none;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid px-4 mt-4">
+  {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
+  <div
+    class="alert alert-{{ category if category != 'message' else 'info' }} border-0 shadow-sm alert-dismissible fade show mb-4"
+    role="alert"
+    style="border-radius: 12px"
+  >
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {% endfor %} {% endif %} {% endwith %}
 
-      /* KPI CARDS */
-      .card-stat {
-        border-radius: 16px;
-        background: white;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
-        transition: transform 0.3s ease;
-        position: relative;
-        overflow: hidden;
-      }
-      .card-stat:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 15px rgba(0, 0, 0, 0.05);
-        border-color: var(--primary-color);
-      }
-      .stat-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-      }
-
-      /* TABLEAU */
-      .card-table {
-        background: white;
-        border-radius: 16px;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        padding: 5px;
-      }
-      .table thead th {
-        background-color: #f8f9fa;
-        color: #8898aa;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        border-bottom: 2px solid var(--border-color);
-        padding: 15px 20px;
-      }
-      .table tbody td {
-        padding: 20px;
-        vertical-align: middle;
-        border-bottom: 1px solid var(--border-color);
-      }
-      .table-hover tbody tr:hover {
-        background-color: #fafbff;
-      }
-
-      .company-avatar {
-        width: 40px;
-        height: 40px;
-        background-color: var(--primary-color);
-        color: white;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 0.9rem;
-        margin-right: 15px;
-        box-shadow: 0 4px 6px rgba(0, 51, 102, 0.2);
-      }
-
-      /* BADGES */
-      .badge-status {
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.7rem;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-      }
-      .bg-en-attente {
-        background-color: #fff3cd;
-        color: #ffc107;
-        border: 1px solid #ffeeba;
-      }
-      .bg-retenu {
-        background-color: #d1e7dd;
-        color: #198754;
-        border: 1px solid #badbcc;
-      }
-      .bg-refuse {
-        background-color: #f8d7da;
-        color: #dc3545;
-        border: 1px solid #f5c2c7;
-      }
-
-      .btn-action {
-        width: 32px;
-        height: 32px;
-        padding: 0;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        margin: 0 2px;
-        transition: all 0.2s;
-      }
-      .btn-action:hover {
-        transform: scale(1.1);
-      }
-
-      /* SEARCH BAR STYLE */
-      .search-container {
-        position: relative;
-        max-width: 300px;
-        width: 100%;
-      }
-      .search-input {
-        border-radius: 50px;
-        padding-left: 40px;
-        border: 1px solid var(--border-color);
-        background-color: white;
-        transition: all 0.3s;
-      }
-      .search-input:focus {
-        box-shadow: 0 0 0 4px rgba(0, 51, 102, 0.1);
-        border-color: var(--primary-color);
-      }
-      .search-icon {
-        position: absolute;
-        left: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #aaa;
-        pointer-events: none;
-      }
-    </style>
-  </head>
-  <body>
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-      <div class="container-fluid px-4">
-        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.tableau_de_bord') }}">
-          <span style="font-size: 1.5rem; margin-right: 10px">🏛️</span>
-          <div style="line-height: 1">
-            <div>MCAT</div>
-            <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7">PORTAIL ADMIN</div>
+  <div class="row g-4 mb-4">
+    <div class="col-xl-3 col-sm-6">
+      <div class="card card-stat p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <p class="text-muted mb-0 small text-uppercase fw-bold">Total Dossiers</p>
+            <h4 class="mb-0 fw-bold text-dark mt-1">{{ candidats|length }}</h4>
           </div>
-        </a>
-
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
-          <ul class="navbar-nav">
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}">ACCUEIL</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.liste_cotations') }}">COTATIONS</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.drps') }}">DRP</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.page_suivi_dossiers') }}"> ⏱️ SUIVI DES MARCHÉS </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.page_archives') }}"> 🗄️ ARCHIVES GLOBALES </a>
-            </li>
-          </ul>
-        </div>
-
-        <div class="d-flex align-items-center">
-          <button
-            class="btn btn-outline-light btn-sm rounded-pill px-3 fw-bold"
-            type="button"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#menuLateralRapide"
-            aria-controls="menuLateralRapide"
-          >
-            ☰ Menu
-          </button>
+          <div class="stat-icon bg-primary bg-opacity-10 text-primary">📂</div>
         </div>
       </div>
-    </nav>
+    </div>
 
-    <div class="container-fluid px-4 mt-4">
-      {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
-      <div
-        class="alert alert-{{ category if category != 'message' else 'info' }} border-0 shadow-sm alert-dismissible fade show mb-4"
-        role="alert"
-        style="border-radius: 12px"
-      >
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      </div>
-      {% endfor %} {% endif %} {% endwith %}
-
-      <div class="row g-4 mb-4">
-        <div class="col-xl-3 col-sm-6">
-          <div class="card card-stat p-3">
-            <div class="d-flex justify-content-between align-items-center">
-              <div>
-                <p class="text-muted mb-0 small text-uppercase fw-bold">Total Dossiers</p>
-                <h4 class="mb-0 fw-bold text-dark mt-1">{{ candidats|length }}</h4>
-              </div>
-              <div class="stat-icon bg-primary bg-opacity-10 text-primary">📂</div>
-            </div>
+    <div class="col-xl-3 col-sm-6">
+      <div class="card card-stat p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <p class="text-muted mb-0 small text-uppercase fw-bold">En Attente</p>
+            <h4 class="mb-0 fw-bold text-warning mt-1">{{ candidats | selectattr("statut", "equalto", "En attente") | list | length }}</h4>
           </div>
-        </div>
-
-        {% set nb_attente = 0 %} {% for c in candidats %}{% if "attente" in c.statut %}{% set nb_attente = nb_attente + 1 %}{% endif %}{% endfor %}
-        <div class="col-xl-3 col-sm-6">
-          <div class="card card-stat p-3">
-            <div class="d-flex justify-content-between align-items-center">
-              <div>
-                <p class="text-muted mb-0 small text-uppercase fw-bold">En Attente</p>
-                <h4 class="mb-0 fw-bold text-warning mt-1">{{ candidats | selectattr("statut", "equalto", "En attente") | list | length }}</h4>
-              </div>
-              <div class="stat-icon bg-warning bg-opacity-10 text-warning">⏳</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-xl-3 col-sm-6">
-          <div class="card card-stat p-3">
-            <div class="d-flex justify-content-between align-items-center">
-              <div>
-                <p class="text-muted mb-0 small text-uppercase fw-bold">Validés</p>
-                <h4 class="mb-0 fw-bold text-success mt-1">{{ candidats | selectattr("statut", "equalto", "Retenu") | list | length }}</h4>
-              </div>
-              <div class="stat-icon bg-success bg-opacity-10 text-success">✅</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-xl-3 col-sm-6">
-          <a href="{{ url_for('main.afficher_formulaire') }}" class="text-decoration-none">
-            <div
-              class="card card-stat p-3 bg-primary text-white h-100 d-flex justify-content-center align-items-center border-0"
-              style="background: linear-gradient(135deg, #003366 0%, #0056b3 100%)"
-            >
-              <div class="text-center">
-                <span style="font-size: 1.5rem">+</span>
-                <span class="fw-bold ms-2">Nouveau Dossier</span>
-              </div>
-            </div>
-          </a>
+          <div class="stat-icon bg-warning bg-opacity-10 text-warning">⏳</div>
         </div>
       </div>
+    </div>
 
-      <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-3">
-        <div>
-          <h5 class="fw-bold text-dark m-0">Demandes Récentes</h5>
-          <p class="text-muted small mb-0">Gestion des dossiers de demande d'agrément.</p>
+    <div class="col-xl-3 col-sm-6">
+      <div class="card card-stat p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <p class="text-muted mb-0 small text-uppercase fw-bold">Validés</p>
+            <h4 class="mb-0 fw-bold text-success mt-1">{{ candidats | selectattr("statut", "equalto", "Retenu") | list | length }}</h4>
+          </div>
+          <div class="stat-icon bg-success bg-opacity-10 text-success">✅</div>
         </div>
-
-        <div class="search-container">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="searchInput" class="form-control search-input" placeholder="Rechercher (Nom, NINEA...)" />
-        </div>
-        <a href="{{ url_for('main.exporter_excel') }}" class="btn btn-success btn-sm text-white fw-bold shadow-sm"> 📊 Exporter vers Excel</a>
       </div>
+    </div>
 
-      <div class="card card-table">
-        <div class="table-responsive">
-          <table class="table table-hover mb-0 align-middle" id="candidatsTable">
-            <thead>
-              <tr>
-                <th class="ps-4">Candidat</th>
-                <th>Localisation</th>
-                <th>Secteur</th>
-                <th>Contact</th>
-                <th class="text-center">Statut</th>
-                <th class="text-end pe-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for candidat in candidats %}
-              <tr>
-                <td class="ps-4">
-                  <div class="d-flex align-items-center">
-                    <div class="company-avatar">{{ candidat.nom_entreprise[:2].upper() }}</div>
-                    <div>
-                      <div class="fw-bold text-dark">{{ candidat.nom_entreprise }}</div>
-                      <div class="small text-muted">NINEA: {{ candidat.ninea }}</div>
-                      <div class="small text-muted" style="font-size: 0.7rem">📅 {{ candidat.date_enregistrement.strftime('%d/%m/%Y') }}</div>
-                    </div>
-                  </div>
-                </td>
+    <div class="col-xl-3 col-sm-6">
+      <a href="{{ url_for('main.afficher_formulaire') }}" class="text-decoration-none">
+        <div
+          class="card card-stat p-3 bg-primary text-white h-100 d-flex justify-content-center align-items-center border-0"
+          style="background: linear-gradient(135deg, #003366 0%, #0056b3 100%)"
+        >
+          <div class="text-center">
+            <span style="font-size: 1.5rem">+</span>
+            <span class="fw-bold ms-2">Nouveau Dossier</span>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
 
-                <td>
-                  <div class="fw-semibold text-dark" style="font-size: 0.9rem">{{ candidat.ville }}</div>
-                  <div class="text-muted small text-truncate" style="max-width: 150px">{{ candidat.adresse }}</div>
-                </td>
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-3">
+    <div>
+      <h5 class="fw-bold text-dark m-0">Demandes Récentes</h5>
+      <p class="text-muted small mb-0">Gestion des dossiers de demande d'agrément.</p>
+    </div>
 
-                <td>
-                  <span class="badge bg-light text-dark border fw-normal text-wrap" style="max-width: 150px"> {{ candidat.position }} </span>
-                </td>
+    <div class="search-container">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" class="form-control search-input" placeholder="Rechercher (Nom, NINEA...)" />
+    </div>
+    <a href="{{ url_for('main.exporter_excel') }}" class="btn btn-success btn-sm text-white fw-bold shadow-sm"> 📊 Exporter vers Excel</a>
+  </div>
 
-                <td>
-                  <div class="small fw-bold">{{ candidat.nom_proprietaire }}</div>
-                  <div class="small text-muted">{{ candidat.telephone }}</div>
-                </td>
-
-                <td class="text-center">
-                  {% if "attente" in candidat.statut %}
-                  <span class="badge badge-status bg-en-attente">En attente</span>
-                  {% elif "Retenu" in candidat.statut %}
-                  <span class="badge badge-status bg-retenu">Validé</span>
-                  {% else %}
-                  <span class="badge badge-status bg-refuse">Refusé</span>
-                  {% endif %}
-                </td>
-
-                <td class="text-end pe-4">
-                  {% if current_user.role in ['superadmin', 'admin'] %} {% if "Retenu" not in candidat.statut %}
-                  <button
-                    type="button"
-                    class="btn btn-action btn-light text-success"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalValidation"
-                    data-id="{{ candidat.id }}"
-                    data-nom="{{ candidat.nom_entreprise }}"
-                    title="Valider"
-                  >
-                    ✓
-                  </button>
-                  {% endif %} {% endif %} {% if candidat.fichier_scanne %}
-                  <a
-                    href="{{ url_for('main.voir_scan', nom_fichier=candidat.fichier_scanne) }}"
-                    target="_blank"
-                    class="btn btn-action btn-light text-success"
-                    title="Voir l'agrément signé"
-                  >
-                    👁️
-                  </a>
-                  {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
-                  <button
-                    type="button"
-                    class="btn btn-action btn-light text-warning"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalScan{{ candidat.id }}"
-                    title="Uploader l'agrément signé"
-                  >
-                    📤
-                  </button>
-                  {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
-                  <a
-                    href="{{ url_for('main.decision', id=candidat.id, type_decision='refuser') }}"
-                    class="btn btn-action btn-light text-warning"
-                    title="Rejeter"
-                    >✕</a
-                  >
-                  {% endif %}
-
-                  <a
-                    href="{{ url_for('main.telecharger_agrement_vierge', id=candidat.id) }}"
-                    class="btn btn-action btn-light text-secondary"
-                    title="Brouillon"
-                    >📄</a
-                  >
-
-                  {% if "Retenu" in candidat.statut %}
-                  <a
-                    href="{{ url_for('main.telecharger_agrement_final', id=candidat.id) }}"
-                    class="btn btn-action btn-success text-white"
-                    title="Télécharger Final"
-                    >📥</a
-                  >
-                  {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
-                  <form action="{{ url_for('main.supprimer', id=candidat.id) }}" method="POST" style="display: inline">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <button
-                      type="submit"
-                      class="btn btn-danger btn-sm"
-                      title="Supprimer"
-                      onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.');"
-                    >
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </form>
-                  {% endif %}
-                </td>
-              </tr>
+  <div class="card card-table">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle" id="candidatsTable">
+        <thead>
+          <tr>
+            <th class="ps-4">Candidat</th>
+            <th>Localisation</th>
+            <th>Secteur</th>
+            <th>Contact</th>
+            <th class="text-center">Statut</th>
+            <th class="text-end pe-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for candidat in candidats %}
+          <tr>
+            <td class="ps-4">
+              <div class="d-flex align-items-center">
+                <div class="company-avatar">{{ candidat.nom_entreprise[:2].upper() }}</div>
+                <div>
+                  <div class="fw-bold text-dark">{{ candidat.nom_entreprise }}</div>
+                  <div class="small text-muted">NINEA: {{ candidat.ninea }}</div>
+                  <div class="small text-muted" style="font-size: 0.7rem">📅 {{ candidat.date_enregistrement.strftime('%d/%m/%Y') }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="fw-semibold text-dark" style="font-size: 0.9rem">{{ candidat.ville }}</div>
+              <div class="text-muted small text-truncate" style="max-width: 150px">{{ candidat.adresse }}</div>
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border fw-normal text-wrap" style="max-width: 150px"> {{ candidat.position }} </span>
+            </td>
+            <td>
+              <div class="small fw-bold">{{ candidat.nom_proprietaire }}</div>
+              <div class="small text-muted">{{ candidat.telephone }}</div>
+            </td>
+            <td class="text-center">
+              {% if "attente" in candidat.statut %}
+              <span class="badge badge-status bg-en-attente">En attente</span>
+              {% elif "Retenu" in candidat.statut %}
+              <span class="badge badge-status bg-retenu">Validé</span>
               {% else %}
-              <tr>
-                <td colspan="6" class="text-center py-5">
-                  <div class="text-muted mb-3" style="font-size: 3rem">📂</div>
-                  <h6 class="text-muted">Aucun dossier enregistré</h6>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              <span class="badge badge-status bg-refuse">Refusé</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-4">
+              {% if current_user.role in ['superadmin', 'admin'] %} {% if "Retenu" not in candidat.statut %}
+              <button
+                type="button"
+                class="btn btn-action btn-light text-success"
+                data-bs-toggle="modal"
+                data-bs-target="#modalValidation"
+                data-id="{{ candidat.id }}"
+                data-nom="{{ candidat.nom_entreprise }}"
+                title="Valider"
+              >
+                ✓
+              </button>
+              {% endif %} {% endif %} {% if candidat.fichier_scanne %}
+              <a
+                href="{{ url_for('main.voir_scan', nom_fichier=candidat.fichier_scanne) }}"
+                target="_blank"
+                class="btn btn-action btn-light text-success"
+                title="Voir l'agrément signé"
+                >👁️</a
+              >
+              {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
+              <button
+                type="button"
+                class="btn btn-action btn-light text-warning"
+                data-bs-toggle="modal"
+                data-bs-target="#modalScan{{ candidat.id }}"
+                title="Uploader l'agrément signé"
+              >
+                📤
+              </button>
+              {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
+              <a
+                href="{{ url_for('main.decision', id=candidat.id, type_decision='refuser') }}"
+                class="btn btn-action btn-light text-warning"
+                title="Rejeter"
+                >✕</a
+              >
+              {% endif %}
+              <a
+                href="{{ url_for('main.telecharger_agrement_vierge', id=candidat.id) }}"
+                class="btn btn-action btn-light text-secondary"
+                title="Brouillon"
+                >📄</a
+              >
+              {% if "Retenu" in candidat.statut %}
+              <a
+                href="{{ url_for('main.telecharger_agrement_final', id=candidat.id) }}"
+                class="btn btn-action btn-success text-white"
+                title="Télécharger Final"
+                >📥</a
+              >
+              {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
+              <form action="{{ url_for('main.supprimer', id=candidat.id) }}" method="POST" style="display: inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button
+                  type="submit"
+                  class="btn btn-danger btn-sm"
+                  title="Supprimer"
+                  onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.');"
+                >
+                  <i class="fas fa-trash"></i>
+                </button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center py-5">
+              <div class="text-muted mb-3" style="font-size: 3rem">📂</div>
+              <h6 class="text-muted">Aucun dossier enregistré</h6>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
+</div>
 
-    <div class="modal fade" id="modalValidation" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-          <div class="modal-header bg-success text-white">
-            <h5 class="modal-title fw-bold">Valider l'Agrément</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="modal fade" id="modalValidation" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title fw-bold">Valider l'Agrément</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{{ url_for('main.valider_agrement_final') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="modal-body p-4">
+          <div class="text-center mb-4">
+            <h4 id="displayNomEntreprise" class="fw-bold text-success mb-0"></h4>
+            <small class="text-muted">Configuration de l'agrément final</small>
           </div>
-
-          <form action="{{ url_for('main.valider_agrement_final') }}" method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <div class="modal-body p-4">
-              <div class="text-center mb-4">
-                <h4 id="displayNomEntreprise" class="fw-bold text-success mb-0"></h4>
-                <small class="text-muted">Configuration de l'agrément final</small>
+          <input type="hidden" name="candidat_id" id="val_candidat_id" />
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label small fw-bold text-uppercase text-muted">Référence</label>
+              <div class="input-group">
+                <span class="input-group-text bg-white border-end-0">N°</span>
+                <input type="text" class="form-control border-start-0" name="ref_numero" placeholder="0001" required />
+                <input type="text" class="form-control" name="ref_suffixe" value="/SG/DAGE/ms" placeholder="/SG/DAGE/ms" />
               </div>
-              <input type="hidden" name="candidat_id" id="val_candidat_id" />
-              <div class="row g-3">
-                <div class="col-12">
-                  <label class="form-label small fw-bold text-uppercase text-muted">Référence</label>
-                  <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0">N°</span>
-                    <input type="text" class="form-control border-start-0" name="ref_numero" placeholder="0001" required />
-                    <input type="text" class="form-control" name="ref_suffixe" value="/SG/DAGE/ms" placeholder="/SG/DAGE/ms" />
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small fw-bold text-uppercase text-muted">Signataire</label>
-                  <input type="text" class="form-control" name="titre_signataire" value="Le Directeur" />
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small fw-bold text-uppercase text-muted">Date Signature</label>
-                  <input type="text" class="form-control" name="date_signature" placeholder="jj/mm/aaaa" required />
-                </div>
-                <div class="col-12">
-                  <label class="form-label small fw-bold text-uppercase text-muted">Réf. Lettre Candidat</label>
-                  <input type="text" class="form-control" name="ref_lettre_candidat" placeholder="SR/..." />
-                </div>
-              </div>
             </div>
-            <div class="modal-footer bg-light border-0">
-              <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Annuler</button>
-              <button type="submit" class="btn btn-success px-4 rounded-pill fw-bold">Valider et Envoyer</button>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-uppercase text-muted">Signataire</label>
+              <input type="text" class="form-control" name="titre_signataire" value="Le Directeur" />
             </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    {% for candidat in candidats %} {% if not candidat.fichier_scanne %}
-    <div class="modal fade" id="modalScan{{ candidat.id }}" tabindex="-1">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow border-0">
-          <div class="modal-header bg-primary text-white">
-            <h5 class="modal-title fw-bold">Scan de l'agrément signé</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-          </div>
-          <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <div class="modal-body p-4">
-              <p class="small text-muted">
-                Uploadez la version scannée de l'agrément pour
-                <strong>{{ candidat.nom_entreprise }}</strong>.
-              </p>
-
-              <input type="hidden" name="type_doc" value="agrement" />
-              <input type="hidden" name="doc_id" value="{{ candidat.id }}" />
-              <input type="hidden" name="page_retour" value="main.tableau_de_bord" />
-
-              <input type="file" name="scan_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required />
+            <div class="col-md-6">
+              <label class="form-label small fw-bold text-uppercase text-muted">Date Signature</label>
+              <input type="text" class="form-control" name="date_signature" placeholder="jj/mm/aaaa" required />
             </div>
-            <div class="modal-footer bg-light border-0">
-              <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Annuler</button>
-              <button type="submit" class="btn btn-primary px-4 rounded-pill fw-bold">Enregistrer le Scan</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-    {% endif %} {% endfor %}
-
-    <div id="session-timeout-badge" class="fixed-bottom p-3" style="z-index: 1050; width: fit-content">
-      <div class="badge bg-dark border border-secondary shadow-sm p-2 opacity-75">
-        <i class="fas fa-clock text-warning"></i>
-        <span id="session-timer">30:00</span>
-      </div>
-    </div>
-
-    <div class="offcanvas offcanvas-end border-0 shadow-lg" tabindex="-1" id="menuLateralRapide" aria-labelledby="menuLateralLabel">
-      <div class="offcanvas-header" style="background-color: #003366; color: white">
-        <h5 class="offcanvas-title fw-bold" id="menuLateralLabel">🧭 Navigation MCAT</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Fermer"></button>
-      </div>
-
-      <div class="offcanvas-body d-flex flex-column" style="background-color: #f8f9fa">
-        <p class="text-muted small mb-4">Accédez rapidement à tous vos modules :</p>
-
-        <div class="d-grid gap-3">
-          <a href="{{ url_for('main.tableau_de_bord') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 🏆 Agréments </a>
-
-          <a href="{{ url_for('main.liste_cotations') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 💰 Cotations </a>
-
-          <button
-            class="btn btn-light border shadow-sm text-start fw-bold p-3 d-flex justify-content-between align-items-center"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#collapseDrp"
-            aria-expanded="false"
-            aria-controls="collapseDrp"
-          >
-            <span>📄 Dossiers DRP</span>
-            <span style="font-size: 0.8em">▼</span>
-          </button>
-
-          <div class="collapse" id="collapseDrp">
-            <div class="d-grid gap-2 ps-3 pe-1 border-start border-primary border-3 ms-2">
-              <a href="{{ url_for('main.drps') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"> DRP</a>
-              <a href="{{ url_for('main.liste_bordereaux') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">1. Bordereaux</a>
-              <a href="{{ url_for('main.creer_lettre_invitation') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >2. Lettre d'invitation</a
-              >
-              <a href="{{ url_for('main.liste_notifications') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >3. Lettre de Notification</a
-              >
-              <a href="{{ url_for('main.lettres_information') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >4. Lettre d'Information</a
-              >
-              <a href="{{ url_for('main.liste_pv') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">5. Procès Verbal (PV)</a>
-
-              <a href="{{ url_for('main.creer_contrat') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">6. Contrat</a>
+            <div class="col-12">
+              <label class="form-label small fw-bold text-uppercase text-muted">Réf. Lettre Candidat</label>
+              <input type="text" class="form-control" name="ref_lettre_candidat" placeholder="SR/..." />
             </div>
           </div>
-          <a href="{{ url_for('main.page_suivi_dossiers') }}" class="btn btn-warning shadow-sm text-start fw-bold p-3 text-dark border-0">
-            ⏱️ Suivi des Marchés
-          </a>
-
-          <a href="{{ url_for('main.page_archives') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 🗄️ Archives Globales </a>
         </div>
-
-        <div class="mt-auto pt-4">
-          <hr />
-          <a href="{{ url_for('main.logout') }}" class="btn btn-danger w-100 fw-bold shadow-sm p-3"> 🚪 Déconnexion </a>
+        <div class="modal-footer bg-light border-0">
+          <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-success px-4 rounded-pill fw-bold">Valider et Envoyer</button>
         </div>
-      </div>
+      </form>
     </div>
+  </div>
+</div>
 
-    <style>
-      #session-timeout-badge {
-        left: 20px; /* Positionné en bas à gauche */
-        pointer-events: none; /* Ne gêne pas les clics sur l'interface */
+{% for candidat in candidats %} {% if not candidat.fichier_scanne %}
+<div class="modal fade" id="modalScan{{ candidat.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow border-0">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold">Scan de l'agrément signé</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="modal-body p-4">
+          <p class="small text-muted">Uploadez la version scannée de l'agrément pour <strong>{{ candidat.nom_entreprise }}</strong>.</p>
+          <input type="hidden" name="type_doc" value="agrement" />
+          <input type="hidden" name="doc_id" value="{{ candidat.id }}" />
+          <input type="hidden" name="page_retour" value="main.tableau_de_bord" />
+          <input type="file" name="scan_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required />
+        </div>
+        <div class="modal-footer bg-light border-0">
+          <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary px-4 rounded-pill fw-bold">Enregistrer le Scan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %} {% endfor %}
+
+<div id="session-timeout-badge" class="fixed-bottom p-3" style="z-index: 1050; width: fit-content">
+  <div class="badge bg-dark border border-secondary shadow-sm p-2 opacity-75">
+    <i class="fas fa-clock text-warning"></i>
+    <span id="session-timer">30:00</span>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  // 1. Gestion du Modal
+  var modalValidation = document.getElementById("modalValidation");
+  modalValidation.addEventListener("show.bs.modal", function (event) {
+    var button = event.relatedTarget;
+    var id = button.getAttribute("data-id");
+    var nom = button.getAttribute("data-nom");
+    var inputId = modalValidation.querySelector("#val_candidat_id");
+    var textNom = modalValidation.querySelector("#displayNomEntreprise");
+    if (inputId) inputId.value = id;
+    if (textNom) textNom.textContent = nom;
+  });
+
+  // 2. Gestion de la Recherche
+  document.getElementById("searchInput").addEventListener("keyup", function () {
+    var filter = this.value.toLowerCase();
+    var rows = document.querySelectorAll("#candidatsTable tbody tr");
+    rows.forEach(function (row) {
+      var text = row.textContent.toLowerCase();
+      if (text.includes(filter)) {
+        row.style.display = "";
+      } else {
+        row.style.display = "none";
       }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    });
+  });
 
-    <script>
-      // 1. Gestion du Modal
-      var modalValidation = document.getElementById("modalValidation");
-      modalValidation.addEventListener("show.bs.modal", function (event) {
-        var button = event.relatedTarget;
-        var id = button.getAttribute("data-id");
-        var nom = button.getAttribute("data-nom");
-        var inputId = modalValidation.querySelector("#val_candidat_id");
-        var textNom = modalValidation.querySelector("#displayNomEntreprise");
-        if (inputId) inputId.value = id;
-        if (textNom) textNom.textContent = nom;
-      });
+  // 3. Gestion du Timer
+  (function () {
+    let timeLeft = 30 * 60;
+    const display = document.querySelector("#session-timer");
+    const badge = document.querySelector("#session-timeout-badge .badge");
 
-      // 2. Gestion de la Recherche
-      document.getElementById("searchInput").addEventListener("keyup", function () {
-        var filter = this.value.toLowerCase();
-        var rows = document.querySelectorAll("#candidatsTable tbody tr");
+    const timer = setInterval(function () {
+      let minutes = Math.floor(timeLeft / 60);
+      let seconds = timeLeft % 60;
 
-        rows.forEach(function (row) {
-          var text = row.textContent.toLowerCase();
-          if (text.includes(filter)) {
-            row.style.display = "";
-          } else {
-            row.style.display = "none";
-          }
-        });
-      });
-    </script>
+      minutes = minutes < 10 ? "0" + minutes : minutes;
+      seconds = seconds < 10 ? "0" + seconds : seconds;
 
-    <script>
-      (function () {
-        // Durée de la session en secondes (doit correspondre à ta config Flask : 30 * 60)
-        let timeLeft = 30 * 60;
-        const display = document.querySelector("#session-timer");
-        const badge = document.querySelector("#session-timeout-badge .badge");
+      display.textContent = minutes + ":" + seconds;
 
-        const timer = setInterval(function () {
-          let minutes = Math.floor(timeLeft / 60);
-          let seconds = timeLeft % 60;
+      if (timeLeft <= 120) {
+        badge.classList.replace("bg-dark", "bg-danger");
+        badge.classList.remove("opacity-75");
+      } else if (timeLeft <= 300) {
+        badge.classList.replace("bg-dark", "bg-warning");
+        badge.classList.remove("text-white");
+        badge.classList.add("text-dark");
+      }
 
-          // Formatage 00:00
-          minutes = minutes < 10 ? "0" + minutes : minutes;
-          seconds = seconds < 10 ? "0" + seconds : seconds;
-
-          display.textContent = minutes + ":" + seconds;
-
-          // Alertes visuelles
-          if (timeLeft <= 120) {
-            // Moins de 2 minutes
-            badge.classList.replace("bg-dark", "bg-danger");
-            badge.classList.remove("opacity-75");
-          } else if (timeLeft <= 300) {
-            // Moins de 5 minutes
-            badge.classList.replace("bg-dark", "bg-warning");
-            badge.classList.remove("text-white");
-            badge.classList.add("text-dark");
-          }
-
-          if (timeLeft <= 0) {
-            clearInterval(timer);
-            window.location.href = "{{ url_for('main.login') }}"; // Redirection auto
-          }
-
-          timeLeft--;
-        }, 1000);
-      })();
-    </script>
-  </body>
-</html>
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        window.location.href = "{{ url_for('main.login') }}";
+      }
+      timeLeft--;
+    }, 1000);
+  })();
+</script>
+{% endblock %}

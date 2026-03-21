@@ -1,429 +1,267 @@
-<!doctype html>
-<html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mes PV d'Attribution - MCAT</title>
+{% extends "base.html" %} {% block title %}Mes PV d'Attribution - MCAT{% endblock %} {% block extra_css %}
+<style>
+  /* TABLEAU & BOUTONS */
+  .card-table {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 5px;
+    overflow: hidden;
+  }
+  .table thead th {
+    background-color: #f8f9fa;
+    color: #8898aa;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 2px solid var(--border-color);
+    padding: 15px 20px;
+  }
+  .table tbody td {
+    padding: 20px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .table-hover tbody tr:hover {
+    background-color: #fafbff;
+  }
+  .btn-nouveau {
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 50px;
+    padding: 10px 25px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: none;
+    transition: all 0.3s;
+  }
+  .btn-nouveau:hover {
+    background-color: #002244;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 51, 102, 0.3);
+    color: white;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid px-4 mt-5">
+  {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
+  <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %} {% endif %} {% endwith %}
 
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" />
-
-    <style>
-      :root {
-        --primary-color: #003366;
-        --secondary-bg: #e3e8ee;
-        --border-color: #d0d7de;
-      }
-      body {
-        background-color: var(--secondary-bg);
-        font-family: "Poppins", sans-serif;
-        min-height: 100vh;
-        padding-bottom: 50px;
-        color: #344767;
-      }
-      .navbar {
-        background-color: var(--primary-color);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        padding: 15px 0;
-      }
-      .navbar-brand {
-        font-weight: 700;
-        letter-spacing: 1px;
-        font-size: 1.2rem;
-      }
-      .nav-link {
-        font-size: 0.85rem;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        padding: 10px 15px !important;
-        border-radius: 8px;
-        transition: all 0.3s;
-        color: rgba(255, 255, 255, 0.8) !important;
-      }
-      .nav-link:hover {
-        color: white !important;
-        background-color: rgba(255, 255, 255, 0.1);
-        transform: translateY(-2px);
-      }
-      .nav-link.active {
-        background-color: rgba(255, 255, 255, 0.2);
-        color: white !important;
-      }
-      .card-table {
-        background: white;
-        border-radius: 16px;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        padding: 5px;
-        overflow: hidden;
-      }
-      .table thead th {
-        background-color: #f8f9fa;
-        color: #8898aa;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        border-bottom: 2px solid var(--border-color);
-        padding: 15px 20px;
-      }
-      .table tbody td {
-        padding: 20px;
-        vertical-align: middle;
-        border-bottom: 1px solid var(--border-color);
-      }
-      .table-hover tbody tr:hover {
-        background-color: #fafbff;
-      }
-      .btn-nouveau {
-        background-color: var(--primary-color);
-        color: white;
-        border-radius: 50px;
-        padding: 10px 25px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        border: none;
-        transition: all 0.3s;
-      }
-      .btn-nouveau:hover {
-        background-color: #002244;
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 51, 102, 0.3);
-        color: white;
-      }
-    </style>
-  </head>
-  <body>
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-      <div class="container-fluid px-4">
-        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.tableau_de_bord') }}">
-          <span style="font-size: 1.5rem; margin-right: 10px">🏛️</span>
-          <div style="line-height: 1">
-            <div>MCAT</div>
-            <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7">PORTAIL ADMIN</div>
-          </div>
-        </a>
-
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
-          <ul class="navbar-nav">
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}">ACCUEIL</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.liste_cotations') }}">COTATIONS</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.drps') }}">DRP</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.page_suivi_dossiers') }}"> ⏱️ SUIVI DES MARCHÉS </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.page_archives') }}"> 🗄️ ARCHIVES GLOBALES </a>
-            </li>
-          </ul>
-        </div>
-
-        <div class="d-flex align-items-center">
-          <button
-            class="btn btn-outline-light btn-sm rounded-pill px-3 fw-bold"
-            type="button"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#menuLateralRapide"
-            aria-controls="menuLateralRapide"
-          >
-            ☰ Menu
-          </button>
-        </div>
-      </div>
-    </nav>
-
-    <div class="container-fluid px-4 mt-5">
-      {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
-      <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-      {% endfor %} {% endif %} {% endwith %}
-
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h3 class="fw-bold text-dark mb-1">Procès-Verbaux d'Attribution</h3>
-          <p class="text-muted small mb-0">Historique des PV générés par la commission.</p>
-        </div>
-      </div>
-
-      <div class="card card-table">
-        <div class="table-responsive">
-          <table class="table table-hover mb-0 align-middle">
-            <thead>
-              <tr>
-                <th class="ps-4">N° DRP</th>
-                <th>Objet du Marché</th>
-                <th>Entreprise Moins Disante</th>
-                <th>Date Création</th>
-                <th class="text-end pe-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for pv in pvs %}
-              <tr>
-                <td class="ps-4">
-                  <span class="badge bg-light text-primary border">{{ pv.numero_drp }}</span>
-                </td>
-                <td>
-                  <div class="text-truncate" style="max-width: 250px">{{ pv.objet }}</div>
-                </td>
-                <td>
-                  <div class="fw-bold text-dark">{{ pv.entreprise }}</div>
-                </td>
-                <td>{{ pv.date_creation.strftime('%d/%m/%Y') }}</td>
-                <td class="text-end pe-4">
-                  <div class="btn-group">
-                    <a
-                      href="{{ url_for('main.download_pv_pdf', id=pv.id) }}"
-                      class="btn btn-outline-danger btn-sm"
-                      target="_blank"
-                      title="Télécharger le PDF"
-                    >
-                      <i class="bi bi-file-earmark-pdf-fill"></i> PDF
-                    </a>
-
-                    {% if pv.fichier_scanne %}
-                    <a
-                      href="{{ url_for('main.voir_scan', nom_fichier=pv.fichier_scanne) }}"
-                      target="_blank"
-                      class="btn btn-sm btn-outline-success ms-1"
-                      title="Voir le PV signé"
-                    >
-                      👁️ Voir Scan
-                    </a>
-                    {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
-                    <button
-                      type="button"
-                      class="btn btn-sm btn-outline-warning ms-1"
-                      data-bs-toggle="modal"
-                      data-bs-target="#modalScan{{ pv.id }}"
-                      title="Joindre le PV signé"
-                    >
-                      📤 Joindre Scan
-                    </button>
-                    {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
-                    <form action="{{ url_for('main.supprimer_pv', id=pv.id) }}" method="POST" style="display: inline">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                      <button
-                        type="submit"
-                        class="btn btn-outline-secondary btn-sm ms-1"
-                        onclick="return confirm('Confirmer la suppression de ce Procès-Verbal ?');"
-                        title="Supprimer"
-                      >
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </form>
-                    {% endif %}
-                  </div>
-                </td>
-              </tr>
-              {% else %}
-              <tr>
-                <td colspan="5" class="text-center py-5">
-                  <div class="text-muted mb-3" style="font-size: 3rem">⚖️</div>
-                  <h6 class="text-muted">Aucun Procès-Verbal enregistré.</h6>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="fw-bold text-dark mb-1">Procès-Verbaux d'Attribution</h3>
+      <p class="text-muted small mb-0">Historique des PV générés par la commission.</p>
     </div>
+  </div>
 
-    <div class="modal fade" id="modalNouveauPV" tabindex="-1">
-      <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content shadow">
-          <div class="modal-header bg-primary text-white">
-            <h5 class="modal-title fw-bold">PV d'Attribution</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-          </div>
-          <form action="{{ url_for('main.ajouter_pv') }}" method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <div class="modal-body p-4">
-              <input type="hidden" name="type_document" value="pv_attribution" />
-
-              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête du document</h6>
-              <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                  <label class="form-label fw-bold">N° d'ordre</label>
-                  <input type="text" class="form-control" name="num_ordre" placeholder="Ex: 208" />
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label fw-bold text-danger">Suffixe Réf.</label>
-                  <input type="text" class="form-control" name="ref_service" value="MCAT/SG/DAGE/ms" required />
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label fw-bold">Date de signature</label>
-                  <input type="text" class="form-control" name="date_lettre" placeholder="Ex: 15 mars 2015" required />
-                </div>
-              </div>
-
-              <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                  <label class="form-label fw-bold text-danger">Nom de la Direction</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    name="direction_name"
-                    value="La Direction de l'Administration Générale et de l'Equipement"
-                    required
-                  />
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold text-danger">Adresse</label>
-                  <input type="text" class="form-control" name="adresse_direction" value="route des Almadies, Dakar" required />
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label fw-bold text-danger">Signataire (Haut)</label>
-                <input type="text" class="form-control" name="signataire" value="Le Directeur," required />
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label fw-bold text-danger">Fonction du signataire (Bas de page)</label>
-                <textarea class="form-control" name="signataire_bas" rows="3" required>
-Le Directeur de
-l'Administration
-Générale et de l'Equipement</textarea
+  <div class="card card-table">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead>
+          <tr>
+            <th class="ps-4">N° DRP</th>
+            <th>Objet du Marché</th>
+            <th>Entreprise Moins Disante</th>
+            <th>Date Création</th>
+            <th class="text-end pe-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pv in pvs %}
+          <tr>
+            <td class="ps-4">
+              <span class="badge bg-light text-primary border">{{ pv.numero_drp }}</span>
+            </td>
+            <td>
+              <div class="text-truncate" style="max-width: 250px" title="{{ pv.objet }}">{{ pv.objet }}</div>
+            </td>
+            <td>
+              <div class="fw-bold text-dark">{{ pv.entreprise }}</div>
+            </td>
+            <td>{{ pv.date_creation.strftime('%d/%m/%Y') }}</td>
+            <td class="text-end pe-4">
+              <div class="btn-group">
+                <a
+                  href="{{ url_for('main.download_pv_pdf', id=pv.id) }}"
+                  class="btn btn-outline-danger btn-sm"
+                  target="_blank"
+                  title="Télécharger le PDF"
                 >
-              </div>
+                  <i class="bi bi-file-earmark-pdf-fill"></i> PDF
+                </a>
 
-              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Informations du Marché</h6>
-              <div class="mb-3">
-                <label class="form-label fw-bold text-danger">Objet complet du marché</label>
-                <input type="text" class="form-control" name="objet_marche" placeholder="Ex: la confection de cartons d'invitation..." required />
+                {% if pv.fichier_scanne %}
+                <a
+                  href="{{ url_for('main.voir_scan', nom_fichier=pv.fichier_scanne) }}"
+                  target="_blank"
+                  class="btn btn-sm btn-outline-success ms-1"
+                  title="Voir le PV signé"
+                >
+                  👁️ Voir Scan
+                </a>
+                {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-warning ms-1"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalScan{{ pv.id }}"
+                  title="Joindre le PV signé"
+                >
+                  📤 Joindre Scan
+                </button>
+                {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
+                <form action="{{ url_for('main.supprimer_pv', id=pv.id) }}" method="POST" style="display: inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button
+                    type="submit"
+                    class="btn btn-outline-secondary btn-sm ms-1"
+                    onclick="return confirm('Confirmer la suppression de ce Procès-Verbal ?');"
+                    title="Supprimer"
+                  >
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+                {% endif %}
               </div>
-
-              <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                  <label class="form-label fw-bold text-danger">N° Immatriculation</label>
-                  <input type="text" class="form-control" name="immatriculation" placeholder="Ex: S_DAGE_373" required />
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold text-danger">Date de la commission</label>
-                  <input type="date" class="form-control" name="date_commission" required />
-                </div>
-              </div>
-
-              <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">3. Attributaire</h6>
-              <div class="mb-3">
-                <label class="form-label fw-bold text-danger">Entreprise moins disante (gagnante)</label>
-                <select class="form-select" name="prestataire_id_pv" required>
-                  <option value="">Sélectionner une entreprise...</option>
-                  {% for candidat in candidats %}
-                  <option value="{{ candidat.id }}">{{ candidat.nom_entreprise }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-            </div>
-            <div class="modal-footer bg-light border-0">
-              <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
-              <button type="submit" class="btn btn-primary px-4 rounded-pill">Générer le PV</button>
-            </div>
-          </form>
-        </div>
-      </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="text-center py-5">
+              <div class="text-muted mb-3" style="font-size: 3rem">⚖️</div>
+              <h6 class="text-muted">Aucun Procès-Verbal enregistré.</h6>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
+</div>
 
-    {% for pv in pvs %} {% if not pv.fichier_scanne %}
-    <div class="modal fade" id="modalScan{{ pv.id }}" tabindex="-1">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow">
-          <div class="modal-header bg-warning">
-            <h5 class="modal-title fw-bold text-dark">Joindre le PV d'Attribution signé</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="modal fade" id="modalNouveauPV" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content shadow">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold">PV d'Attribution</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="{{ url_for('main.ajouter_pv') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="modal-body p-4">
+          <input type="hidden" name="type_document" value="pv_attribution" />
+
+          <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête du document</h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label fw-bold">N° d'ordre</label>
+              <input type="text" class="form-control" name="num_ordre" placeholder="Ex: 208" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold text-danger">Suffixe Réf.</label>
+              <input type="text" class="form-control" name="ref_service" value="MCAT/SG/DAGE/ms" required />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Date de signature</label>
+              <input type="text" class="form-control" name="date_lettre" placeholder="Ex: 15 mars 2015" required />
+            </div>
           </div>
 
-          <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <div class="modal-body p-4">
-              <input type="hidden" name="type_doc" value="pv_attribution" />
-              <input type="hidden" name="doc_id" value="{{ pv.id }}" />
-              <input type="hidden" name="page_retour" value="main.liste_pv" />
-              <label class="form-label fw-bold">Sélectionnez le PV scanné (PDF/Image) :</label>
-              <input type="file" name="scan_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required />
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold text-danger">Nom de la Direction</label>
+              <input
+                type="text"
+                class="form-control"
+                name="direction_name"
+                value="La Direction de l'Administration Générale et de l'Equipement"
+                required
+              />
             </div>
-            <div class="modal-footer bg-light border-0">
-              <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
-              <button type="submit" class="btn btn-warning px-4 rounded-pill fw-bold">Uploader le Scan</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-    {% endif %} {% endfor %}
-
-    <div class="offcanvas offcanvas-end border-0 shadow-lg" tabindex="-1" id="menuLateralRapide" aria-labelledby="menuLateralLabel">
-      <div class="offcanvas-header" style="background-color: #003366; color: white">
-        <h5 class="offcanvas-title fw-bold" id="menuLateralLabel">🧭 Navigation MCAT</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Fermer"></button>
-      </div>
-
-      <div class="offcanvas-body d-flex flex-column" style="background-color: #f8f9fa">
-        <p class="text-muted small mb-4">Accédez rapidement à tous vos modules :</p>
-
-        <div class="d-grid gap-3">
-          <a href="{{ url_for('main.tableau_de_bord') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 🏆 Agréments </a>
-
-          <a href="{{ url_for('main.liste_cotations') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 💰 Cotations </a>
-
-          <button
-            class="btn btn-light border shadow-sm text-start fw-bold p-3 d-flex justify-content-between align-items-center"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#collapseDrp"
-            aria-expanded="false"
-            aria-controls="collapseDrp"
-          >
-            <span>📄 Dossiers DRP</span>
-            <span style="font-size: 0.8em">▼</span>
-          </button>
-
-          <div class="collapse" id="collapseDrp">
-            <div class="d-grid gap-2 ps-3 pe-1 border-start border-primary border-3 ms-2">
-              <a href="{{ url_for('main.drps') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"> DRP</a>
-              <a href="{{ url_for('main.liste_bordereaux') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">1. Bordereaux</a>
-              <a href="{{ url_for('main.creer_lettre_invitation') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >2. Lettre d'invitation</a
-              >
-              <a href="{{ url_for('main.liste_notifications') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >3. Lettre de Notification</a
-              >
-              <a href="{{ url_for('main.lettres_information') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >4. Lettre d'Information</a
-              >
-              <a href="{{ url_for('main.liste_pv') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">5. Procès Verbal (PV)</a>
-
-              <a href="{{ url_for('main.creer_contrat') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">6. Contrat</a>
+            <div class="col-md-6">
+              <label class="form-label fw-bold text-danger">Adresse</label>
+              <input type="text" class="form-control" name="adresse_direction" value="route des Almadies, Dakar" required />
             </div>
           </div>
-          <a href="{{ url_for('main.page_suivi_dossiers') }}" class="btn btn-warning shadow-sm text-start fw-bold p-3 text-dark border-0">
-            ⏱️ Suivi des Marchés
-          </a>
 
-          <a href="{{ url_for('main.page_archives') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 🗄️ Archives Globales </a>
-        </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold text-danger">Signataire (Haut)</label>
+            <input type="text" class="form-control" name="signataire" value="Le Directeur," required />
+          </div>
 
-        <div class="mt-auto pt-4">
-          <hr />
-          <a href="{{ url_for('main.logout') }}" class="btn btn-danger w-100 fw-bold shadow-sm p-3"> 🚪 Déconnexion </a>
+          <div class="mb-3">
+            <label class="form-label fw-bold text-danger">Fonction du signataire (Bas de page)</label>
+            <textarea class="form-control" name="signataire_bas" rows="3" required>
+Le Directeur de l'Administration Générale et de l'Equipement</textarea
+            >
+          </div>
+
+          <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Informations du Marché</h6>
+          <div class="mb-3">
+            <label class="form-label fw-bold text-danger">Objet complet du marché</label>
+            <input type="text" class="form-control" name="objet_marche" placeholder="Ex: la confection de cartons d'invitation..." required />
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold text-danger">N° Immatriculation</label>
+              <input type="text" class="form-control" name="immatriculation" placeholder="Ex: S_DAGE_373" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold text-danger">Date de la commission</label>
+              <input type="date" class="form-control" name="date_commission" required />
+            </div>
+          </div>
+
+          <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">3. Attributaire</h6>
+          <div class="mb-3">
+            <label class="form-label fw-bold text-danger">Entreprise moins disante (gagnante)</label>
+            <select class="form-select" name="prestataire_id_pv" required>
+              <option value="">Sélectionner une entreprise...</option>
+              {% for candidat in candidats %}
+              <option value="{{ candidat.id }}">{{ candidat.nom_entreprise }}</option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
-      </div>
+        <div class="modal-footer bg-light border-0">
+          <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary px-4 rounded-pill">Générer le PV</button>
+        </div>
+      </form>
     </div>
+  </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  </body>
-</html>
+{% for pv in pvs %} {% if not pv.fichier_scanne %}
+<div class="modal fade" id="modalScan{{ pv.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title fw-bold text-dark">Joindre le PV d'Attribution signé</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="modal-body p-4">
+          <input type="hidden" name="type_doc" value="pv_attribution" />
+          <input type="hidden" name="doc_id" value="{{ pv.id }}" />
+          <input type="hidden" name="page_retour" value="main.liste_pv" />
+          <label class="form-label fw-bold">Sélectionnez le PV scanné (PDF/Image) :</label>
+          <input type="file" name="scan_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required />
+        </div>
+        <div class="modal-footer bg-light border-0">
+          <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-warning px-4 rounded-pill fw-bold">Uploader le Scan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %} {% endfor %} {% endblock %} {% block scripts %} {% endblock %}

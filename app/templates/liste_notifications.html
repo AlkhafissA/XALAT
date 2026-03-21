@@ -1,534 +1,401 @@
-<!doctype html>
-<html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mes Notifications - MCAT</title>
+{% extends "base.html" %} {% block title %}Mes Notifications - MCAT{% endblock %} {% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" />
+<style>
+  /* TABLEAU & BOUTONS */
+  .card-table {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 5px;
+    overflow: hidden;
+  }
+  .table thead th {
+    background-color: #f8f9fa;
+    color: #8898aa;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 2px solid var(--border-color);
+    padding: 15px 20px;
+  }
+  .table tbody td {
+    padding: 20px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .table-hover tbody tr:hover {
+    background-color: #fafbff;
+  }
+  .btn-nouveau {
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 50px;
+    padding: 10px 25px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: none;
+    transition: all 0.3s;
+  }
+  .btn-nouveau:hover {
+    background-color: #002244;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 51, 102, 0.3);
+    color: white;
+  }
 
-    <style>
-      :root {
-        --primary-color: #003366;
-        --secondary-bg: #e3e8ee;
-        --border-color: #d0d7de;
-      }
-      body {
-        background-color: var(--secondary-bg);
-        font-family: "Poppins", sans-serif;
-        min-height: 100vh;
-        padding-bottom: 50px;
-        color: #344767;
-      }
-      .navbar {
-        background-color: var(--primary-color);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        padding: 15px 0;
-      }
-      .navbar-brand {
-        font-weight: 700;
-        letter-spacing: 1px;
-        font-size: 1.2rem;
-      }
-      .nav-link {
-        font-size: 0.85rem;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        padding: 10px 15px !important;
-        border-radius: 8px;
-        transition: all 0.3s;
-        color: rgba(255, 255, 255, 0.8) !important;
-      }
-      .nav-link:hover {
-        color: white !important;
-        background-color: rgba(255, 255, 255, 0.1);
-        transform: translateY(-2px);
-      }
-      .nav-link.active {
-        background-color: rgba(255, 255, 255, 0.2);
-        color: white !important;
-      }
-      .card-table {
-        background: white;
-        border-radius: 16px;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        padding: 5px;
-        overflow: hidden;
-      }
-      .table thead th {
-        background-color: #f8f9fa;
-        color: #8898aa;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        border-bottom: 2px solid var(--border-color);
-        padding: 15px 20px;
-      }
-      .table tbody td {
-        padding: 20px;
-        vertical-align: middle;
-        border-bottom: 1px solid var(--border-color);
-      }
-      .table-hover tbody tr:hover {
-        background-color: #fafbff;
-      }
-      .btn-nouveau {
-        background-color: var(--primary-color);
-        color: white;
-        border-radius: 50px;
-        padding: 10px 25px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        border: none;
-        transition: all 0.3s;
-      }
-      .btn-nouveau:hover {
-        background-color: #002244;
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 51, 102, 0.3);
-        color: white;
-      }
-    </style>
-  </head>
-  <body>
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-      <div class="container-fluid px-4">
-        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.tableau_de_bord') }}">
-          <span style="font-size: 1.5rem; margin-right: 10px">🏛️</span>
-          <div style="line-height: 1">
-            <div>MCAT</div>
-            <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7">PORTAIL ADMIN</div>
-          </div>
-        </a>
+  /* Style pour harmoniser Select2 avec Bootstrap */
+  .select2-container--default .select2-selection--single {
+    border: 1px solid #0d6efd;
+    border-radius: 0.375rem;
+    height: 38px;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 36px;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid px-4 mt-5">
+  {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
+  <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %} {% endif %} {% endwith %}
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
-          <ul class="navbar-nav">
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}">ACCUEIL</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.liste_cotations') }}">COTATIONS</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.drps') }}">DRP</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.page_suivi_dossiers') }}"> ⏱️ SUIVI DES MARCHÉS </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.page_archives') }}"> 🗄️ ARCHIVES GLOBALES </a>
-            </li>
-          </ul>
-        </div>
-
-        <div class="d-flex align-items-center">
-          <button
-            class="btn btn-outline-light btn-sm rounded-pill px-3 fw-bold"
-            type="button"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#menuLateralRapide"
-            aria-controls="menuLateralRapide"
-          >
-            ☰ Menu
-          </button>
-        </div>
-      </div>
-    </nav>
-
-    <div class="container-fluid px-4 mt-5">
-      {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
-      <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-      {% endfor %} {% endif %} {% endwith %}
-
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h3 class="fw-bold text-dark mb-1">Lettres de Notification</h3>
-          <p class="text-muted small mb-0">Historique des notifications de marchés attribués.</p>
-        </div>
-        <div>
-          {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
-          <button class="btn btn-nouveau shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalNouveau">+ Nouvelle Lettre</button>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="card card-table">
-        <div class="table-responsive">
-          <table class="table table-hover mb-0 align-middle">
-            <thead>
-              <tr>
-                <th class="ps-4">Immatriculation</th>
-                <th>Objet du Marché</th>
-                <th>Entreprise Attributaire</th>
-                <th>Date Création</th>
-                <th class="text-end pe-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for n in notifications %}
-              <tr>
-                <td class="ps-4">
-                  <span class="badge bg-light text-primary border">{{ n.immatriculation }}</span>
-                </td>
-                <td>
-                  <div class="text-truncate" style="max-width: 250px">{{ n.objet_marche }}</div>
-                </td>
-                <td><div class="fw-bold text-dark">{{ n.entreprise }}</div></td>
-                <td>{{ n.date_creation.strftime('%d/%m/%Y') }}</td>
-                <td class="text-end pe-4">
-                  <div class="btn-group">
-                    <a
-                      href="{{ url_for('main.download_notification_pdf', id=n.id) }}"
-                      class="btn btn-outline-danger btn-sm"
-                      target="_blank"
-                      title="Lettre de Notification (Gagnant)"
-                    >
-                      <i class="bi bi-file-earmark-pdf-fill"></i> Notif
-                    </a>
-
-                    <a
-                      href="{{ url_for('main.lettres_information') }}"
-                      class="btn btn-sm btn-outline-info"
-                      title="Aller vers la page des Lettres d'Information"
-                    >
-                      ℹ️ Info
-                    </a>
-
-                    <a href="{{ url_for('main.liste_pv') }}" class="btn btn-sm btn-outline-dark" title="Aller vers la page des PV d'Attribution">
-                      📄 PV
-                    </a>
-
-                    {% if n.fichier_scanne %}
-                    <a
-                      href="{{ url_for('main.voir_scan', nom_fichier=n.fichier_scanne) }}"
-                      target="_blank"
-                      class="btn btn-sm btn-outline-success"
-                      title="Voir la lettre signée"
-                    >
-                      👁️ Voir Scan
-                    </a>
-                    {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
-                    <button
-                      type="button"
-                      class="btn btn-sm btn-outline-warning"
-                      data-bs-toggle="modal"
-                      data-bs-target="#modalScan{{ n.id }}"
-                      title="Joindre la lettre signée"
-                    >
-                      📤 Scan
-                    </button>
-                    {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
-                    <form action="{{ url_for('main.supprimer_notification', id=n.id) }}" method="POST" style="display: inline">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                      <button
-                        type="submit"
-                        class="btn btn-outline-secondary btn-sm ms-1"
-                        onclick="return confirm('Supprimer cette notification ?');"
-                        title="Supprimer"
-                      >
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </form>
-                    {% endif %}
-                  </div>
-                </td>
-              </tr>
-              {% else %}
-              <tr>
-                <td colspan="5" class="text-center py-5">
-                  <div class="text-muted mb-3" style="font-size: 3rem">📩</div>
-                  <h6 class="text-muted">Aucune lettre enregistrée.</h6>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h3 class="fw-bold text-dark mb-1">Lettres de Notification</h3>
+      <p class="text-muted small mb-0">Historique des notifications de marchés attribués.</p>
     </div>
+    <div>
+      {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
+      <button class="btn btn-nouveau shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalNouveau">+ Nouvelle Lettre</button>
+      {% endif %}
+    </div>
+  </div>
 
-    <div class="modal fade" id="modalNouveau" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content border-0 shadow-lg">
-          <div class="modal-header bg-primary text-white">
-            <h5 class="modal-title fw-bold">Générer les Lettres (Notification, Information & PV)</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-          </div>
-          <form action="{{ url_for('main.ajouter_notification') }}" method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <div class="modal-body p-4">
-              <div class="row g-3 mb-4 bg-light p-3 rounded border border-primary-subtle">
-                <div class="col-12">
-                  <label class="form-label fw-bold text-primary"><i class="bi bi-card-list"></i> 1. Sélectionner la Lettre d'Invitation</label>
-                  <select class="form-select border-primary shadow-sm" id="select_reference" required>
-                    <option value="" disabled selected>Cliquez ici pour choisir une Référence...</option>
-                    {% for inv in lettres_invitation %}
-                    <option value="{{ inv.immatriculation }}">Réf: {{ inv.num_ordre }} (Immat: {{ inv.immatriculation }})</option>
-                    {% endfor %}
-                  </select>
-                  <small class="text-muted mt-1 d-block" id="status_recherche"> Tous les champs ci-dessous se rempliront automatiquement. </small>
-                </div>
-              </div>
+  <div class="card card-table">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead>
+          <tr>
+            <th class="ps-4">Immatriculation</th>
+            <th>Objet du Marché</th>
+            <th>Entreprise Attributaire</th>
+            <th>Date Création</th>
+            <th class="text-end pe-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for n in notifications %}
+          <tr>
+            <td class="ps-4">
+              <span class="badge bg-light text-primary border">{{ n.immatriculation }}</span>
+            </td>
+            <td>
+              <div class="text-truncate" style="max-width: 250px" title="{{ n.objet_marche }}">{{ n.objet_marche }}</div>
+            </td>
+            <td><div class="fw-bold text-dark">{{ n.entreprise }}</div></td>
+            <td>{{ n.date_creation.strftime('%d/%m/%Y') }}</td>
+            <td class="text-end pe-4">
+              <div class="btn-group shadow-sm">
+                <a
+                  href="{{ url_for('main.download_notification_pdf', id=n.id) }}"
+                  class="btn btn-outline-danger btn-sm"
+                  target="_blank"
+                  title="Lettre de Notification (Gagnant)"
+                >
+                  <i class="bi bi-file-earmark-pdf-fill"></i> Notif
+                </a>
 
-              <div class="row g-3 mb-3">
-                <div class="col-md-3">
-                  <label class="form-label fw-bold">Immatriculation</label>
-                  <input
-                    type="text"
-                    class="form-control bg-light text-primary fw-bold"
-                    name="immatriculation"
-                    id="input_immatriculation"
-                    readonly
-                    required
-                  />
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label fw-bold">N° d'ordre</label>
-                  <input type="text" class="form-control bg-white" name="num_ordre" id="input_numero_ordre" placeholder="Ex: 123" />
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label fw-bold">Suffixe Réf.</label>
-                  <input type="text" class="form-control bg-white" name="ref_service" id="input_suffixe" value="MCAT/SG/DAGE/ms" required />
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label fw-bold">Date lettre</label>
-                  <input type="date" class="form-control" name="date_lettre" required />
-                </div>
-              </div>
+                <a
+                  href="{{ url_for('main.lettres_information') }}"
+                  class="btn btn-sm btn-outline-info"
+                  title="Aller vers la page des Lettres d'Information"
+                >
+                  ℹ️ Info
+                </a>
 
-              <div class="mb-3">
-                <label class="form-label fw-bold">Objet du marché</label>
-                <textarea class="form-control bg-white" name="objet_marche" id="input_objet" rows="2" required></textarea>
-              </div>
+                <a href="{{ url_for('main.liste_pv') }}" class="btn btn-sm btn-outline-dark" title="Aller vers la page des PV d'Attribution">
+                  📄 PV
+                </a>
 
-              <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Direction concernée</label>
-                  <input type="text" class="form-control bg-white" name="direction_name" id="input_direction" required />
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Date de la commission</label>
-                  <input type="date" class="form-control" name="date_commission" required />
-                </div>
-              </div>
-
-              <div class="row g-3 mb-4">
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Signataire</label>
-                  <input type="text" class="form-control" name="signataire" value="Le Directeur," />
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Civilité Représentant</label>
-                  <input type="text" class="form-control" name="civilite_representant" value="Monsieur le Directeur Général" />
-                </div>
-              </div>
-
-              <div class="row g-3 mb-4 bg-light p-3 rounded border border-dark-subtle shadow-sm">
-                <div class="col-12 mb-2 border-bottom pb-2">
-                  <h6 class="fw-bold text-dark mb-0">
-                    <i class="bi bi-file-earmark-check-fill text-primary"></i> 2. Veuillez finaliser les informations du PV avant génération
-                  </h6>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Adresse de la Direction</label>
-                  <input type="text" class="form-control bg-white" name="adresse_direction" value="Route des Almadies, Dakar" required />
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Fonction du Signataire (Bas de page)</label>
-                  <textarea class="form-control bg-white" name="signataire_bas" rows="2" required>
-Le Directeur de l'Administration
-Générale et de l'Equipement</textarea
+                {% if n.fichier_scanne %}
+                <a
+                  href="{{ url_for('main.voir_scan', nom_fichier=n.fichier_scanne) }}"
+                  target="_blank"
+                  class="btn btn-sm btn-outline-success"
+                  title="Voir la lettre signée"
+                >
+                  👁️ Voir Scan
+                </a>
+                {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-warning"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalScan{{ n.id }}"
+                  title="Joindre la lettre signée"
+                >
+                  📤 Scan
+                </button>
+                {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
+                <form action="{{ url_for('main.supprimer_notification', id=n.id) }}" method="POST" style="display: inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button
+                    type="submit"
+                    class="btn btn-outline-secondary btn-sm ms-1"
+                    onclick="return confirm('Supprimer cette notification ?');"
+                    title="Supprimer"
                   >
-                </div>
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+                {% endif %}
               </div>
-
-              <div class="mb-2 p-3 border rounded border-success-subtle bg-success-subtle bg-opacity-10">
-                <label class="form-label fw-bold text-success"><i class="bi bi-trophy-fill"></i> 3. Entreprise attributaire (Le Gagnant)</label>
-                <select class="form-select border-success shadow-sm" name="prestataire_id_notif" id="select_entreprise" required>
-                  <option value="">Attente de la sélection...</option>
-                </select>
-                <small class="text-success mt-1">Les autres entreprises invitées recevront automatiquement la lettre d'information.</small>
-              </div>
-            </div>
-
-            <div class="modal-footer bg-light border-0">
-              <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
-              <button type="submit" class="btn btn-primary px-4 rounded-pill fw-bold">Enregistrer et Générer (Notif, Info, PV)</button>
-            </div>
-          </form>
-        </div>
-      </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="text-center py-5">
+              <div class="text-muted mb-3" style="font-size: 3rem">📩</div>
+              <h6 class="text-muted">Aucune lettre enregistrée.</h6>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<div class="modal fade" id="modalNouveau" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold">Générer les Lettres (Notification, Information & PV)</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="{{ url_for('main.ajouter_notification') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="modal-body p-4">
+          <div class="row g-3 mb-4 bg-light p-3 rounded border border-primary-subtle">
+            <div class="col-12">
+              <label class="form-label fw-bold text-primary"><i class="bi bi-card-list"></i> 1. Sélectionner la Lettre d'Invitation</label>
 
-    {% for notification in notifications %} {% if not notification.fichier_scanne %}
-    <div class="modal fade" id="modalScan{{ notification.id }}" tabindex="-1">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow">
-          <div class="modal-header bg-warning">
-            <h5 class="modal-title fw-bold text-dark">Joindre la lettre signée</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              <select class="form-select border-primary shadow-sm" id="select_reference" name="immatriculation_select" style="width: 100%" required>
+                <option value="" disabled selected>-- Tapez pour chercher une Référence --</option>
+                {% for inv in lettres_invitation %}
+                <option value="{{ inv.immatriculation }}">Réf: {{ inv.num_ordre }} (Immat: {{ inv.immatriculation }})</option>
+                {% endfor %}
+              </select>
+
+              <small class="text-muted mt-1 d-block" id="status_recherche"> Tous les champs ci-dessous se rempliront automatiquement. </small>
+            </div>
           </div>
 
-          <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <div class="modal-body p-4">
-              <input type="hidden" name="type_doc" value="lettre_notification" />
-              <input type="hidden" name="doc_id" value="{{ notification.id }}" />
-              <input type="hidden" name="page_retour" value="main.liste_notifications" />
-              <label class="form-label fw-bold">Sélectionnez la lettre scannée (PDF/Image) :</label>
-              <input type="file" name="scan_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required />
+          <div class="row g-3 mb-3">
+            <div class="col-md-3">
+              <label class="form-label fw-bold">Immatriculation</label>
+              <input
+                type="text"
+                class="form-control bg-light text-primary fw-bold"
+                name="immatriculation"
+                id="input_immatriculation"
+                readonly
+                required
+              />
             </div>
-            <div class="modal-footer bg-light border-0">
-              <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
-              <button type="submit" class="btn btn-warning px-4 rounded-pill fw-bold">Uploader le Scan</button>
+            <div class="col-md-3">
+              <label class="form-label fw-bold">N° d'ordre</label>
+              <input type="text" class="form-control bg-white" name="num_ordre" id="input_numero_ordre" placeholder="Ex: 123" />
             </div>
-          </form>
-        </div>
-      </div>
-    </div>
-    {% endif %} {% endfor %}
-
-    <div class="offcanvas offcanvas-end border-0 shadow-lg" tabindex="-1" id="menuLateralRapide" aria-labelledby="menuLateralLabel">
-      <div class="offcanvas-header" style="background-color: #003366; color: white">
-        <h5 class="offcanvas-title fw-bold" id="menuLateralLabel">🧭 Navigation MCAT</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Fermer"></button>
-      </div>
-
-      <div class="offcanvas-body d-flex flex-column" style="background-color: #f8f9fa">
-        <p class="text-muted small mb-4">Accédez rapidement à tous vos modules :</p>
-
-        <div class="d-grid gap-3">
-          <a href="{{ url_for('main.tableau_de_bord') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 🏆 Agréments </a>
-
-          <a href="{{ url_for('main.liste_cotations') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 💰 Cotations </a>
-
-          <button
-            class="btn btn-light border shadow-sm text-start fw-bold p-3 d-flex justify-content-between align-items-center"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#collapseDrp"
-            aria-expanded="false"
-            aria-controls="collapseDrp"
-          >
-            <span>📄 Dossiers DRP</span>
-            <span style="font-size: 0.8em">▼</span>
-          </button>
-
-          <div class="collapse" id="collapseDrp">
-            <div class="d-grid gap-2 ps-3 pe-1 border-start border-primary border-3 ms-2">
-              <a href="{{ url_for('main.drps') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"> DRP</a>
-              <a href="{{ url_for('main.liste_bordereaux') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">1. Bordereaux</a>
-              <a href="{{ url_for('main.creer_lettre_invitation') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >2. Lettre d'invitation</a
-              >
-              <a href="{{ url_for('main.liste_notifications') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >3. Lettre de Notification</a
-              >
-              <a href="{{ url_for('main.lettres_information') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >4. Lettre d'Information</a
-              >
-              <a href="{{ url_for('main.liste_pv') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">5. Procès Verbal (PV)</a>
-
-              <a href="{{ url_for('main.creer_contrat') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">6. Contrat</a>
+            <div class="col-md-3">
+              <label class="form-label fw-bold">Suffixe Réf.</label>
+              <input type="text" class="form-control bg-white" name="ref_service" id="input_suffixe" value="MCAT/SG/DAGE/ms" required />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-bold">Date lettre</label>
+              <input type="date" class="form-control" name="date_lettre" required />
             </div>
           </div>
-          <a href="{{ url_for('main.page_suivi_dossiers') }}" class="btn btn-warning shadow-sm text-start fw-bold p-3 text-dark border-0">
-            ⏱️ Suivi des Marchés
-          </a>
 
-          <a href="{{ url_for('main.page_archives') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 🗄️ Archives Globales </a>
+          <div class="mb-3">
+            <label class="form-label fw-bold">Objet du marché</label>
+            <textarea class="form-control bg-white" name="objet_marche" id="input_objet" rows="2" required></textarea>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Direction concernée</label>
+              <input type="text" class="form-control bg-white" name="direction_name" id="input_direction" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Date de la commission</label>
+              <input type="date" class="form-control" name="date_commission" required />
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Signataire</label>
+              <input type="text" class="form-control" name="signataire" value="Le Directeur," />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Civilité Représentant</label>
+              <input type="text" class="form-control" name="civilite_representant" value="Monsieur le Directeur Général" />
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4 bg-light p-3 rounded border border-dark-subtle shadow-sm">
+            <div class="col-12 mb-2 border-bottom pb-2">
+              <h6 class="fw-bold text-dark mb-0">
+                <i class="bi bi-file-earmark-check-fill text-primary"></i> 2. Veuillez finaliser les informations du PV avant génération
+              </h6>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Adresse de la Direction</label>
+              <input type="text" class="form-control bg-white" name="adresse_direction" value="Route des Almadies, Dakar" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Fonction du Signataire (Bas de page)</label>
+              <textarea class="form-control bg-white" name="signataire_bas" rows="2" required>
+Le Directeur de l'Administration Générale et de l'Equipement</textarea
+              >
+            </div>
+          </div>
+
+          <div class="mb-2 p-3 border rounded border-success-subtle bg-success-subtle bg-opacity-10">
+            <label class="form-label fw-bold text-success"><i class="bi bi-trophy-fill"></i> 3. Entreprise attributaire (Le Gagnant)</label>
+            <select class="form-select border-success shadow-sm" name="prestataire_id_notif" id="select_entreprise" required>
+              <option value="">Attente de la sélection de la lettre...</option>
+            </select>
+            <small class="text-success mt-1">Les autres entreprises invitées recevront automatiquement la lettre d'information.</small>
+          </div>
         </div>
 
-        <div class="mt-auto pt-4">
-          <hr />
-          <a href="{{ url_for('main.logout') }}" class="btn btn-danger w-100 fw-bold shadow-sm p-3"> 🚪 Déconnexion </a>
+        <div class="modal-footer bg-light border-0">
+          <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary px-4 rounded-pill fw-bold">Enregistrer et Générer (Notif, Info, PV)</button>
         </div>
-      </div>
+      </form>
     </div>
+  </div>
+</div>
 
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const selectReference = document.getElementById("select_reference");
-        const inputImmat = document.getElementById("input_immatriculation");
-        const inputObjet = document.getElementById("input_objet");
-        const inputNumOrdre = document.getElementById("input_numero_ordre");
-        const inputSuffixe = document.getElementById("input_suffixe");
-        const inputDirection = document.getElementById("input_direction");
-        const selectEntreprise = document.getElementById("select_entreprise");
-        const statusText = document.getElementById("status_recherche");
+{% for notification in notifications %} {% if not notification.fichier_scanne %}
+<div class="modal fade" id="modalScan{{ notification.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title fw-bold text-dark">Joindre la lettre signée</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
 
-        if (selectReference) {
-          selectReference.addEventListener("change", function () {
-            const immat = this.value;
+      <form action="{{ url_for('main.uploader_scan') }}" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="modal-body p-4">
+          <input type="hidden" name="type_doc" value="lettre_notification" />
+          <input type="hidden" name="doc_id" value="{{ notification.id }}" />
+          <input type="hidden" name="page_retour" value="main.liste_notifications" />
+          <label class="form-label fw-bold">Sélectionnez la lettre scannée (PDF/Image) :</label>
+          <input type="file" name="scan_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required />
+        </div>
+        <div class="modal-footer bg-light border-0">
+          <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-warning px-4 rounded-pill fw-bold">Uploader le Scan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %} {% endfor %} {% endblock %} {% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-            if (immat) {
-              statusText.innerHTML = '<span class="text-warning"><i class="bi bi-hourglass-split"></i> Chargement...</span>';
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const selectReference = document.getElementById("select_reference");
+    const inputImmat = document.getElementById("input_immatriculation");
+    const inputObjet = document.getElementById("input_objet");
+    const inputNumOrdre = document.getElementById("input_numero_ordre");
+    const inputSuffixe = document.getElementById("input_suffixe");
+    const inputDirection = document.getElementById("input_direction");
+    const selectEntreprise = document.getElementById("select_entreprise");
+    const statusText = document.getElementById("status_recherche");
 
-              inputImmat.value = immat;
+    // Initialisation de Select2 pour la modale
+    if ($.fn.select2 && $("#select_reference").length) {
+      $("#select_reference").select2({
+        placeholder: "-- Tapez pour chercher une Référence --",
+        allowClear: true,
+        dropdownParent: $("#modalNouveau"),
+      });
 
-              const apiUrl = `{{ url_for('main.get_infos_invitation') }}?immat=${encodeURIComponent(immat)}`;
-              console.log("Je vais interroger l'URL :", apiUrl);
+      // Relais de l'événement Select2 vers le script natif
+      $("#select_reference").on("select2:select", function (e) {
+        var event = new Event("change", { bubbles: true });
+        selectReference.dispatchEvent(event);
+      });
+    }
 
-              fetch(apiUrl)
-                .then((response) => {
-                  console.log("Réponse du serveur reçue :", response.status);
-                  return response.json();
-                })
-                .then((data) => {
-                  console.log("Données JSON renvoyées par Python :", data);
+    // Script d'auto-remplissage
+    if (selectReference) {
+      selectReference.addEventListener("change", function () {
+        const immat = this.value;
 
-                  if (data.success) {
-                    if (inputObjet) inputObjet.value = data.objet || "";
-                    if (inputNumOrdre) inputNumOrdre.value = data.num_ordre || "";
-                    if (inputSuffixe) inputSuffixe.value = data.ref_service || "";
-                    if (inputDirection) {
-                      inputDirection.value = data.direction_name || "";
-                      console.log("✅ Case trouvée ! J'y ai inséré :", inputDirection.value);
-                    } else {
-                      console.error("❌ ERREUR : Je ne trouve pas la case avec l'id 'input_direction' dans le HTML !");
+        if (immat) {
+          statusText.innerHTML = '<span class="text-warning"><i class="bi bi-hourglass-split"></i> Chargement...</span>';
+
+          inputImmat.value = immat;
+
+          const apiUrl = `{{ url_for('main.get_infos_invitation') }}?immat=${encodeURIComponent(immat)}`;
+
+          fetch(apiUrl)
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                if (inputObjet) inputObjet.value = data.objet || "";
+                if (inputNumOrdre) inputNumOrdre.value = data.num_ordre || "";
+                if (inputSuffixe) inputSuffixe.value = data.ref_service || "";
+                if (inputDirection) inputDirection.value = data.direction_name || "";
+
+                selectEntreprise.innerHTML = '<option value="" disabled selected>Sélectionner le gagnant...</option>';
+                if (data.prestataires && data.prestataires.length > 0) {
+                  data.prestataires.forEach((prestataire) => {
+                    const nom = prestataire.nom_entreprise || prestataire.nom;
+                    const id = prestataire.id || prestataire.candidat_id;
+                    if (nom && id && id !== "undefined") {
+                      const option = document.createElement("option");
+                      option.value = id;
+                      option.textContent = nom;
+                      selectEntreprise.appendChild(option);
                     }
+                  });
+                }
 
-                    selectEntreprise.innerHTML = '<option value="" disabled selected>Sélectionner le gagnant...</option>';
-                    if (data.prestataires && data.prestataires.length > 0) {
-                      data.prestataires.forEach((prestataire) => {
-                        const nom = prestataire.nom_entreprise || prestataire.nom;
-                        const id = prestataire.id || prestataire.candidat_id;
-                        if (nom && id && id !== "undefined") {
-                          const option = document.createElement("option");
-                          option.value = id;
-                          option.textContent = nom;
-                          selectEntreprise.appendChild(option);
-                        }
-                      });
-                    } else {
-                      console.log("Attention : La liste des prestataires est vide !");
-                    }
+                statusText.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Données chargées !</span>';
 
-                    statusText.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Données chargées !</span>';
-                  } else {
-                    statusText.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> ${data.message}</span>`;
-                  }
-                })
-                .catch((error) => {
-                  console.error("Erreur Javascript/Reseau :", error);
-                  statusText.innerHTML = '<span class="text-danger">Erreur de connexion au serveur.</span>';
-                });
-            }
-          });
+                // Petit effet visuel pour confirmer le chargement
+                inputObjet.style.transition = "background-color 0.5s ease";
+                inputObjet.style.backgroundColor = "#e8f5e9";
+                setTimeout(() => (inputObjet.style.backgroundColor = ""), 1000);
+              } else {
+                statusText.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> ${data.message}</span>`;
+              }
+            })
+            .catch((error) => {
+              console.error("Erreur Javascript/Reseau :", error);
+              statusText.innerHTML = '<span class="text-danger">Erreur de connexion au serveur.</span>';
+            });
         }
       });
-    </script>
-  </body>
-</html>
+    }
+  });
+</script>
+{% endblock %}

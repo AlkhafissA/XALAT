@@ -1,182 +1,37 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Espace DRPS - MCAT</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <style>
-        :root {
-            --primary-color: #003366; 
-            --secondary-bg: #E3E8EE; 
-            --border-color: #D0D7DE; 
-        }
+{% extends "base.html" %} {% block title %}Espace DRPS - MCAT{% endblock %} {% block extra_css %}
+<style>
+  /* --- EN-TÊTE DE PAGE --- */
+  .page-header {
+    background-color: white;
+    padding: 20px 30px;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border-bottom: 4px solid var(--primary-color);
+  }
 
-        body {
-            background-color: var(--secondary-bg);
-            font-family: 'Poppins', sans-serif;
-            min-height: 100vh;
-            color: #344767;
-            padding-bottom: 50px;
-        }
-        
-        /* NAVBAR (Identique au Dashboard) */
-        .navbar {
-            background-color: var(--primary-color);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            padding: 15px 0;
-        }
-        .navbar-brand { font-weight: 700; letter-spacing: 1px; font-size: 1.2rem; }
-        .nav-link { font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; padding: 10px 15px !important; border-radius: 8px; transition: all 0.3s; color: rgba(255,255,255,0.8) !important; }
-        .nav-link:hover { color: white !important; background-color: rgba(255,255,255,0.1); transform: translateY(-2px); }
-        .nav-link.active { background-color: rgba(255,255,255,0.2); color: white !important; }
+  /* --- MODALS --- */
+  .modal-header {
+    background-color: var(--primary-color);
+    color: white;
+  }
+  .btn-close-white {
+    filter: invert(1);
+  }
+  .modal-content {
+    border-radius: 16px;
+    border: none;
+  }
 
-        /* CARDS DOCUMENTS (Style adapté du Dashboard) */
-        .card-stat {
-            border-radius: 16px; 
-            background: white;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02); 
-            transition: all 0.3s ease;
-            position: relative; overflow: hidden;
-            cursor: pointer; /* Indique que c'est cliquable */
-            height: 100%;
-        }
-        .card-stat:hover { 
-            transform: translateY(-5px); 
-            box-shadow: 0 10px 20px rgba(0,51,102,0.15); /* Ombre bleutée */
-            border-color: var(--primary-color); 
-        }
-        
-        .stat-icon { 
-            width: 60px; height: 60px; 
-            border-radius: 16px; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 1.8rem; 
-            margin-bottom: 15px;
-        }
-
-        .page-header {
-            background-color: white;
-            padding: 20px 30px;
-            border-radius: 16px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            border-bottom: 4px solid var(--primary-color);
-        }
-
-        /* MODALS */
-        .modal-header { background-color: var(--primary-color); color: white; }
-        .btn-close-white { filter: invert(1); }
-        .modal-content { border-radius: 16px; border: none; }
-    </style>
-</head>
-<body>
-
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.tableau_de_bord') }}">
-                <span style="font-size: 1.5rem; margin-right: 10px;">🏛️</span>
-                <div style="line-height: 1;">
-                    <div>MCAT</div>
-                    <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7;">PORTAIL ADMIN</div>
-                </div>
-            </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
-          <ul class="navbar-nav">
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}">ACCUEIL</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.liste_cotations') }}">COTATIONS</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.drps') }}">DRP</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.page_suivi_dossiers') }}"> ⏱️ SUIVI DES MARCHÉS </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.page_archives') }}"> 🗄️ ARCHIVES GLOBALES </a>
-            </li>
-          </ul>
-        </div>
-
-        <div class="d-flex align-items-center">
-          <button
-            class="btn btn-outline-light btn-sm rounded-pill px-3 fw-bold"
-            type="button"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#menuLateralRapide"
-            aria-controls="menuLateralRapide"
-          >
-            ☰ Menu
-          </button>
-        </div>
-      </div>
-    </nav>
-
-    <div class="container-fluid px-4 mt-4">
-        
-        <div class="d-flex justify-content-between align-items-center mb-4 page-header">
-            <div>
-                <h4 class="fw-bold text-dark m-0">Espace DRP</h4>
-                <p class="text-muted small mb-0">Génération automatique des documents administratifs.</p>
-            </div>
-            <div class="d-none d-md-block text-end">
-                <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill">Module V1.0</span>
-            </div>
-        </div>
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-info border-0 shadow-sm alert-dismissible fade show mb-4" role="alert" style="border-radius: 12px;">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-
-    <style>
-    .card-menu {
-        transition: all 0.3s ease;
-        border: 1px solid #e9ecef;
-        border-radius: 12px;
-        background: #fff;
-    }
-    .card-menu:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
-        border-color: #d1d5db;
-    }
-    .icon-box {
-        width: 50px;
-        height: 50px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 12px;
-        font-size: 1.4rem;
-    }
-/* LE STYLE DU BLOC BLANC (LE CUBE) */
-.card-cube {
+  /* --- LE STYLE DU BLOC BLANC (LE CUBE) --- */
+  .card-cube {
     background-color: white;
     border: 1px solid var(--border-color);
-    border-radius: 24px; /* Bords bien arrondis */
-    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    border-radius: 24px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
     padding: 30px 20px;
     height: 100%;
-    min-height: 220px; /* Donne l'aspect "cube" ou carré */
+    min-height: 220px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -184,622 +39,599 @@
     text-align: center;
     transition: all 0.3s ease;
     cursor: pointer;
-}
+  }
 
-/* EFFET AU SURVOL DU BLOC */
-.card-cube:hover {
+  /* EFFET AU SURVOL DU BLOC */
+  .card-cube:hover {
     transform: translateY(-6px);
-    box-shadow: 0 12px 24px rgba(0, 51, 102, 0.12); /* Ombre bleutée de ton thème */
+    box-shadow: 0 12px 24px rgba(0, 51, 102, 0.12);
     border-color: rgba(0, 51, 102, 0.3);
-}
+  }
 
-/* LE STYLE DE L'ICÔNE À L'INTÉRIEUR */
-.icon-vibre {
+  /* --- LE STYLE DE L'ICÔNE À L'INTÉRIEUR --- */
+  .icon-vibre {
     width: 65px;
     height: 65px;
-    border-radius: 18px; /* Petit carré arrondi pour l'icône */
+    border-radius: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 2rem;
     margin-bottom: 20px;
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
+  }
 
-/* EFFET DE VIBRATION DE L'ICÔNE AU SURVOL DU BLOC */
-.card-cube:hover .icon-vibre {
+  /* EFFET DE VIBRATION DE L'ICÔNE AU SURVOL DU BLOC */
+  .card-cube:hover .icon-vibre {
     transform: scale(1.15) rotate(8deg);
-}
+  }
 
-/* On s'assure que les liens n'ont pas de soulignement */
-.lien-cube {
+  .lien-cube {
     text-decoration: none !important;
     display: block;
     height: 100%;
-}
+  }
 </style>
-    <div class="row g-4">
-            
-    <div class="col-lg-4 col-md-6">
-        <a href="{{ url_for('main.liste_bordereaux') }}" class="lien-cube">
-            <div class="card-cube">
-                <div class="icon-vibre bg-primary bg-opacity-10 text-primary">📋</div>
-                <h5 class="fw-bold text-dark mb-2">Bordereau de Revue</h5>
-                <p class="text-muted small mb-0">Gérer l'historique et créer de nouveaux bordereaux</p>
-            </div>
-        </a>
+{% endblock %} {% block content %}
+<div class="container-fluid px-4 mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 page-header">
+    <div>
+      <h4 class="fw-bold text-dark m-0">Espace DRP</h4>
+      <p class="text-muted small mb-0">Génération automatique des documents administratifs.</p>
     </div>
-
-    <div class="col-lg-4 col-md-6">
-        <a href="{{ url_for('main.creer_lettre_invitation') }}" class="lien-cube">
-            <div class="card-cube">
-                <div class="icon-vibre bg-warning bg-opacity-10 text-warning">📩</div>
-                <h5 class="fw-bold text-dark mb-2">Lettre d’Invitation</h5>
-                <p class="text-muted small mb-0">Inviter des prestataires à soumissionner</p>
-            </div>
-        </a>
+    <div class="d-none d-md-block text-end">
+      <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill">Module V1.0</span>
     </div>
+  </div>
 
+  {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
+  <div class="alert alert-info border-0 shadow-sm alert-dismissible fade show mb-4" role="alert" style="border-radius: 12px">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {% endfor %} {% endif %} {% endwith %}
+
+  <div class="row g-4">
     <div class="col-lg-4 col-md-6">
-        <a href="{{ url_for('main.liste_notifications') }}" class="lien-cube">
-            <div class="card-cube">
-                <div class="icon-vibre bg-danger bg-opacity-10 text-danger">✅</div>
-                <h5 class="fw-bold text-dark mb-2">Lettre de Notification</h5>
-                <p class="text-muted small mb-0">Notifier l'attribution provisoire</p>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-lg-4 col-md-6">
-        <a href="{{ url_for('main.lettres_information') }}" class="lien-cube">
-            <div class="card-cube">
-                <div class="icon-vibre bg-info bg-opacity-10 text-info">ℹ️</div>
-                <h5 class="fw-bold text-dark mb-2">Lettre d’Information</h5>
-                <p class="text-muted small mb-0">Informer les candidats non retenus</p>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-lg-4 col-md-6">
-        <a href="{{ url_for('main.liste_pv') }}" class="lien-cube">
-            <div class="card-cube">
-                <div class="icon-vibre bg-secondary bg-opacity-10 text-dark">⚖️</div>
-                <h5 class="fw-bold text-dark mb-2">PV d’Attribution</h5>
-                <p class="text-muted small mb-0">Générer le procès-verbal final</p>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-lg-4 col-md-6">
-        <a href="{{ url_for('main.creer_contrat') }}" class="lien-cube">
-            <div class="card-cube">
-                <div class="icon-vibre bg-success bg-opacity-10 text-success">✍🏽</div>
-                <h5 class="fw-bold text-dark mb-2">Projet de Contrat</h5>
-                <p class="text-muted small mb-0">Créer un nouveau contrat final</p>
-            </div>
-        </a>
-    </div>
-
-</div>
-    <div class="modal fade" id="modalBordereau" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content shadow">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Bordereau de Revue</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                
-                <form action="{{ url_for('main.ajouter_bordereau') }}" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <div class="modal-body p-4">
-                        <input type="hidden" name="type_document" value="bordereau">
-
-                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête du Document</h6>
-                        
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-danger">Nom de la Direction (Texte Rouge)</label>
-                            <input type="text" class="form-control" name="direction_name" 
-                                   value="DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT" required>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">N° Référence</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">N°</span>
-                                    <input type="text" class="form-control" name="numero" placeholder="Ex: 005" required>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Suffixe Service</label>
-                                <input type="text" class="form-control" name="service_ref" value="MTA/DAGE/DFC" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Date</label>
-                                <input type="date" class="form-control" name="date_signature">
-                            </div>
-                        </div>
-
-                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Liste des Dossiers</h6>
-        
-                        <div class="alert alert-light border small">
-                            <i class="bi bi-info-circle"></i> Le texte "Demande de Renseignements..." est ajouté automatiquement. Saisis uniquement la partie variable (travaux...) et la référence.
-                        </div>
-
-                        <div id="dossiers-container">
-                            <div class="dossier-item card bg-light mb-3 p-3 border-0">
-                                <h6 class="fw-bold text-muted">Dossier N°1</h6>
-                                <div class="mb-2">
-                                    <label class="small text-muted">Objet (partie modifiable)</label>
-                                    <textarea class="form-control" name="objets[]" rows="2" placeholder="Ex: travaux de peinture, de révision sanitaire..." required></textarea>
-                                </div>
-                                <div class="mb-2">
-                                    <label class="small text-muted">Référence du dossier</label>
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text fw-bold">N°</span> <input type="text" class="form-control" name="references[]" placeholder="T_DAGE_208" required>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="text-end mb-3">
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="ajouterDossier()">
-                                + Ajouter un dossier
-                            </button>
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-md-12">
-                                <label class="form-label fw-bold">Observations (Colonne de droite)</label>
-                                <input type="text" class="form-control" name="observations" value="Pour REVUE">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="modal-footer bg-light border-0">
-                        <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary px-4 rounded-pill">Générer le PDF</button>
-                    </div>
-                </form>
-            </div>
+      <a href="{{ url_for('main.liste_bordereaux') }}" class="lien-cube">
+        <div class="card-cube">
+          <div class="icon-vibre bg-primary bg-opacity-10 text-primary">📋</div>
+          <h5 class="fw-bold text-dark mb-2">Bordereau de Revue</h5>
+          <p class="text-muted small mb-0">Gérer l'historique et créer de nouveaux bordereaux</p>
         </div>
+      </a>
     </div>
 
-    
-
-    <div class="modal fade" id="modalInvitation" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content shadow">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Lettre d'Invitation</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form action="/drps" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <div class="modal-body p-4">
-                        <input type="hidden" name="type_document" value="invitation">
-                        <label class="form-label fw-bold">Destinataire (Entreprise)</label>
-                        <input type="text" name="destinataire" class="form-control" required>
-                    </div>
-                    <div class="modal-footer bg-light border-0">
-                        <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary px-4 rounded-pill">Générer</button>
-                    </div>
-                </form>
-            </div>
+    <div class="col-lg-4 col-md-6">
+      <a href="{{ url_for('main.creer_lettre_invitation') }}" class="lien-cube">
+        <div class="card-cube">
+          <div class="icon-vibre bg-warning bg-opacity-10 text-warning">📩</div>
+          <h5 class="fw-bold text-dark mb-2">Lettre d’Invitation</h5>
+          <p class="text-muted small mb-0">Inviter des prestataires à soumissionner</p>
         </div>
+      </a>
     </div>
 
-    <div class="modal fade" id="modalInformation" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content shadow">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Lettre d'Information (Non retenus)</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form action="{{ url_for('main.drps') }}" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                     <div class="modal-body p-4">
-                        <input type="hidden" name="type_document" value="information">
-
-                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête de la lettre</h6>
-                        
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-danger">Nom de la Direction (Sous le logo MCAT)</label>
-                            <input type="text" class="form-control" name="direction_name" value="Direction de l'Administration Générale et de l'Equipement" required>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">N° d'ordre</label>
-                                <input type="text" class="form-control" name="num_ordre" placeholder="Ex: 123" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">Suffixe Réf.</label>
-                                <input type="text" class="form-control" name="ref_service" value="MCAT/SG/DAGE/ms" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">Date lettre</label>
-                                <input type="date" class="form-control" name="date_lettre" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold text-danger">Signataire</label>
-                                <input type="text" class="form-control" name="signataire" value="Le Directeur" required>
-                            </div>
-                        </div>
-
-                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Informations du Marché</h6>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">N° Immatriculation</label>
-                                <input type="text" class="form-control" name="immatriculation" placeholder="Ex: S_DAGE_198" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Date de commission</label>
-                                <input type="date" class="form-control" name="date_commission" required>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Objet complet du marché</label>
-                            <input type="text" class="form-control" name="objet_marche" placeholder="Ex: entretien et nettoiement des locaux..." required>
-                        </div>
-
-                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">3. Prestataires non retenus</h6>
-                        <div class="alert alert-light border small">
-                            <i class="bi bi-info-circle"></i> Sélectionnez l'entreprise, son adresse s'affichera automatiquement.
-                        </div>
-
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-sm" id="tableauPrestatairesInfo">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 5%;"></th>
-                                        <th style="width: 35%;">PRESTATAIRES</th>
-                                        <th style="width: 25%;">N° RC</th> <th style="width: 35%;">ADRESSES</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbody-prestataires">
-                                    <tr>
-                                        <td class="text-center align-middle">
-                                            <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="supprimerLigneInfo(this)">🗑️</button>
-                                        </td>
-                                        <td>
-                                            <select class="form-select form-select-sm" name="prestataire_id[]" onchange="updateAdresseInfo(this)" required>
-                                                <option value="">-- Choisir --</option>
-                                                {% for candidat in candidats %}
-                                                    <option value="{{ candidat.id }}">{{ candidat.nom_entreprise }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <input type="text" class="form-control form-control-sm" name="rc[]" placeholder="Ex: SN-DKR-..." required>
-                                        </td>
-                                        <td>
-                                            <input type="text" class="form-control form-control-sm champ-adresse" name="adresse[]" readonly placeholder="Auto-rempli">
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <div class="text-end mb-2">
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="ajouterLigneInfo()">
-                                + Ajouter une entreprise
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="modal-footer bg-light border-0">
-                        <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary px-4 rounded-pill">Générer le PDF</button>
-                    </div>
-                </form>
-            </div>
+    <div class="col-lg-4 col-md-6">
+      <a href="{{ url_for('main.liste_notifications') }}" class="lien-cube">
+        <div class="card-cube">
+          <div class="icon-vibre bg-danger bg-opacity-10 text-danger">✅</div>
+          <h5 class="fw-bold text-dark mb-2">Lettre de Notification</h5>
+          <p class="text-muted small mb-0">Notifier l'attribution provisoire</p>
         </div>
+      </a>
     </div>
 
-    <div class="modal fade" id="modalNotification" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content shadow">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Lettre de Notification (Attributaire)</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form action="{{ url_for('main.ajouter_notification') }}" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <div class="modal-body p-4">
-                        <input type="hidden" name="type_document" value="notification">
-
-                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête de la lettre</h6>
-                        
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-danger">Nom de la Direction (Sous le logo MCAT)</label>
-                            <input type="text" class="form-control" name="direction_name" value="Direction de l'Administration Générale et de l'Equipement" required>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">N° d'ordre</label>
-                                <input type="text" class="form-control" name="num_ordre" placeholder="Ex: 123">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold text-danger">Suffixe Réf.</label>
-                                <input type="text" class="form-control" name="ref_service" value="MCAT/SG/DAGE/ms" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">Date lettre</label>
-                                <input type="text" class="form-control" name="date_lettre" placeholder="Ex: 15 Mars 2025" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold text-danger">Signataire</label>
-                                <input type="text" class="form-control" name="signataire" value="Le Directeur" required>
-                            </div>
-                        </div>
-
-                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Destinataire</h6>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-danger">Civilité du représentant</label>
-                            <input type="text" class="form-control" name="civilite_representant" value="Monsieur le Directeur Général," required>
-                        </div>
-
-                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">3. Informations du Marché</h6>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-danger">N° Immatriculation</label>
-                                <input type="text" class="form-control" name="immatriculation" placeholder="Ex: S_DAGE_198" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-danger">Date de commission</label>
-                                <input type="date" class="form-control" name="date_commission" required>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-danger">Objet complet du marché</label>
-                            <input type="text" class="form-control" name="objet_marche" placeholder="Ex: entretien et nettoiement des locaux..." required>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Entreprise attributaire</label>
-                        <select class="form-select" name="prestataire_id_notif" required>
-                            <option value="">Sélectionner une entreprise...</option>
-                            {% for candidat in candidats %}
-                                <option value="{{ candidat.id }}">{{ candidat.nom_entreprise }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <div class="modal-footer bg-light border-0">
-                        <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary px-4 rounded-pill">Générer le PDF</button>
-                    </div>
-                </form>
-            </div>
+    <div class="col-lg-4 col-md-6">
+      <a href="{{ url_for('main.lettres_information') }}" class="lien-cube">
+        <div class="card-cube">
+          <div class="icon-vibre bg-info bg-opacity-10 text-info">ℹ️</div>
+          <h5 class="fw-bold text-dark mb-2">Lettre d’Information</h5>
+          <p class="text-muted small mb-0">Informer les candidats non retenus</p>
         </div>
+      </a>
     </div>
-    
-    <div class="modal fade" id="modalPV" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content shadow">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">PV d'Attribution</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form action="{{ url_for('main.ajouter_pv') }}" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <div class="modal-body p-4">
-                        <input type="hidden" name="type_document" value="pv_attribution">
 
-                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête du document</h6>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">N° d'ordre</label>
-                                <input type="text" class="form-control" name="num_ordre" placeholder="Ex: 123">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold text-danger">Suffixe Réf.</label>
-                                <input type="text" class="form-control" name="ref_service" value="MCAT/SG/DAGE/ms" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Date de signature</label>
-                                <input type="text" class="form-control" name="date_lettre" placeholder="Ex: 25 Novembre 2025" required>
-                            </div>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-danger">Nom de la Direction</label>
-                                <input type="text" class="form-control" name="direction_name" value="La Direction de l'Administration Générale et de l'Equipement" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-danger">Adresse</label>
-                                <input type="text" class="form-control" name="adresse_direction" value="route des Almadies, Dakar" required>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-danger">Signataire</label>
-                            <input type="text" class="form-control" name="signataire" value="Le Directeur," required>
-                        </div>
-                         
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-danger">Fonction du signataire (Bas de page)</label>
-                            <textarea class="form-control" name="signataire_bas" rows="3" required>Le Directeur de
-l'Administration
-Générale et de l'Equipement</textarea>
-                        </div>
-
-                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Informations du Marché</h6>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-danger">Objet complet du marché</label>
-                            <input type="text" class="form-control" name="objet_marche" placeholder="Ex: entretien et nettoiement des locaux..." required>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-danger">N° Immatriculation</label>
-                                <input type="text" class="form-control" name="immatriculation" placeholder="Ex: S_DAGE_373" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-danger">Date de la commission</label>
-                                <input type="date" class="form-control" name="date_commission" required>
-                            </div>
-                        </div>
-
-                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">3. Attributaire</h6>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-danger">Entreprise moins disante (gagnante)</label>
-                            <select class="form-select" name="prestataire_id_pv" required>
-                                <option value="">Sélectionner une entreprise...</option>
-                                {% for candidat in candidats %}
-                                    <option value="{{ candidat.id }}">{{ candidat.nom_entreprise }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                    </div>
-                    <div class="modal-footer bg-light border-0">
-                        <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary px-4 rounded-pill">Générer le PV</button>
-                    </div>
-                </form>
-            </div>
+    <div class="col-lg-4 col-md-6">
+      <a href="{{ url_for('main.liste_pv') }}" class="lien-cube">
+        <div class="card-cube">
+          <div class="icon-vibre bg-secondary bg-opacity-10 text-dark">⚖️</div>
+          <h5 class="fw-bold text-dark mb-2">PV d’Attribution</h5>
+          <p class="text-muted small mb-0">Générer le procès-verbal final</p>
         </div>
+      </a>
     </div>
 
+    <div class="col-lg-4 col-md-6">
+      <a href="{{ url_for('main.creer_contrat') }}" class="lien-cube">
+        <div class="card-cube">
+          <div class="icon-vibre bg-success bg-opacity-10 text-success">✍🏽</div>
+          <h5 class="fw-bold text-dark mb-2">Projet de Contrat</h5>
+          <p class="text-muted small mb-0">Créer un nouveau contrat final</p>
+        </div>
+      </a>
+    </div>
+  </div>
 
-    <div class="offcanvas offcanvas-end border-0 shadow-lg" tabindex="-1" id="menuLateralRapide" aria-labelledby="menuLateralLabel">
-      <div class="offcanvas-header" style="background-color: #003366; color: white">
-        <h5 class="offcanvas-title fw-bold" id="menuLateralLabel">🧭 Navigation MCAT</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Fermer"></button>
-      </div>
+  <div class="modal fade" id="modalBordereau" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Bordereau de Revue</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
 
-      <div class="offcanvas-body d-flex flex-column" style="background-color: #f8f9fa">
-        <p class="text-muted small mb-4">Accédez rapidement à tous vos modules :</p>
+        <form action="{{ url_for('main.ajouter_bordereau') }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="modal-body p-4">
+            <input type="hidden" name="type_document" value="bordereau" />
 
-        <div class="d-grid gap-3">
-          <a href="{{ url_for('main.tableau_de_bord') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 🏆 Agréments </a>
+            <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête du Document</h6>
 
-          <a href="{{ url_for('main.liste_cotations') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 💰 Cotations </a>
+            <div class="mb-3">
+              <label class="form-label fw-bold text-danger">Nom de la Direction (Texte Rouge)</label>
+              <input
+                type="text"
+                class="form-control"
+                name="direction_name"
+                value="DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT"
+                required
+              />
+            </div>
 
-          <button
-            class="btn btn-light border shadow-sm text-start fw-bold p-3 d-flex justify-content-between align-items-center"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#collapseDrp"
-            aria-expanded="false"
-            aria-controls="collapseDrp"
-          >
-            <span>📄 Dossiers DRP</span>
-            <span style="font-size: 0.8em">▼</span>
-          </button>
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label class="form-label fw-bold">N° Référence</label>
+                <div class="input-group">
+                  <span class="input-group-text">N°</span>
+                  <input type="text" class="form-control" name="numero" placeholder="Ex: 005" required />
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold">Suffixe Service</label>
+                <input type="text" class="form-control" name="service_ref" value="MTA/DAGE/DFC" required />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold">Date</label>
+                <input type="date" class="form-control" name="date_signature" />
+              </div>
+            </div>
 
-          <div class="collapse" id="collapseDrp">
-            <div class="d-grid gap-2 ps-3 pe-1 border-start border-primary border-3 ms-2">
-              <a href="{{ url_for('main.drps') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"> DRP</a>
-              <a href="{{ url_for('main.liste_bordereaux') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">1. Bordereaux</a>
-              <a href="{{ url_for('main.creer_lettre_invitation') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >2. Lettre d'invitation</a
-              >
-              <a href="{{ url_for('main.liste_notifications') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >3. Lettre de Notification</a
-              >
-              <a href="{{ url_for('main.lettres_information') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >4. Lettre d'Information</a
-              >
-              <a href="{{ url_for('main.liste_pv') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">5. Procès Verbal (PV)</a>
+            <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Liste des Dossiers</h6>
 
-              <a href="{{ url_for('main.creer_contrat') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">6. Contrat</a>
+            <div class="alert alert-light border small">
+              <i class="bi bi-info-circle"></i> Le texte "Demande de Renseignements..." est ajouté automatiquement. Saisis uniquement la partie
+              variable (travaux...) et la référence.
+            </div>
+
+            <div id="dossiers-container">
+              <div class="dossier-item card bg-light mb-3 p-3 border-0">
+                <h6 class="fw-bold text-muted">Dossier N°1</h6>
+                <div class="mb-2">
+                  <label class="small text-muted">Objet (partie modifiable)</label>
+                  <textarea
+                    class="form-control"
+                    name="objets[]"
+                    rows="2"
+                    placeholder="Ex: travaux de peinture, de révision sanitaire..."
+                    required
+                  ></textarea>
+                </div>
+                <div class="mb-2">
+                  <label class="small text-muted">Référence du dossier</label>
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text fw-bold">N°</span>
+                    <input type="text" class="form-control" name="references[]" placeholder="T_DAGE_208" required />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-end mb-3">
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="ajouterDossier()">+ Ajouter un dossier</button>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-12">
+                <label class="form-label fw-bold">Observations (Colonne de droite)</label>
+                <input type="text" class="form-control" name="observations" value="Pour REVUE" />
+              </div>
             </div>
           </div>
-          <a href="{{ url_for('main.page_suivi_dossiers') }}" class="btn btn-warning shadow-sm text-start fw-bold p-3 text-dark border-0">
-            ⏱️ Suivi des Marchés
-          </a>
 
-          <a href="{{ url_for('main.page_archives') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 🗄️ Archives Globales </a>
-        </div>
-
-        <div class="mt-auto pt-4">
-          <hr />
-          <a href="{{ url_for('main.logout') }}" class="btn btn-danger w-100 fw-bold shadow-sm p-3"> 🚪 Déconnexion </a>
-        </div>
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-primary px-4 rounded-pill">Générer le PDF</button>
+          </div>
+        </form>
       </div>
     </div>
+  </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script>
-        // --- SCRIPT POUR LE BORDEREAU ---
-        function ajouterDossier() {
-            const container = document.getElementById('dossiers-container');
-            const count = container.children.length + 1;
-            
-            const html = `
-                <div class="dossier-item card bg-light mb-3 p-3 border-0 position-relative">
-                    <button type="button" class="btn-close position-absolute top-0 end-0 m-2" onclick="this.parentElement.remove()" aria-label="Close"></button>
-                    <h6 class="fw-bold text-muted">Dossier N°${count}</h6>
-                    <div class="mb-2">
-                        <label class="small text-muted">Objet (partie modifiable)</label>
-                        <textarea class="form-control" name="objets[]" rows="2" required></textarea>
-                    </div>
-                    
-                   <div class="mb-2">
-                       <label class="small text-muted">Référence du dossier</label>
-                       <div class="input-group input-group-sm">
-                           <span class="input-group-text fw-bold">N°</span>
-                           <input type="text" class="form-control" name="references[]" placeholder="T_DAGE_208" required>
-                        </div>
-                   </div>
-                  
+  <div class="modal fade" id="modalInvitation" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Lettre d'Invitation</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form action="/drps" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="modal-body p-4">
+            <input type="hidden" name="type_document" value="invitation" />
+            <label class="form-label fw-bold">Destinataire (Entreprise)</label>
+            <input type="text" name="destinataire" class="form-control" required />
+          </div>
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-primary px-4 rounded-pill">Générer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalInformation" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Lettre d'Information (Non retenus)</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form action="{{ url_for('main.drps') }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="modal-body p-4">
+            <input type="hidden" name="type_document" value="information" />
+
+            <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête de la lettre</h6>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold text-danger">Nom de la Direction (Sous le logo MCAT)</label>
+              <input
+                type="text"
+                class="form-control"
+                name="direction_name"
+                value="Direction de l'Administration Générale et de l'Equipement"
+                required
+              />
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-3">
+                <label class="form-label fw-bold">N° d'ordre</label>
+                <input type="text" class="form-control" name="num_ordre" placeholder="Ex: 123" required />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold">Suffixe Réf.</label>
+                <input type="text" class="form-control" name="ref_service" value="MCAT/SG/DAGE/ms" required />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold">Date lettre</label>
+                <input type="date" class="form-control" name="date_lettre" required />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold text-danger">Signataire</label>
+                <input type="text" class="form-control" name="signataire" value="Le Directeur" required />
+              </div>
+            </div>
+
+            <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Informations du Marché</h6>
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-bold">N° Immatriculation</label>
+                <input type="text" class="form-control" name="immatriculation" placeholder="Ex: S_DAGE_198" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold">Date de commission</label>
+                <input type="date" class="form-control" name="date_commission" required />
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Objet complet du marché</label>
+              <input type="text" class="form-control" name="objet_marche" placeholder="Ex: entretien et nettoiement des locaux..." required />
+            </div>
+
+            <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">3. Prestataires non retenus</h6>
+            <div class="alert alert-light border small">
+              <i class="bi bi-info-circle"></i> Sélectionnez l'entreprise, son adresse s'affichera automatiquement.
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-bordered table-sm" id="tableauPrestatairesInfo">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 5%"></th>
+                    <th style="width: 35%">PRESTATAIRES</th>
+                    <th style="width: 25%">N° RC</th>
+                    <th style="width: 35%">ADRESSES</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-prestataires">
+                  <tr>
+                    <td class="text-center align-middle">
+                      <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="supprimerLigneInfo(this)">🗑️</button>
+                    </td>
+                    <td>
+                      <select class="form-select form-select-sm" name="prestataire_id[]" onchange="updateAdresseInfo(this)" required>
+                        <option value="">-- Choisir --</option>
+                        {% for candidat in candidats %}
+                        <option value="{{ candidat.id }}">{{ candidat.nom_entreprise }}</option>
+                        {% endfor %}
+                      </select>
+                    </td>
+                    <td>
+                      <input type="text" class="form-control form-control-sm" name="rc[]" placeholder="Ex: SN-DKR-..." required />
+                    </td>
+                    <td>
+                      <input type="text" class="form-control form-control-sm champ-adresse" name="adresse[]" readonly placeholder="Auto-rempli" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="text-end mb-2">
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="ajouterLigneInfo()">+ Ajouter une entreprise</button>
+            </div>
+          </div>
+
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-primary px-4 rounded-pill">Générer le PDF</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalNotification" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Lettre de Notification (Attributaire)</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form action="{{ url_for('main.ajouter_notification') }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="modal-body p-4">
+            <input type="hidden" name="type_document" value="notification" />
+
+            <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête de la lettre</h6>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold text-danger">Nom de la Direction (Sous le logo MCAT)</label>
+              <input
+                type="text"
+                class="form-control"
+                name="direction_name"
+                value="Direction de l'Administration Générale et de l'Equipement"
+                required
+              />
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-3">
+                <label class="form-label fw-bold">N° d'ordre</label>
+                <input type="text" class="form-control" name="num_ordre" placeholder="Ex: 123" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold text-danger">Suffixe Réf.</label>
+                <input type="text" class="form-control" name="ref_service" value="MCAT/SG/DAGE/ms" required />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold">Date lettre</label>
+                <input type="text" class="form-control" name="date_lettre" placeholder="Ex: 15 Mars 2025" required />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold text-danger">Signataire</label>
+                <input type="text" class="form-control" name="signataire" value="Le Directeur" required />
+              </div>
+            </div>
+
+            <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Destinataire</h6>
+            <div class="mb-3">
+              <label class="form-label fw-bold text-danger">Civilité du représentant</label>
+              <input type="text" class="form-control" name="civilite_representant" value="Monsieur le Directeur Général," required />
+            </div>
+
+            <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">3. Informations du Marché</h6>
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-danger">N° Immatriculation</label>
+                <input type="text" class="form-control" name="immatriculation" placeholder="Ex: S_DAGE_198" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-danger">Date de commission</label>
+                <input type="date" class="form-control" name="date_commission" required />
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold text-danger">Objet complet du marché</label>
+              <input type="text" class="form-control" name="objet_marche" placeholder="Ex: entretien et nettoiement des locaux..." required />
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold">Entreprise attributaire</label>
+              <select class="form-select" name="prestataire_id_notif" required>
+                <option value="">Sélectionner une entreprise...</option>
+                {% for candidat in candidats %}
+                <option value="{{ candidat.id }}">{{ candidat.nom_entreprise }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-primary px-4 rounded-pill">Générer le PDF</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalPV" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content shadow">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">PV d'Attribution</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form action="{{ url_for('main.ajouter_pv') }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="modal-body p-4">
+            <input type="hidden" name="type_document" value="pv_attribution" />
+
+            <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">1. En-tête du document</h6>
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label class="form-label fw-bold">N° d'ordre</label>
+                <input type="text" class="form-control" name="num_ordre" placeholder="Ex: 123" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold text-danger">Suffixe Réf.</label>
+                <input type="text" class="form-control" name="ref_service" value="MCAT/SG/DAGE/ms" required />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold">Date de signature</label>
+                <input type="text" class="form-control" name="date_lettre" placeholder="Ex: 25 Novembre 2025" required />
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-danger">Nom de la Direction</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  name="direction_name"
+                  value="La Direction de l'Administration Générale et de l'Equipement"
+                  required
+                />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-danger">Adresse</label>
+                <input type="text" class="form-control" name="adresse_direction" value="route des Almadies, Dakar" required />
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold text-danger">Signataire</label>
+              <input type="text" class="form-control" name="signataire" value="Le Directeur," required />
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold text-danger">Fonction du signataire (Bas de page)</label>
+              <textarea class="form-control" name="signataire_bas" rows="3" required>
+Le Directeur de
+l'Administration
+Générale et de l'Equipement</textarea
+              >
+            </div>
+
+            <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">2. Informations du Marché</h6>
+            <div class="mb-3">
+              <label class="form-label fw-bold text-danger">Objet complet du marché</label>
+              <input type="text" class="form-control" name="objet_marche" placeholder="Ex: entretien et nettoiement des locaux..." required />
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-danger">N° Immatriculation</label>
+                <input type="text" class="form-control" name="immatriculation" placeholder="Ex: S_DAGE_373" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-danger">Date de la commission</label>
+                <input type="date" class="form-control" name="date_commission" required />
+              </div>
+            </div>
+
+            <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">3. Attributaire</h6>
+            <div class="mb-3">
+              <label class="form-label fw-bold text-danger">Entreprise moins disante (gagnante)</label>
+              <select class="form-select" name="prestataire_id_pv" required>
+                <option value="">Sélectionner une entreprise...</option>
+                {% for candidat in candidats %}
+                <option value="{{ candidat.id }}">{{ candidat.nom_entreprise }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-primary px-4 rounded-pill">Générer le PV</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  // --- SCRIPT POUR LE BORDEREAU ---
+  function ajouterDossier() {
+    const container = document.getElementById("dossiers-container");
+    const count = container.children.length + 1;
+
+    const html = `
+            <div class="dossier-item card bg-light mb-3 p-3 border-0 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-2" onclick="this.parentElement.remove()" aria-label="Close"></button>
+                <h6 class="fw-bold text-muted">Dossier N°${count}</h6>
+                <div class="mb-2">
+                    <label class="small text-muted">Objet (partie modifiable)</label>
+                    <textarea class="form-control" name="objets[]" rows="2" required></textarea>
                 </div>
-            `;
-            container.insertAdjacentHTML('beforeend', html);
-        }
+                
+               <div class="mb-2">
+                   <label class="small text-muted">Référence du dossier</label>
+                   <div class="input-group input-group-sm">
+                       <span class="input-group-text fw-bold">N°</span>
+                       <input type="text" class="form-control" name="references[]" placeholder="T_DAGE_208" required>
+                    </div>
+               </div>
+              
+            </div>
+        `;
+    container.insertAdjacentHTML("beforeend", html);
+  }
 
-        // --- SCRIPTS POUR LA LETTRE D'INFORMATION ---
-        // Fonction pour récupérer l'adresse de l'entreprise
-        function updateAdresseInfo(selectElement) {
-            var candidatId = selectElement.value;
-            var row = selectElement.closest('tr');
-            var inputAdresse = row.querySelector('.champ-adresse');
+  // --- SCRIPTS POUR LA LETTRE D'INFORMATION ---
+  function updateAdresseInfo(selectElement) {
+    var candidatId = selectElement.value;
+    var row = selectElement.closest("tr");
+    var inputAdresse = row.querySelector(".champ-adresse");
 
-            if (candidatId) {
-                // Requête vers la route Flask (que l'on créera) pour avoir l'adresse
-                fetch('/api/get_adresse/' + candidatId)
-                    .then(response => response.json())
-                    .then(data => {
-                        inputAdresse.value = data.adresse;
-                    })
-                    .catch(error => console.error('Erreur:', error));
-            } else {
-                inputAdresse.value = '';
-            }
-        }
+    if (candidatId) {
+      fetch("/api/get_adresse/" + candidatId)
+        .then((response) => response.json())
+        .then((data) => {
+          inputAdresse.value = data.adresse || "Adresse non trouvée";
+        })
+        .catch((error) => console.error("Erreur:", error));
+    } else {
+      inputAdresse.value = "";
+    }
+  }
 
-        // Fonction pour ajouter une ligne au tableau
-        function ajouterLigneInfo() {
-            var tbody = document.getElementById("tbody-prestataires");
-            var nouvelleLigne = tbody.rows[0].cloneNode(true); // Clone la première ligne
-    
-            // Vide les champs de la nouvelle ligne
-            nouvelleLigne.querySelector('select').value = '';
-            nouvelleLigne.querySelector('input[name="rc[]"]').value = ''; // <-- LA NOUVELLE LIGNE EST ICI
-            nouvelleLigne.querySelector('.champ-adresse').value = '';
-    
-           // Ajoute la ligne au tableau
-           tbody.appendChild(nouvelleLigne);
-        }
+  function ajouterLigneInfo() {
+    var tbody = document.getElementById("tbody-prestataires");
+    var nouvelleLigne = tbody.rows[0].cloneNode(true);
 
-        // Fonction pour supprimer une ligne du tableau
-        function supprimerLigneInfo(bouton) {
-            var tbody = document.getElementById("tbody-prestataires");
-            if (tbody.rows.length > 1) { // Laisse toujours au moins 1 ligne
-                var row = bouton.closest('tr');
-                row.remove();
-            } else {
-                alert("Vous devez garder au moins une ligne.");
-            }
-        }
-    </script>
-</body>
-</html>
+    nouvelleLigne.querySelector("select").value = "";
+    nouvelleLigne.querySelector('input[name="rc[]"]').value = "";
+    nouvelleLigne.querySelector(".champ-adresse").value = "";
+
+    tbody.appendChild(nouvelleLigne);
+  }
+
+  function supprimerLigneInfo(bouton) {
+    var tbody = document.getElementById("tbody-prestataires");
+    if (tbody.rows.length > 1) {
+      var row = bouton.closest("tr");
+      row.remove();
+    } else {
+      alert("Vous devez garder au moins une ligne.");
+    }
+  }
+</script>
+{% endblock %}

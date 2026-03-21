@@ -1,403 +1,269 @@
-<!doctype html>
-<html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Formulaire Cotation - MCAT</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <style>
-      /* --- FOND GÉNÉRAL --- */
-      body {
-        background-color: #dbe0e6;
-        font-family: "Segoe UI", sans-serif;
-        padding-bottom: 50px;
-      }
+{% extends "base.html" %}
 
-      /* --- BARRE DE NAVIGATION --- */
-      .navbar {
-        background-color: #003366 !important;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        padding: 15px;
-      }
-      .navbar-brand {
-        font-weight: 800;
-        letter-spacing: 1px;
-        color: white !important; /* Force le blanc */
-      }
+{% block title %}Formulaire Cotation - MCAT{% endblock %}
 
-      /* --- CONTENEUR PRINCIPAL --- */
-      .container {
-        max-width: 900px;
-      }
-      .card-form {
-        background-color: #ffffff;
-        padding: 50px;
-        border-radius: 25px;
-        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
-        border: none;
-      }
+{% block extra_css %}
+<style>
+  /* --- FOND SPÉCIFIQUE À CETTE PAGE --- */
+  body {
+    background-color: #dbe0e6 !important;
+  }
 
-      /* --- TITRES --- */
-      .section-title {
-        color: #000000;
-        font-weight: 800;
-        border-bottom: 3px solid #000000;
-        padding-bottom: 10px;
-        margin-bottom: 25px;
-        margin-top: 30px;
-        text-transform: uppercase;
-        font-size: 1rem;
-        letter-spacing: 1px;
-      }
+  /* --- CONTENEUR PRINCIPAL --- */
+  .container-form {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  
+  .card-form {
+    background-color: #ffffff;
+    padding: 50px;
+    border-radius: 25px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+    border: none;
+  }
 
-      /* --- INPUTS --- */
-      label {
-        font-weight: 700;
-        color: #333;
-        margin-bottom: 8px;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
+  /* --- TITRES --- */
+  .section-title {
+    color: #000000;
+    font-weight: 800;
+    border-bottom: 3px solid #000000;
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+    margin-top: 30px;
+    text-transform: uppercase;
+    font-size: 1rem;
+    letter-spacing: 1px;
+  }
 
-      .form-control,
-      .form-select {
-        background-color: #f2f4f6;
-        border: 2px solid #ccc;
-        border-radius: 15px;
-        padding: 15px;
-        font-weight: 500;
-        color: #333;
-        transition: all 0.3s ease;
-      }
+  /* --- INPUTS --- */
+  label.form-label, label.small {
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 
-      .form-control:focus,
-      .form-select:focus {
-        background-color: #ffffff;
-        border-color: #000000;
-        box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.1);
-        outline: none;
-        transform: scale(1.01);
-      }
+  .form-control, .form-select {
+    background-color: #f2f4f6;
+    border: 2px solid #ccc;
+    border-radius: 15px;
+    padding: 15px;
+    font-weight: 500;
+    color: #333;
+    transition: all 0.3s ease;
+  }
 
-      textarea.form-control {
-        border-left: 5px solid #000000;
-      }
+  .form-control:focus, .form-select:focus {
+    background-color: #ffffff;
+    border-color: #000000;
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.1);
+    outline: none;
+    transform: scale(1.01);
+  }
 
-      /* --- BOUTON --- */
-      .btn-primary-custom {
-        background-color: #000000;
-        color: white;
-        border: none;
-        border-radius: 50px;
-        padding: 15px 30px;
-        font-weight: 700;
-        font-size: 1.1rem;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-        transition: all 0.3s;
-      }
+  textarea.form-control {
+    border-left: 5px solid #000000;
+  }
 
-      .btn-primary-custom:hover {
-        background-color: #003366;
-        transform: translateY(-3px);
-        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-      }
+  /* --- BOUTON --- */
+  .btn-primary-custom {
+    background-color: #000000;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 15px 30px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s;
+  }
 
-      /* --- AJOUT CSS POUR LA VALIDATION (Important) --- */
-      .error-message {
-        display: none; /* Caché par défaut */
-        color: #dc3545;
-        font-weight: bold;
-        font-size: 0.85rem;
-        margin-top: 5px;
-      }
+  .btn-primary-custom:hover {
+    background-color: #003366;
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+  }
 
-      .is-invalid-montant {
-        border-color: #dc3545 !important;
-        background-color: #fff8f8 !important;
-        box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.1) !important;
-      }
-    </style>
-  </head>
-  <body>
-     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-      <div class="container-fluid px-4">
-        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.tableau_de_bord') }}">
-          <span style="font-size: 1.5rem; margin-right: 10px">🏛️</span>
-          <div style="line-height: 1">
-            <div>MCAT</div>
-            <div style="font-size: 0.7rem; font-weight: 400; opacity: 0.7">PORTAIL ADMIN</div>
-          </div>
-        </a>
+  /* --- AJOUT CSS POUR LA VALIDATION DES 3 MILLIONS --- */
+  .error-message {
+    display: none;
+    color: #dc3545;
+    font-weight: bold;
+    font-size: 0.85rem;
+    margin-top: 5px;
+  }
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-          <span class="navbar-toggler-icon"></span>
-        </button>
+  .is-invalid-montant {
+    border-color: #dc3545 !important;
+    background-color: #fff8f8 !important;
+    box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.1) !important;
+  }
+</style>
+{% endblock %}
 
-        <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
-          <ul class="navbar-nav">
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.tableau_de_bord') }}">ACCUEIL</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.liste_cotations') }}">COTATIONS</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.drps') }}">DRP</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.page_suivi_dossiers') }}"> ⏱️ SUIVI DES MARCHÉS </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('main.page_archives') }}"> 🗄️ ARCHIVES GLOBALES </a>
-            </li>
-          </ul>
-        </div>
-
-        <div class="d-flex align-items-center">
-          <button
-            class="btn btn-outline-light btn-sm rounded-pill px-3 fw-bold"
-            type="button"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#menuLateralRapide"
-            aria-controls="menuLateralRapide"
-          >
-            ☰ Menu
-          </button>
-        </div>
-      </div>
-    </nav>
-
-
-    <div class="container mt-5">
-      <div class="row justify-content-center">
-        <div class="col-lg-10">
-          {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
+{% block content %}
+<div class="container container-form mt-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-12">
+      
+      {% with messages = get_flashed_messages(with_categories=true) %} 
+        {% if messages %} 
+          {% for category, message in messages %}
           <div class="alert alert-{{ category }} shadow-sm mb-4">⚠️ {{ message }}</div>
-          {% endfor %} {% endif %} {% endwith %}
+          {% endfor %} 
+        {% endif %} 
+      {% endwith %}
 
-          <div class="card card-form p-4 p-md-5">
-            <h3 class="fw-bold text-center text-dark mb-4">{% if cotation %} Modification du Marché {% else %} Nouveau Marché {% endif %}</h3>
+      <div class="card card-form p-4 p-md-5">
+        <h3 class="fw-bold text-center text-dark mb-4">
+          {% if cotation %} Modification du Marché {% else %} Nouveau Marché {% endif %}
+        </h3>
 
-            <form action="{{ url_for('main.sauvegarder_cotation') }}" method="POST" id="formCotation">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-              {% if cotation %}
-              <input type="hidden" name="cotation_id" value="{{ cotation.id }}" />
-              {% endif %}
+        <form action="{{ url_for('main.sauvegarder_cotation') }}" method="POST" id="formCotation">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          
+          {% if cotation %}
+          <input type="hidden" name="cotation_id" value="{{ cotation.id }}" />
+          {% endif %}
 
-              <div class="section-title">1. Informations Générales</div>
-              <div class="mb-3">
-                <label class="form-label fw-bold">Objet</label>
-                <textarea class="form-control" name="objet" rows="2" required>{{ cotation.objet if cotation else '' }}</textarea>
-              </div>
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Lieu</label>
-                  <input type="text" class="form-control" name="lieu" value="{{ cotation.lieu if cotation else 'Salle de réunion du 5e étage' }}" />
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Date Limite Dépôt</label>
-                  <input
-                    type="datetime-local"
-                    class="form-control"
-                    name="date_limite"
-                    value="{{ cotation.date_limite.strftime('%Y-%m-%dT%H:%M') if cotation else '' }}"
-                    required
-                  />
-                </div>
-              </div>
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Date Ouverture</label>
-                  <input
-                    type="datetime-local"
-                    class="form-control"
-                    name="date_ouverture"
-                    value="{{ cotation.date_ouverture.strftime('%Y-%m-%dT%H:%M') if cotation else '' }}"
-                    required
-                  />
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Date Attribution</label>
-                  <input
-                    type="datetime-local"
-                    class="form-control"
-                    name="date_attribution"
-                    value="{{ cotation.date_attribution.strftime('%Y-%m-%dT%H:%M') if cotation else '' }}"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div class="section-title">2. Commission</div>
-              <div class="row">
-                <div class="col-md-4">
-                  <label class="small">Président</label
-                  ><input
-                    type="text"
-                    class="form-control"
-                    name="president"
-                    value="{{ cotation.president if cotation else 'Mamadou Moustapha DIALLO' }}"
-                  />
-                </div>
-                <div class="col-md-4">
-                  <label class="small">Membre 1</label
-                  ><input type="text" class="form-control" name="membre1" value="{{ cotation.membre1 if cotation else 'Ababacar SALL' }}" />
-                </div>
-                <div class="col-md-4">
-                  <label class="small">Membre 2</label
-                  ><input type="text" class="form-control" name="membre2" value="{{ cotation.membre2 if cotation else 'Pape Gora DIA' }}" />
-                </div>
-              </div>
-
-              <div class="section-title mt-4">
-                3. Offres (Candidats)
-                <span class="badge bg-danger ms-2">Max : 2 999 999 F</span>
-              </div>
-
-              {% for i in range(1, 4) %} {# Logique de récupération de l'offre existante si en mode édition #} {% set offre = None %} {% if cotation
-              and cotation.offres|length >= i %} {% set offre = cotation.offres[i-1] %} {% endif %}
-
-              <div class="row mb-3 align-items-center p-2 border rounded bg-light">
-                <div class="col-1 fw-bold text-center h4 text-secondary">{{ i }}</div>
-                <div class="col-md-6 mb-2 mb-md-0">
-                  <label class="small text-muted">Entreprise</label>
-                  <select class="form-select" name="candidat_{{ i }}">
-                    <option value="">-- Choisir --</option>
-                    {% for c in candidats %}
-                    <option value="{{ c.nom_entreprise }}" {{ 'selected' if offre and offre.nom_candidat == c.nom_entreprise else '' }}>
-                      {{ c.nom_entreprise }}
-                    </option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="col-md-5">
-                  <label class="small text-muted">Montant (FCFA)</label>
-                  <input
-                    type="number"
-                    class="form-control input-montant"
-                    name="montant_{{ i }}"
-                    placeholder="Ex: 2500000"
-                    value="{{ offre.montant if offre else '' }}"
-                    oninput="verifierMontant(this)"
-                  />
-                  <div class="error-message mt-1">⛔ Le montant doit être inférieur à 3 Millions !</div>
-                </div>
-              </div>
-              {% endfor %}
-
-              <div class="d-grid mt-4">
-                <button type="submit" class="btn btn-primary-custom btn-lg shadow" id="btnSave">💾 Enregistrer le Marché</button>
-              </div>
-            </form>
+          <div class="section-title">1. Informations Générales</div>
+          <div class="mb-3">
+            <label class="form-label fw-bold">Objet</label>
+            <textarea class="form-control" name="objet" rows="2" required>{{ cotation.objet if cotation else '' }}</textarea>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="offcanvas offcanvas-end border-0 shadow-lg" tabindex="-1" id="menuLateralRapide" aria-labelledby="menuLateralLabel">
-      <div class="offcanvas-header" style="background-color: #003366; color: white">
-        <h5 class="offcanvas-title fw-bold" id="menuLateralLabel">🧭 Navigation MCAT</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Fermer"></button>
-      </div>
-
-      <div class="offcanvas-body d-flex flex-column" style="background-color: #f8f9fa">
-        <p class="text-muted small mb-4">Accédez rapidement à tous vos modules :</p>
-
-        <div class="d-grid gap-3">
-          <a href="{{ url_for('main.tableau_de_bord') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 🏆 Agréments </a>
-
-          <a href="{{ url_for('main.liste_cotations') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 💰 Cotations </a>
-
-          <button
-            class="btn btn-light border shadow-sm text-start fw-bold p-3 d-flex justify-content-between align-items-center"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#collapseDrp"
-            aria-expanded="false"
-            aria-controls="collapseDrp"
-          >
-            <span>📄 Dossiers DRP</span>
-            <span style="font-size: 0.8em">▼</span>
-          </button>
-
-          <div class="collapse" id="collapseDrp">
-            <div class="d-grid gap-2 ps-3 pe-1 border-start border-primary border-3 ms-2">
-              <a href="{{ url_for('main.drps') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"> DRP</a>
-              <a href="{{ url_for('main.liste_bordereaux') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">1. Bordereaux</a>
-              <a href="{{ url_for('main.creer_lettre_invitation') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >2. Lettre d'invitation</a
-              >
-              <a href="{{ url_for('main.liste_notifications') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >3. Lettre de Notification</a
-              >
-              <a href="{{ url_for('main.lettres_information') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border"
-                >4. Lettre d'Information</a
-              >
-              <a href="{{ url_for('main.liste_pv') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">5. Procès Verbal (PV)</a>
-
-              <a href="{{ url_for('main.creer_contrat') }}" class="btn btn-sm btn-white text-start fw-semibold shadow-sm border">6. Contrat</a>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">Lieu</label>
+              <input type="text" class="form-control" name="lieu" value="{{ cotation.lieu if cotation else 'Salle de réunion du 5e étage' }}" />
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">Date Limite Dépôt</label>
+              <input type="datetime-local" class="form-control" name="date_limite" value="{{ cotation.date_limite.strftime('%Y-%m-%dT%H:%M') if cotation else '' }}" required />
             </div>
           </div>
-          <a href="{{ url_for('main.page_suivi_dossiers') }}" class="btn btn-warning shadow-sm text-start fw-bold p-3 text-dark border-0">
-            ⏱️ Suivi des Marchés
-          </a>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">Date Ouverture</label>
+              <input type="datetime-local" class="form-control" name="date_ouverture" value="{{ cotation.date_ouverture.strftime('%Y-%m-%dT%H:%M') if cotation else '' }}" required />
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">Date Attribution</label>
+              <input type="datetime-local" class="form-control" name="date_attribution" value="{{ cotation.date_attribution.strftime('%Y-%m-%dT%H:%M') if cotation else '' }}" required />
+            </div>
+          </div>
 
-          <a href="{{ url_for('main.page_archives') }}" class="btn btn-light border shadow-sm text-start fw-bold p-3"> 🗄️ Archives Globales </a>
-        </div>
+          <div class="section-title">2. Commission</div>
+          <div class="row">
+            <div class="col-md-4">
+              <label class="small">Président</label>
+              <input type="text" class="form-control" name="president" value="{{ cotation.president if cotation else 'Mamadou Moustapha DIALLO' }}" />
+            </div>
+            <div class="col-md-4">
+              <label class="small">Membre 1</label>
+              <input type="text" class="form-control" name="membre1" value="{{ cotation.membre1 if cotation else 'Ababacar SALL' }}" />
+            </div>
+            <div class="col-md-4">
+              <label class="small">Membre 2</label>
+              <input type="text" class="form-control" name="membre2" value="{{ cotation.membre2 if cotation else 'Pape Gora DIA' }}" />
+            </div>
+          </div>
 
-        <div class="mt-auto pt-4">
-          <hr />
-          <a href="{{ url_for('main.logout') }}" class="btn btn-danger w-100 fw-bold shadow-sm p-3"> 🚪 Déconnexion </a>
-        </div>
+          <div class="section-title mt-4">
+            3. Offres (Candidats)
+            <span class="badge bg-danger ms-2">Max : 2 999 999 F</span>
+          </div>
+
+          {% for i in range(1, 4) %} 
+            {# Logique de récupération de l'offre existante si en mode édition #} 
+            {% set offre = None %} 
+            {% if cotation and cotation.offres|length >= i %} 
+              {% set offre = cotation.offres[i-1] %} 
+            {% endif %}
+
+            <div class="row mb-3 align-items-center p-2 border rounded bg-light">
+              <div class="col-1 fw-bold text-center h4 text-secondary">{{ i }}</div>
+              
+              <div class="col-md-6 mb-2 mb-md-0">
+                <label class="small text-muted">Entreprise</label>
+                <select class="form-select" name="candidat_{{ i }}">
+                  <option value="">-- Choisir --</option>
+                  {% for c in candidats %}
+                  <option value="{{ c.nom_entreprise }}" {{ 'selected' if offre and offre.nom_candidat == c.nom_entreprise else '' }}>
+                    {{ c.nom_entreprise }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              
+              <div class="col-md-5">
+                <label class="small text-muted">Montant (FCFA)</label>
+                <input type="number" class="form-control input-montant" name="montant_{{ i }}" placeholder="Ex: 2500000" value="{{ offre.montant if offre else '' }}" oninput="verifierMontant(this)" />
+                <div class="error-message mt-1">⛔ Le montant doit être inférieur à 3 Millions !</div>
+              </div>
+            </div>
+          {% endfor %}
+
+          <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-primary-custom btn-lg shadow" id="btnSave">💾 Enregistrer le Marché</button>
+          </div>
+        </form>
+
       </div>
     </div>
+  </div>
+</div>
+{% endblock %}
 
-    <script>
-      function verifierMontant(input) {
-        let valeur = parseInt(input.value);
-        let messageDiv = input.nextElementSibling; // Le div error-message juste en dessous
-        let bouton = document.getElementById("btnSave");
+{% block scripts %}
+<script>
+  function verifierMontant(input) {
+    let valeur = parseInt(input.value);
+    let messageDiv = input.nextElementSibling; // Le div error-message juste en dessous
+    let bouton = document.getElementById("btnSave");
 
-        if (valeur >= 3000000) {
-          // ALERTE ROUGE
-          input.classList.add("is-invalid-montant");
-          messageDiv.style.display = "block";
+    if (valeur >= 3000000) {
+      // ALERTE ROUGE
+      input.classList.add("is-invalid-montant");
+      messageDiv.style.display = "block";
 
-          bouton.disabled = true; // On désactive le bouton sauvegarder
-          bouton.innerText = "⛔ Corrigez les montants !";
-          bouton.classList.replace("btn-primary-custom", "btn-danger");
-        } else {
-          // TOUT VA BIEN
-          input.classList.remove("is-invalid-montant");
-          messageDiv.style.display = "none";
+      bouton.disabled = true; // On désactive le bouton sauvegarder
+      bouton.innerText = "⛔ Corrigez les montants !";
+      bouton.classList.replace("btn-primary-custom", "btn-danger");
+    } else {
+      // TOUT VA BIEN
+      input.classList.remove("is-invalid-montant");
+      messageDiv.style.display = "none";
 
-          // On vérifie si TOUS les champs sont corrects pour réactiver le bouton
-          verifierTousLesChamps();
-        }
+      // On vérifie si TOUS les champs sont corrects pour réactiver le bouton
+      verifierTousLesChamps();
+    }
+  }
+
+  function verifierTousLesChamps() {
+    let inputs = document.querySelectorAll(".input-montant");
+    let erreurTrouvee = false;
+
+    inputs.forEach(function (inp) {
+      if (inp.value && parseInt(inp.value) >= 3000000) {
+        erreurTrouvee = true;
       }
+    });
 
-      function verifierTousLesChamps() {
-        let inputs = document.querySelectorAll(".input-montant");
-        let erreurTrouvee = false;
-
-        inputs.forEach(function (inp) {
-          if (inp.value && parseInt(inp.value) >= 3000000) {
-            erreurTrouvee = true;
-          }
-        });
-
-        let bouton = document.getElementById("btnSave");
-        if (!erreurTrouvee) {
-          bouton.disabled = false;
-          bouton.innerText = "💾 Enregistrer le Marché";
-          // On remet la classe d'origine si elle a été changée
-          if (bouton.classList.contains("btn-danger")) {
-            bouton.classList.replace("btn-danger", "btn-primary-custom");
-          }
-        }
+    let bouton = document.getElementById("btnSave");
+    if (!erreurTrouvee) {
+      bouton.disabled = false;
+      bouton.innerText = "💾 Enregistrer le Marché";
+      if (bouton.classList.contains("btn-danger")) {
+        bouton.classList.replace("btn-danger", "btn-primary-custom");
       }
-    </script>
-  </body>
-</html>
+    }
+  }
+</script>
+{% endblock %}
