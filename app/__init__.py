@@ -7,7 +7,7 @@ from flask_migrate import Migrate
 from config import Config
 from app.extensions import db, mail, login_manager
 from flask_wtf.csrf import CSRFProtect
-# 👇 NOUVEAU 2 : On crée l'objet CSRF (le bouclier)
+
 csrf = CSRFProtect()
 
 def create_app(config_class=Config):
@@ -17,6 +17,11 @@ def create_app(config_class=Config):
     # --- CONFIGURATION SÉCURITÉ SESSION ---
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
     app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SECURE'] = True  # ✅ NOUVEAU : HTTPS only (production)
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # ✅ NOUVEAU : CSRF protection
+    # Désactiver en développement local si vous utilisez HTTP
+    if os.environ.get('FLASK_ENV') == 'production':
+        app.config['SESSION_COOKIE_SECURE'] = True
     # --------------------------------------
 
     # Initialisation
@@ -28,7 +33,6 @@ def create_app(config_class=Config):
     login_manager.login_message = "Votre session a expiré. Veuillez vous reconnecter."
     login_manager.login_message_category = "info"
 
-    # 👇 NOUVEAU 3 : On attache le bouclier à ton application !
     csrf.init_app(app)
 
     # --- ÉTAPE 1 : CONFIGURATION DU FICHIER LOG ---
@@ -36,7 +40,6 @@ def create_app(config_class=Config):
         if not os.path.exists('logs'):
             os.mkdir('logs')
         
-        # Fichier tournant : max 100 Ko par fichier, garde les 10 derniers
         file_handler = RotatingFileHandler('logs/mcat_errors.log', maxBytes=102400, backupCount=10)
         file_handler.setFormatter(logging.Formatter(
             '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
@@ -56,10 +59,9 @@ def create_app(config_class=Config):
 
     @app.errorhandler(500)
     def internal_error(error):
-        db.session.rollback() # On annule les transactions BDD en cours
+        db.session.rollback()
         return render_template('errors/500.html'), 500
     
-    # --- NOUVEAU : GESTION DE L'ERREUR DE FICHIER TROP LOURD ---
     @app.errorhandler(413)
     def file_too_large(error):
         return render_template('errors/413.html'), 413
@@ -71,10 +73,18 @@ def create_app(config_class=Config):
         
         from werkzeug.security import generate_password_hash
         
-        # --- 🛡️ RÉCUPÉRATION SÉCURISÉE DEPUIS LE .ENV ---
-        # On demande à l'OS de lire les variables d'environnement
-        admin_pass = os.environ.get('ADMIN_DEFAULT_PASSWORD', '@dmin1900')
-        superadmin_pass = os.environ.get('SUPERADMIN_DEFAULT_PASSWORD', 'TAWHID2021!')
+        # --- 🛡️ RÉCUPÉRATION OBLIGATOIRE DEPUIS LE .ENV ---
+        # Les mots de passe par défaut DOIVENT être définis en variables d'environnement
+        # S'ils manquent, l'application refuse de démarrer
+        admin_pass = os.environ.get('ADMIN_DEFAULT_PASSWORD')
+        superadmin_pass = os.environ.get('SUPERADMIN_DEFAULT_PASSWORD')
+        
+        # ✅ VALIDATION CRITIQUE : Forcer les variables d'environnement
+        if not admin_pass or not superadmin_pass:
+            raise ValueError(
+                "ERREUR CRITIQUE : Les variables d'environnement ADMIN_DEFAULT_PASSWORD "
+                "et SUPERADMIN_DEFAULT_PASSWORD doivent être définies dans le fichier .env"
+            )
 
         # Création du compte Admin si absent
         if not models.User.query.filter_by(username='Admin').first():
