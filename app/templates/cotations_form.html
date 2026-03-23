@@ -110,15 +110,6 @@
 <div class="container container-form mt-4">
   <div class="row justify-content-center">
     <div class="col-lg-12">
-      
-      {% with messages = get_flashed_messages(with_categories=true) %} 
-        {% if messages %} 
-          {% for category, message in messages %}
-          <div class="alert alert-{{ category }} shadow-sm mb-4">⚠️ {{ message }}</div>
-          {% endfor %} 
-        {% endif %} 
-      {% endwith %}
-
       <div class="card card-form p-4 p-md-5">
         <h3 class="fw-bold text-center text-dark mb-4">
           {% if cotation %} Modification du Marché {% else %} Nouveau Marché {% endif %}

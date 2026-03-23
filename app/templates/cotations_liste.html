@@ -89,13 +89,6 @@
 </style>
 {% endblock %} {% block content %}
 <div class="container-fluid px-4 mt-5">
-  {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
-  <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4" role="alert">
-    {{ message }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
-  {% endfor %} {% endif %} {% endwith %}
-
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
     <div>
       <h3 class="fw-bold text-dark mb-1">Registre des Cotations</h3>
@@ -157,6 +150,7 @@
             </td>
             <td class="text-end pe-4">
               <div class="btn-group">
+                {# 1. Bouton PDF #}
                 <a
                   href="{{ url_for('main.telecharger_pv', id=cot.id) }}"
                   class="btn btn-action btn-light text-success"
@@ -165,7 +159,7 @@
                   📄
                 </a>
 
-                {% if cot.fichier_scanne %}
+                {# 2. Gestion du Scan (Voir ou Uploader) #} {% if cot.fichier_scanne %}
                 <a
                   href="{{ url_for('main.secure_download', folder='cotations', filename=cot.fichier_scanne) }}"
                   target="_blank"
@@ -184,15 +178,18 @@
                 >
                   📤
                 </button>
-                {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
+                {% endif %} {% endif %} {# 3. Bouton Modifier (Verrouillé si scan présent) #} {% if current_user.role in ['superadmin', 'admin',
+                'agent'] %} {% if not cot.fichier_scanne %}
                 <a href="{{ url_for('main.modifier_cotation', id=cot.id) }}" class="btn btn-action btn-light text-primary" title="Modifier"> ✏️ </a>
-                {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
+                {% else %}
+                <span class="btn btn-action btn-light text-muted" title="Modification verrouillée (Dossier scanné)"> 🔒 </span>
+                {% endif %} {% endif %} {# 4. Bouton Supprimer #} {% if current_user.role in ['superadmin', 'admin'] %}
                 <form action="{{ url_for('main.supprimer_cotation', id=cot.id) }}" method="POST" style="display: inline">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                   <button
                     type="submit"
                     class="btn btn-action btn-light text-danger"
-                    onclick="return confirm('Confirmer la suppression définitive de ce marché ?');"
+                    onclick="return confirm('Confirmer la suppression définitive ?');"
                     title="Supprimer"
                   >
                     🗑️

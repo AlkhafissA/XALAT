@@ -2,6 +2,7 @@ import os
 import zipfile
 import json
 from functools import wraps
+import filetype  # 🛡️ NOUVEAU : Pour lire l'ADN des fichiers
 from werkzeug.utils import secure_filename
 from flask import send_file, make_response, abort
 from flask import send_from_directory, abort
@@ -49,22 +50,50 @@ def role_requis(*roles_autorises):
         return decorated_function
     return decorator
 
-# Seuls les PDF et les images sont acceptés !
+
+
+
+# ==========================================================
+# 🛡️ OUTILS DE SÉCURITÉ ET D'HISTORIQUE
+# ==========================================================
+
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'}
 
 def fichier_est_autorise(filename):
+    """ 1ère couche : Vérifie si l'extension est autorisée """
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def contenu_fichier_est_securise(file_stream):
+    """ 2ème couche : Vérifie la vraie signature (Magic Bytes) à l'intérieur du fichier """
+    header = file_stream.read(2048)
+    file_stream.seek(0) # IMPORTANT : remet le curseur à zéro
+    
+    kind = filetype.guess(header)
+    if kind is None:
+        return False
+        
+    mimes_autorises = [
+        'application/pdf', 
+        'image/png', 
+        'image/jpeg',
+        'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ]
+    
+    return kind.mime in mimes_autorises
+
 def log_action(action, cible):
+    """ Enregistre les actions dans la base de données (Historique) """
     try:
         user_name = current_user.username if current_user.is_authenticated else "Système"
         nouveau_log = Historique(utilisateur=user_name, action=action, cible=cible)
         db.session.add(nouveau_log)
     except Exception as e:
-        # On importe current_app ici au cas où
         from flask import current_app
-        # On écrit l'erreur dans la console pour l'administrateur
         current_app.logger.error(f"ERREUR SÉCURITÉ - Impossible d'enregistrer le log ({action}) : {str(e)}")
+
+# ==========================================================
+# ==========================================================
 
 # --- ROUTES AUTHENTIFICATION ---
 
@@ -267,15 +296,16 @@ def valider_agrement_final():
             
     return redirect(url_for('main.tableau_de_bord'))
 
-@main.route('/decision/<int:id>/<type_decision>')
+@main.route('/decision/<int:id>/<type_decision>', methods=['POST'])
 @login_required
-@role_requis('superadmin', 'admin') # 🛡️ SEULS LES CHEFS : L'Agent et le Stagiaire ne peuvent pas refuser un dossier
+@role_requis('superadmin', 'admin') 
 def decision(id, type_decision):
     candidat = db.session.get(Candidat, id)
     if candidat and type_decision == 'refuser':
         candidat.statut = "Refusé"
         log_action("Refus Candidature", candidat.nom_entreprise)
         db.session.commit()
+        flash(f"Le dossier de {candidat.nom_entreprise} a été refusé.", "warning")
     return redirect(url_for('main.tableau_de_bord'))
 
 @main.route('/supprimer/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
@@ -692,13 +722,11 @@ def supprimer_utilisateur(id):
             
     return redirect(url_for('main.super_dashboard'))
 
-@main.route('/reset_password/<int:id>')
+# 🛡️ SÉCURITÉ : Ajout de methods=['POST']
+@main.route('/reset_password/<int:id>', methods=['POST'])
 @login_required
+@role_requis('superadmin') # 👈 Utilisation de ton décorateur !
 def reset_password(id):
-    if current_user.role != 'superadmin':
-        flash("Action non autorisée.", "danger")
-        return redirect(url_for('main.tableau_de_bord'))
-    
     user_to_reset = db.session.get(User, id)
     
     if user_to_reset:
@@ -2072,15 +2100,20 @@ def uploader_scan():
         
     file = request.files['scan_file']
 
-    # ==========================================================
-    # 👇 LE BOUCLIER DE SÉCURITÉ EST LÀ 👇
-    if not fichier_est_autorise(file.filename):
-        flash("Fichier non autorisé ! Seuls les PDF et images sont acceptés.", "danger")
-        log_action("Alerte Sécurité", f"Tentative d'upload illégal : {file.filename} sur {type_doc} n°{doc_id}")
+    # 1ère couche : Vérification du nom
+    if not fichier_est_autorise(file.filename):  # 👈 Utilise le nom d'origine ici !
+        flash("Fichier non autorisé ! L'extension n'est pas acceptée.", "danger")
+        log_action("ALERTE SÉCURITÉ", f"Upload bloqué (Mauvaise extension) : {file.filename} pour doc n°{doc_id}")
         db.session.commit()
         return redirect(url_for(page_retour))
-    # 👆 FIN DU BOUCLIER 👆
-    # ==========================================================
+
+    # 2ème couche : Vérification du contenu réel
+    if not contenu_fichier_est_securise(file):
+        flash("ALERTE : Fichier falsifié ou corrompu ! Le contenu ne correspond pas à l'extension.", "danger")
+        # On logue la tentative de spoofing !
+        log_action("ALERTE CRITIQUE", f"Tentative de Spoofing (Fausse extension) bloquée : {file.filename}")
+        db.session.commit()
+        return redirect(url_for(page_retour))
     
     # 1. Préparation du nom et du dossier
     filename = secure_filename(file.filename)

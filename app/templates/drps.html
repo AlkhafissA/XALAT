@@ -83,14 +83,6 @@
       <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill">Module V1.0</span>
     </div>
   </div>
-
-  {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
-  <div class="alert alert-info border-0 shadow-sm alert-dismissible fade show mb-4" role="alert" style="border-radius: 12px">
-    {{ message }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
-  {% endfor %} {% endif %} {% endwith %}
-
   <div class="row g-4">
     <div class="col-lg-4 col-md-6">
       <a href="{{ url_for('main.liste_bordereaux') }}" class="lien-cube">
@@ -255,7 +247,7 @@
           <h5 class="modal-title fw-bold">Lettre d'Invitation</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
-        <form action="/drps" method="POST">
+        <form action="{{ url_for('main.drps') }}" method="POST">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <div class="modal-body p-4">
             <input type="hidden" name="type_document" value="invitation" />

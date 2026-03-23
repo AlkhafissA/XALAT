@@ -86,13 +86,6 @@
 </style>
 {% endblock %} {% block content %}
 <div class="container-fluid px-4 mt-5">
-  {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for category, message in messages %}
-  <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show shadow-sm" role="alert">
-    {{ message }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-  {% endfor %} {% endif %} {% endwith %}
-
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
     <div>
       <h3 class="fw-bold text-dark m-0">🗄️ Base Documentaire</h3>
