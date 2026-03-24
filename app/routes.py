@@ -1,6 +1,7 @@
 import os
 import zipfile
 import json
+import uuid
 from functools import wraps
 import filetype  # 🛡️ NOUVEAU : Pour lire l'ADN des fichiers
 from werkzeug.utils import secure_filename
@@ -504,21 +505,26 @@ def telecharger_pv(id):
         pdf.write(6, " dont l'offre est conforme et moins disante pour "); pdf.set_font("Arial", 'B', 11)
         pdf.write(6, clean_text(f"{mt_lettres} ({mt_chiffres}) F CFA TTC."))
     
-    dossier_pv = os.path.join(current_app.root_path, '..', 'stockage_prive', 'cotations')
 
-    if not os.path.exists(dossier_pv):
-        os.makedirs(dossier_pv)
+    # 1. On génère le PDF en mémoire (RAM)
+    try:
+        pdf_bytes = bytes(pdf.output()) # Si tu utilises fpdf2
+    except TypeError:
+        pdf_bytes = pdf.output(dest='S').encode('latin1') # Si tu utilises l'ancien fpdf
 
-    chemin_complet = os.path.join(dossier_pv, f"PV_{cotation.id}.pdf")
-    pdf.output(chemin_complet)
+    buffer = io.BytesIO(pdf_bytes)
+    buffer.seek(0)
     
+    # 2. On garde ton historique d'action
     log_action("Téléchargement PV Cotation", cotation.objet)
     db.session.commit()
 
+    # 3. On envoie le fichier au navigateur
     return send_file(
-        chemin_complet, 
+        buffer, 
         as_attachment=True, 
-        download_name=f"PV_Cotation_{cotation.id}.pdf"
+        download_name=f"PV_Cotation_{cotation.id}.pdf",
+        mimetype='application/pdf'
     )
 
 # --- ADMIN ROUTES ---
@@ -2116,13 +2122,18 @@ def uploader_scan():
         return redirect(url_for(page_retour))
     
     # 1. Préparation du nom et du dossier
-    filename = secure_filename(file.filename)
-    nouveau_nom = f"{type_doc}_{doc_id}_{filename}"
+    # ✨ NOUVEAU CODE SÉCURISÉ (UUID) ✨
+    # 1. On récupère juste l'extension du fichier original (ex: "pdf", "jpg")
+    nom_propre = secure_filename(file.filename)
+    extension = nom_propre.rsplit('.', 1)[1].lower() if '.' in nom_propre else 'pdf'
+    
+    # 2. On génère un nom totalement aléatoire et impossible à deviner
+    nom_uuid = f"{uuid.uuid4().hex}.{extension}"
     
     basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
     dossier_sauvegarde = os.path.join(basedir, 'stockage_prive', 'scans')
     os.makedirs(dossier_sauvegarde, exist_ok=True)
-    
+
     # On importe les modèles ici pour éviter les imports circulaires
     from app.models import (LettreInvitation, Contrat, LettreInformation, 
                             LettreNotification, Bordereau, ProcesVerbal, 
@@ -2153,11 +2164,11 @@ def uploader_scan():
         return redirect(url_for(page_retour))
 
     # 4. On sauvegarde physiquement le fichier
-    chemin_complet = os.path.join(dossier_sauvegarde, nouveau_nom)
+    chemin_complet = os.path.join(dossier_sauvegarde, nom_uuid)
     file.save(chemin_complet)
 
     # 5. On met à jour l'objet en mémoire (SANS FAIRE DE COMMIT ICI)
-    doc.fichier_scanne = nouveau_nom
+    doc.fichier_scanne = nom_uuid
     
      
 # =========================================================
@@ -2171,7 +2182,8 @@ def uploader_scan():
     nouvelle_archive = ArchiveDocument(
         reference=ref_archive,
         type_document=type_formate,
-        nom_fichier=nouveau_nom
+
+        nom_fichier=nom_uuid
     )
     db.session.add(nouvelle_archive)
     
@@ -2463,31 +2475,57 @@ def telecharger_protected_file(filename):
     # on utilise la logique multi-dossiers de secure_download
     return secure_download(folder='archives', filename=filename)
 
+from pathlib import Path
+
 @main.route('/secure_download/<folder>/<path:filename>')
 @login_required
 def secure_download(folder, filename):
+    """Version sécurisée contre le Directory Traversal + Masquage UUID"""
+    
     ALLOWED_FOLDERS = ['archives', 'cotations', 'scans', 'drps', 'agreement']
+    
     if folder not in ALLOWED_FOLDERS:
         abort(403)
-    
-    root_dir = os.path.abspath(os.path.join(current_app.root_path, '..'))
-    
-    # 1. On cherche d'abord dans le dossier demandé (ex: cotations)
-    target_dir = os.path.join(root_dir, 'stockage_prive', folder)
-    file_path = os.path.join(target_dir, filename)
-    
-    # 2. Si non trouvé, on cherche dans le dossier 'scans' (là où uploader_scan enregistre tout)
-    if not os.path.exists(file_path):
-        target_dir = os.path.join(root_dir, 'stockage_prive', 'scans')
-        file_path = os.path.join(target_dir, filename)
 
-    # 3. Si toujours rien, 404
-    if not os.path.exists(file_path):
-        print(f"DEBUG : Fichier introuvable nulle part -> {filename}")
+    # --- 1. TON CODE DE SÉCURITÉ EXISTANT (On garde tout !) ---
+    root_dir = Path(current_app.root_path).parent.resolve()
+    base_path = (root_dir / 'stockage_prive' / folder).resolve()
+
+    try:
+        full_path = (base_path / filename).resolve()
+    except Exception:
         abort(404)
-        
-    return send_from_directory(target_dir, filename)
 
+    if not full_path.is_relative_to(base_path):
+        abort(403)
+
+    if not full_path.exists():
+        scans_path = (root_dir / 'stockage_prive' / 'scans').resolve()
+        full_path = (scans_path / filename).resolve()
+        if not full_path.is_relative_to(scans_path) or not full_path.exists():
+            abort(404)
+            
+    # --- 2. LA NOUVEAUTÉ : TRADUCTION DE L'UUID EN JOLI NOM ---
+    from app.models import ArchiveDocument
+    
+    # On cherche l'UUID dans la table des archives
+    archive = ArchiveDocument.query.filter_by(nom_fichier=full_path.name).first()
+    
+    if archive:
+        # Si on le trouve, on fabrique un beau nom ! 
+        # Ex: "Contrat_S-DAGE-198.pdf"
+        joli_nom = f"{archive.type_document}_{archive.reference}.pdf".replace(" ", "_")
+    else:
+        # Plan de secours si jamais le fichier n'est pas dans les archives
+        joli_nom = "Document_Scan.pdf"
+
+    # --- 3. L'ENVOI AU NAVIGATEUR ---
+    return send_from_directory(
+        str(full_path.parent), 
+        full_path.name,
+        as_attachment=False,  # Affichage direct dans le navigateur si possible
+        download_name=joli_nom  # 👈 Le masque magique est appliqué ici !
+    )
 
 @main.route('/vider_logs_securite', methods=['POST'])
 @login_required

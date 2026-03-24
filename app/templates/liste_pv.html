@@ -90,7 +90,7 @@
 
                 {% if pv.fichier_scanne %}
                 <a
-                  href="{{ url_for('main.voir_scan', nom_fichier=pv.fichier_scanne) }}"
+                  href="{{ url_for('main.secure_download', folder='scans', filename=pv.fichier_scanne) }}"
                   target="_blank"
                   class="btn btn-sm btn-outline-success ms-1"
                   title="Voir le PV signé"

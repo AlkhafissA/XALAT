@@ -103,7 +103,7 @@
 
                 {% if lettre.fichier_scanne %}
                 <a
-                  href="{{ url_for('main.voir_scan_lettre', id=lettre.id) }}"
+                  href="{{ url_for('main.secure_download', folder='scans', filename=lettre.fichier_scanne) }}"
                   target="_blank"
                   class="btn btn-sm btn-outline-success"
                   title="Voir le document signé"

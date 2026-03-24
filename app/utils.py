@@ -2,6 +2,7 @@ import os
 import io
 from flask import send_file
 from fpdf import FPDF
+from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 from flask import current_app
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -275,19 +276,49 @@ def generer_pdf_bordereau(buffer, data):
 
     col_gauche = [drapeau, txt_republique, txt_devise, separateur, txt_ministere, separateur, txt_direction, separateur]
     
+    
+    # 1. On prépare les textes
     ref_complete = f"N°  {data['numero']}  {data['service_ref']}"
-    txt_numero = Paragraph(f"<b>{ref_complete}</b>", style_num_right)
-    txt_date = Paragraph(f"<b>Dakar, le {data['date']}</b>", style_date_right)
-    
-    col_droite = [Spacer(1, 1*cm), txt_numero, Spacer(1, 1.5*cm), txt_date]
 
+        # On crée un nouveau style qui copie le tien, mais on force l'alignement à GAUCHE
+    style_parfait = ParagraphStyle(
+        'StyleParfait',
+        parent=style_num_right,  # On hérite de ta police, ta taille, etc.
+        alignment=TA_LEFT        # Le fameux coup de grâce !
+    )
+
+    # On applique ce nouveau style aux deux textes
+    ref_complete = f"N°  {data['numero']}  {data['service_ref']}"
+    txt_numero = Paragraph(f"<b>{ref_complete}</b>", style_parfait)
+    txt_date = Paragraph(f"<b>Dakar, le {data['date']}</b>", style_parfait)
+    # 2. On empile les éléments avec le Spacer (comme tu l'avais pensé initialement !)
+    col_droite = [
+        Spacer(1, 1*cm),       # Espace au-dessus du N°
+        txt_numero,            # Le N°
+        Spacer(1, 1.5*cm),     # L'écart vertical entre le N° et la date
+        txt_date               # La date
+    ]
+
+    # 3. La partie gauche ne change pas
     table_gauche = Table([[item] for item in col_gauche], colWidths=[9*cm])
-    table_gauche.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER'), ('VALIGN', (0,0), (-1,-1), 'TOP'), ('LEFTPADDING', (0,0), (-1,-1), 0), ('BOTTOMPADDING', (0,0), (-1,-1), 1)]))
+    table_gauche.setStyle(TableStyle([
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'), 
+        ('VALIGN', (0,0), (-1,-1), 'TOP'), 
+        ('LEFTPADDING', (0,0), (-1,-1), 0), 
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1)
+    ]))
 
-    header_table = Table([[table_gauche, col_droite]], colWidths=[10*cm, 8*cm])
-    header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP'), ('ALIGN', (1,0), (1,-1), 'RIGHT')]))
+    # 4. On assemble l'en-tête (Gauche + Droite)
+   # ✅ LE NOUVEAU CODE (On passe de 10 à 12 ou 12.5 cm pour pousser vers la droite)
+    header_table = Table([[table_gauche, col_droite]], colWidths=[13.5*cm, 5.5*cm])
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'), 
+        ('ALIGN', (1,0), (1,-1), 'LEFT'),  # <--- IMPORTANT : On aligne la colonne de droite à GAUCHE
+        ('LEFTPADDING', (1,0), (1,-1), 0)  # On enlève la marge interne pour que ça soit bien aligné
+    ]))
+
     elements.append(header_table)
-    
+
     # --- TITRE ET DESTINATAIRE ---
     elements.append(Spacer(1, 0.5*cm))
     elements.append(Paragraph("<b>BORDEREAU D’ENVOI</b>", ParagraphStyle('TitreGros', parent=style_center_bold, fontSize=16)))
@@ -450,85 +481,78 @@ def generer_pdf_lettre_information(buffer, data):
     pdf.set_x(15) 
     pdf.multi_cell(80, 5, txt=direction_affichee, align='C')
 
-    # --- CORRECTION 2 : N° et Réf sur la MEME LIGNE ---
-    pdf.set_xy(110, y_start_text + 5)
-    texte_num = clean_text(f"N° {num_ordre}  ")
-    pdf.set_font("Arial", 'B', 11)
-    pdf.set_text_color(0, 0, 0)
-    largeur_num = pdf.get_string_width(texte_num) 
-    pdf.cell(largeur_num, 5, txt=texte_num)
+   # --- 2. RÉFÉRENCES, DATE ET SIGNATAIRE (Alignés à droite) ---
+    X_DROITE = 140  # Tu pourras ajuster ce chiffre (130, 140...) comme tout à l'heure
     
+    # 1. Le Numéro et la Réf Service sur la même ligne
+    pdf.set_xy(X_DROITE, y_start_text) 
+    pdf.set_font("Arial", 'B', 11) 
     pdf.set_text_color(0, 0, 0)
-    pdf.cell(0, 5, txt=clean_text(ref_service), new_x="LMARGIN", new_y="NEXT")
+    texte_ref_complet = clean_text(f"N° {num_ordre} {ref_service}")
+    pdf.cell(0, 5, txt=texte_ref_complet, new_x="LMARGIN", new_y="NEXT")
     
-    pdf.ln(15); pdf.set_x(125)
-    pdf.set_text_color(0, 0, 0) 
+    # 2. La Date 
+    pdf.set_xy(X_DROITE, pdf.get_y() + 8) 
     pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_lettre}"), new_x="LMARGIN", new_y="NEXT")
     
-    pdf.ln(30); pdf.set_x(95); pdf.set_font("Arial", 'B', 16)
-    pdf.set_text_color(0, 0, 0) 
-    pdf.multi_cell(0, 6, txt=clean_text(f"{signataire},"))
+    # 3. Le Signataire
+    pdf.set_xy(X_DROITE, pdf.get_y() + 30) 
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 6, txt=clean_text(f"{signataire},"), new_x="LMARGIN", new_y="NEXT")
 
     # --- 3. OBJET & CORPS DE LA LETTRE ---
-    marge_gauche_texte = 25 
+    # On garde nos belles marges symétriques de 15mm pour un texte parfaitement centré
+    marge_gauche_texte = 15 
     pdf.set_left_margin(marge_gauche_texte)
-    pdf.set_xy(marge_gauche_texte, max(pdf.get_y(), 95) + 5) 
+    pdf.set_right_margin(marge_gauche_texte)
+    
+    # On se place sous l'en-tête
+    hauteur_corps_lettre = max(pdf.get_y(), 95) + 5
+    pdf.set_xy(marge_gauche_texte, hauteur_corps_lettre) 
 
     h_ligne = 7
     pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", '', 11)
     
-    # Note : FPDF2 gère très bien pdf.write() pour le texte en ligne, on le garde !
+    # 🧹 1. On prépare toutes les variables proprement
+    objet_propre = clean_text(data.get('objet_marche', '...'))
+    immat_propre = clean_text(data.get('immatriculation', '...'))
+    date_comm_propre = clean_text(date_commission)
+    direction_propre = clean_text(direction_nom)
+    
+   # ==========================================
+    # ✍️ 2. Rédaction
+    # ==========================================
+
+    # Objet (Le mot "Objet" en gras ET souligné, la suite juste en gras)
     pdf.set_font("Arial", 'BU', 11)
-    pdf.write(h_ligne, txt="* Objet")
+    pdf.write(h_ligne, txt="Objet")
+    
     pdf.set_font("Arial", 'B', 11)
     pdf.write(h_ligne, txt=" : Lettre d'information")
-    pdf.ln(10)
+    pdf.ln(10) # Retour à la ligne
 
-    pdf.set_font("Arial", 'B', 11)
-    pdf.write(5, txt="Messieurs,")
-    pdf.ln(10)
+    # Civilité (ici "Messieurs," comme c'est adressé aux prestataires non retenus)
+    pdf.set_font("Arial", '', 11) # On réinitialise la police
+    pdf.multi_cell(0, h_ligne, txt="**Messieurs,**", markdown=True)
+    pdf.ln(6)
 
-    pdf.set_font("Arial", '', 11); pdf.set_text_color(0, 0, 0)
-    pdf.write(h_ligne, txt=clean_text("Suite à l'évaluation et à l'attribution par la commission des marchés, des offres relatives à la Demande de Renseignements et de Prix restreinte portant sur « "))
+    # --- PARAGRAPHE 1 ---
+    texte_p1 = f"Suite à l'évaluation et à l'attribution par la commission des marchés, des offres relatives à la Demande de Renseignements et de Prix restreinte portant sur « **{objet_propre}** » immatriculée **{immat_propre}** en date du **{date_comm_propre}**, pour le compte de la **{direction_propre}**, je vous informe que votre entreprise n'a pas été retenue comme attributaire de ladite demande de renseignements et de prix."
     
-    pdf.set_font("Arial", 'B', 11)
-    pdf.write(h_ligne, txt=clean_text(data.get('objet_marche', '...')))
-    
-    pdf.set_font("Arial", '', 11)
-    pdf.write(h_ligne, txt=" » immatriculée ")
-    
-    pdf.set_font("Arial", 'B', 11)
-    pdf.write(h_ligne, txt=clean_text(data.get('immatriculation', '...')))
-    
-    pdf.set_font("Arial", '', 11)
-    pdf.write(h_ligne, txt=" en date du ")
-    
-    pdf.set_font("Arial", 'B', 11)
-    pdf.write(h_ligne, txt=clean_text(date_commission))
-    
-    pdf.set_font("Arial", '', 11)
-    pdf.write(h_ligne, txt=", pour le compte de la ")
-    
-    pdf.set_font("Arial", 'B', 11)
-    pdf.write(h_ligne, txt=clean_text(direction_nom))
-    
-    pdf.set_font("Arial", '', 11)
-    pdf.write(h_ligne, txt=clean_text(", je vous informe que votre entreprise n'a pas été retenue comme attributaire de ladite demande de renseignements et de prix."))
-    
-    pdf.ln(10)
+    pdf.multi_cell(0, h_ligne, txt=texte_p1, align='J', markdown=True)
+    pdf.ln(6)
 
-    # Paragraphe 2
-    pdf.write(h_ligne, txt=clean_text("A ce titre, je vous prie de bien vouloir passer à la "))
-    pdf.set_font("Arial", 'B', 11)
-    pdf.write(h_ligne, txt=clean_text(direction_nom))
-    pdf.set_font("Arial", '', 11)
-    pdf.write(h_ligne, txt=clean_text(" pour récupérer le procès-verbal d'ouverture et d'évaluation des offres."))
+    # --- PARAGRAPHE 2 ---
+    texte_p2 = f"A ce titre, je vous prie de bien vouloir passer à la **{direction_propre}** pour récupérer le procès-verbal d'ouverture et d'évaluation des offres."
     
-    pdf.ln(10) 
+    pdf.multi_cell(0, h_ligne, txt=texte_p2, align='J', markdown=True)
+    pdf.ln(6) 
 
-    # Paragraphe 3
-    pdf.write(h_ligne, txt=clean_text("Je vous prie d'agréer, Monsieur le Directeur, l'assurance de ma considération distinguée."))
+    # --- PARAGRAPHE 3 ---
+    texte_p3 = "Je vous prie d'agréer, **Monsieur le Directeur**, l'assurance de ma considération distinguée."
     
+    pdf.multi_cell(0, h_ligne, txt=texte_p3, align='J', markdown=True)
     pdf.ln(15)
 
     # --- 4. TABLEAU DES PRESTATAIRES ---
@@ -665,109 +689,99 @@ def generer_pdf_lettre_notification(buffer, data):
     pdf.set_x(15) 
     pdf.multi_cell(80, 5, txt=direction_affichee, align='C')
 
+   # On définit une position X unique pour tout le bloc de droite.
+    # 125 c'est bien à droite (tu peux mettre 130 si tu veux le pousser encore plus)
+    X_DROITE = 135 
+
     # --- 2. RÉFÉRENCES ET DATE ---
-    pdf.set_xy(110, y_start_text + 5)
-    texte_num = clean_text(f"N° {num_ordre}  ")
-    pdf.set_font("Arial", '', 11)
+    # On remonte le bloc en utilisant juste y_start_text (sans le + 5)
+    pdf.set_xy(X_DROITE, y_start_text) 
+    
+    # 1. Le Numéro et la Réf Service (sur une seule ligne, tout en gras)
+    pdf.set_font("Arial", 'B', 11) 
     pdf.set_text_color(0, 0, 0)
-    largeur_num = pdf.get_string_width(texte_num) 
-    pdf.cell(largeur_num, 5, txt=texte_num)
+    texte_ref_complet = clean_text(f"N° {num_ordre} {ref_service}")
+    pdf.cell(0, 5, txt=texte_ref_complet, new_x="LMARGIN", new_y="NEXT")
     
-    # Réf Service
-    pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 5, txt=clean_text(ref_service), new_x="LMARGIN", new_y="NEXT")
-    
-    # Date
-    pdf.ln(15); pdf.set_x(125)
-    pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", 'B', 11)
+    # 2. La Date 
+    # On crée un petit écart propre de 8mm avec la référence
+    pdf.set_xy(X_DROITE, pdf.get_y() + 8) 
     pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_lettre}"), new_x="LMARGIN", new_y="NEXT")
     
-    # Signataire
-    pdf.ln(30); pdf.set_x(40); pdf.set_font("Arial", 'B', 16)
-    pdf.set_text_color(0, 0, 0) 
-    pdf.multi_cell(0, 6, txt=clean_text(f"{signataire},"), align='C')
+    # --- 3. LE SIGNATAIRE ---
+    # On descend de 30mm pour laisser la place à la signature
+    pdf.set_xy(X_DROITE, pdf.get_y() + 30) 
+    pdf.set_font("Arial", 'B', 16)
+    
+    # On aligne le signataire sur la même ligne (X_DROITE) 
+    # et j'ai retiré la virgule à l'intérieur du clean_text pour éviter les doublons
+    pdf.cell(0, 6, txt=clean_text(f"{signataire}"), new_x="LMARGIN", new_y="NEXT")
 
-    # --- 3. OBJET ET CORPS DE LA LETTRE ---
-    marge_gauche_texte = 25 
+   # --- 3. OBJET ET CORPS DE LA LETTRE ---
+    # On réduit la marge gauche (15mm au lieu de 25mm)
+    marge_gauche_texte = 15 
     pdf.set_left_margin(marge_gauche_texte)
     
-    hauteur_corps_lettre = 100 
+    # On ajoute une marge droite identique pour que le texte soit parfaitement centré !
+    pdf.set_right_margin(marge_gauche_texte) 
+    
+    # On remonte un tout petit peu le texte si besoin (tu peux ajuster ce chiffre)
+    hauteur_corps_lettre = 95 
     pdf.set_xy(marge_gauche_texte, hauteur_corps_lettre)
 
+    # L'interligne
     h_ligne = 7
-    
-    # Objet
     pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Arial", 'BU', 11)
-    pdf.write(h_ligne, txt="Objet")
-    pdf.set_font("Arial", 'B', 11)
-    pdf.write(h_ligne, txt=" : Lettre de notification")
-    pdf.ln(12)
+    pdf.set_font("Arial", '', 11)
+
+    # 🧹 1. On prépare et nettoie toutes les variables d'un coup
+    objet_propre = clean_text(data.get('objet_marche', '...'))
+    immat_propre = clean_text(data.get('immatriculation', '...'))
+    date_comm_propre = clean_text(date_commission)
+    direction_propre = clean_text(data.get('direction_name', "Direction de l'Administration Générale et de l'Equipement"))
+    
+    civilite_propre = clean_text(data.get('civilite_representant', 'Monsieur le Directeur Général,'))
+    # Pour la formule de politesse à la fin, on enlève la virgule s'il y en a une
+    civilite_cloture = civilite_propre.replace(",", "") 
+
+    # ==========================================
+    # ✍️ 2. Rédaction avec multi_cell (Markdown + Justifié)
+    # ==========================================
+
+    # Objet
+    texte_objet = "**Objet :** Lettre de notification"
+    pdf.multi_cell(0, h_ligne, txt=texte_objet, markdown=True)
+    pdf.ln(8)
 
     # Civilité
-    civilite = data.get('civilite_representant', 'Monsieur le Directeur Général,')
-    pdf.set_font("Arial", 'B', 11)
-    pdf.set_text_color(0, 0, 0)
-    pdf.write(5, txt=clean_text(civilite))
-    pdf.ln(10)
+    pdf.multi_cell(0, h_ligne, txt=f"**{civilite_propre}**", markdown=True)
+    pdf.ln(8)
 
     # --- PARAGRAPHE 1 ---
-    pdf.set_font("Arial", '', 11); pdf.set_text_color(0, 0, 0)
-    pdf.write(h_ligne, txt=clean_text("Suite à l'évaluation et à l'attribution par la commission des marchés, des offres relatives à la Demande de Renseignements et de Prix restreinte portant sur « "))
+    texte_p1 = f"Suite à l'évaluation et à l'attribution par la commission des marchés, des offres relatives à la Demande de Renseignements et de Prix restreinte portant sur « **{objet_propre}** » immatriculée **{immat_propre}** en date du **{date_comm_propre}**, pour le compte de la **{direction_propre}**, je vous informe que votre entreprise a été retenue comme attributaire de ladite demande de renseignements et de prix."
     
-    pdf.set_font("Arial", 'B', 11)
-    pdf.write(h_ligne, txt=clean_text(data.get('objet_marche', '...')))
-    
-    pdf.set_font("Arial", '', 11)
-    pdf.write(h_ligne, txt=" » immatriculée ")
-    
-    pdf.set_font("Arial", 'B', 11)
-    pdf.write(h_ligne, txt=clean_text(data.get('immatriculation', '...')))
-    
-    pdf.set_font("Arial", '', 11)
-    pdf.write(h_ligne, txt=" en date du ")
-    
-    pdf.set_font("Arial", 'B', 11)
-    pdf.write(h_ligne, txt=clean_text(date_commission))
-    
-    pdf.set_font("Arial", '', 11)
-    pdf.write(h_ligne, txt=", pour le compte de la ")
-    
-    pdf.set_font("Arial", 'B', 11)
-    direction_inline = clean_text(data.get('direction_name', "Direction de l'Administration Générale et de l'Equipement"))
-    pdf.write(h_ligne, txt=direction_inline)
-    
-    pdf.set_font("Arial", '', 11)
-    pdf.write(h_ligne, txt=clean_text(", je vous informe que votre entreprise a été retenue comme attributaire de ladite demande de renseignements et de prix."))
-    
-    pdf.ln(10)
+    pdf.multi_cell(0, h_ligne, txt=texte_p1, align='J', markdown=True)
+    pdf.ln(6)
 
     # --- PARAGRAPHE 2 ---
-    pdf.write(h_ligne, txt=clean_text("A ce titre, je vous prie de bien vouloir passer à la "))
+    texte_p2 = f"A ce titre, je vous prie de bien vouloir passer à la **{direction_propre}** pour récupérer le procès-verbal d'ouverture et d'évaluation des offres et de signer le contrat."
     
-    pdf.set_font("Arial", 'B', 11)
-    pdf.write(h_ligne, txt=direction_inline)
-    
-    pdf.set_font("Arial", '', 11)
-    pdf.write(h_ligne, txt=clean_text(" pour récupérer le procès-verbal d'ouverture et d'évaluation des offres et de signer le contrat."))
-    
-    pdf.ln(10) 
+    pdf.multi_cell(0, h_ligne, txt=texte_p2, align='J', markdown=True)
+    pdf.ln(6) 
 
     # --- PARAGRAPHE 3 ---
-    pdf.write(h_ligne, txt=clean_text("Je vous prie d'agréer, "))
+    texte_p3 = f"Je vous prie d'agréer, **{civilite_cloture}**, l'assurance de ma considération distinguée."
     
-    pdf.set_font("Arial", 'B', 11)
-    civilite_cloture = civilite.replace(",", "") 
-    pdf.write(h_ligne, txt=clean_text(civilite_cloture))
-    
-    pdf.set_font("Arial", '', 11)
-    pdf.write(h_ligne, txt=clean_text(", l'assurance de ma considération distinguée."))
-    
+    pdf.multi_cell(0, h_ligne, txt=texte_p3, align='J', markdown=True)
     pdf.ln(15)
 
-    # === BLOC DESTINATAIRE ===
+   # === BLOC DESTINATAIRE ===
     pdf.set_y(-75) 
-    marge_gauche = 25 
+    
+    # On recule un tout petit peu le X pour donner de la place au texte
+    X_DESTINATAIRE = 115 
+    # On définit une largeur maximum pour ce bloc (le texte ira à la ligne s'il dépasse 80mm)
+    LARGEUR_BLOC = 80 
     
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", 'B', 11)
@@ -778,20 +792,33 @@ def generer_pdf_lettre_notification(buffer, data):
     adresse = data.get('destinataire_adresse', '')
     tel = data.get('destinataire_tel', '')
 
-    # Écriture ligne par ligne
-    pdf.set_x(marge_gauche)
-    pdf.cell(0, 6, txt="A", new_x="LMARGIN", new_y="NEXT")
-    
-    pdf.set_x(marge_gauche)
     civilite_propre = civilite.replace(',', '')
-    pdf.cell(0, 6, txt=f"{civilite_propre} de {entreprise}".upper(), new_x="LMARGIN", new_y="NEXT")
+    texte_nom = f"{civilite_propre} de {entreprise}".upper()
+
+    # Écriture ligne par ligne (avec multi_cell pour gérer les textes longs)
     
-    pdf.set_x(marge_gauche)
-    pdf.cell(0, 6, txt=adresse, new_x="LMARGIN", new_y="NEXT")
+    # 🎯 On définit un décalage manuel juste pour le "À"
+    # Plus le chiffre est petit, plus le "À" ira vers la gauche.
+    # Essaie avec 20, 15 ou 10 pour trouver le "juste milieu" visuel !
+    DECALAGE_A = 34 
     
-    pdf.set_x(marge_gauche)
+    pdf.set_x(X_DESTINATAIRE + DECALAGE_A)
+    # On enlève le align='C' et le LARGEUR_BLOC pour cette ligne
+    pdf.cell(0, 6, txt="À", new_x="LMARGIN", new_y="NEXT")
+
+    # Le nom (qui posait problème) : on utilise multi_cell !
+    pdf.set_x(X_DESTINATAIRE)
+    pdf.multi_cell(LARGEUR_BLOC, 6, txt=texte_nom, align='L')
+    
+    # L'adresse (au cas où elle soit longue aussi)
+    if adresse:
+        pdf.set_x(X_DESTINATAIRE)
+        pdf.multi_cell(LARGEUR_BLOC, 6, txt=adresse, align='L')
+    
+    # Le téléphone
     if tel and tel != "Non renseigné":
-        pdf.cell(0, 6, txt=f"Tél: {tel}", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_x(X_DESTINATAIRE)
+        pdf.multi_cell(LARGEUR_BLOC, 6, txt=f"Tél: {tel}", align='L')
 
     pdf.set_text_color(0, 0, 0)
     
@@ -875,28 +902,25 @@ def generer_pdf_pv_attribution(buffer, data):
     pdf.multi_cell(80, 5, txt=direction_affichee, align='C')
 
     # ==========================================
-    # --- 2. RÉFÉRENCES ET DATE ---
+    # --- 2. RÉFÉRENCES, DATE ET SIGNATAIRE ---
     # ==========================================
-    pdf.set_xy(110, y_start_text + 5)
-    texte_num = clean_text(f"N° {num_ordre}  ")
-    pdf.set_font("Arial", '', 11)
-    pdf.set_text_color(0, 0, 0)
-    largeur_num = pdf.get_string_width(texte_num) 
-    pdf.cell(largeur_num, 5, txt=texte_num)
+    X_DROITE = 135  # Toujours notre variable magique pour l'alignement
     
-    # Réf Service 
-    pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 5, txt=clean_text(ref_service), new_x="LMARGIN", new_y="NEXT")
+    # Numéro et Réf Service sur la même ligne
+    pdf.set_xy(X_DROITE, y_start_text) 
+    pdf.set_font("Arial", 'B', 11) 
+    pdf.set_text_color(0, 0, 0)
+    texte_ref_complet = clean_text(f"N° {num_ordre} {ref_service}")
+    pdf.cell(0, 5, txt=texte_ref_complet, new_x="LMARGIN", new_y="NEXT")
     
     # Date
-    pdf.ln(15); pdf.set_x(125)
-    pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", 'B', 11)
+    pdf.set_xy(X_DROITE, pdf.get_y() + 8) 
     pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_lettre}"), new_x="LMARGIN", new_y="NEXT")
     
-    # Signataire
-    pdf.ln(30); pdf.set_x(40); pdf.set_font("Arial", 'B', 16)
-    pdf.set_text_color(0, 0, 0) 
-    pdf.multi_cell(0, 6, txt=clean_text(f"{signataire},"), align='C')
+    # Signataire (Le Directeur)
+    pdf.set_xy(X_DROITE, pdf.get_y() + 30) 
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 6, txt=clean_text(f"{signataire}"), new_x="LMARGIN", new_y="NEXT")
 
     # ==========================================
     # --- 3. TITRE DU DOCUMENT ---
@@ -924,59 +948,60 @@ def generer_pdf_pv_attribution(buffer, data):
     # ==========================================
     # --- 4. CORPS DU TEXTE DU PV ---
     # ==========================================
-    # On récupère les textes et on formate la date de commission
+    # 🧹 Nettoyage et préparation des variables
     date_commission_brute = data.get('date_commission', '')
     date_commission = formater_date_en_francais(date_commission_brute)
     
-    entreprise = data.get('entreprise_attributaire', "l'entreprise non renseignée")
-    adresse = data.get('adresse_direction', 'route des Almadies, Dakar')
-    immatriculation = data.get('immatriculation', '')
-    objet_marche = data.get('objet_marche', '')
+    entreprise_propre = clean_text(data.get('entreprise_attributaire', "l'entreprise non renseignée"))
+    adresse_propre = clean_text(data.get('adresse_direction', 'Route des Almadies, Dakar'))
+    immat_propre = clean_text(data.get('immatriculation', ''))
+    objet_propre = clean_text(data.get('objet_marche', ''))
+    direction_propre = clean_text(direction_nom)
 
-    # Réglage des marges et de la police
-    marge = 20
+    # 📏 Réglage des marges symétriques à 15mm comme pour les autres courriers
+    marge = 15
     pdf.set_left_margin(marge)
     pdf.set_right_margin(marge)
     pdf.set_x(marge)
     
     hauteur_ligne = 7
-    pdf.set_font("Arial", '', 12)
+    pdf.set_font("Arial", '', 12) # Taille 12 pour le PV, c'est très bien !
     pdf.set_text_color(0, 0, 0) 
     
     # --- PARAGRAPHE 1 ---
-    paragraphe_1 = (
-        f"{direction_nom} du Ministère de la Culture, de l'Artisanat et du Tourisme, "
-        f"{adresse} a procédé à l'attribution "
-        f"des offres reçues dans le cadre de la demande de renseignements et de prix restreinte "
-        f"N° {immatriculation} portant sur « {objet_marche} »."
-    )
-    pdf.multi_cell(0, hauteur_ligne, txt=clean_text(paragraphe_1), align='J')
+    texte_p1 = f"La **{direction_propre}** du Ministère de la Culture, de l'Artisanat et du Tourisme, **{adresse_propre}**, a procédé à l'attribution des offres reçues dans le cadre de la demande de renseignements et de prix restreinte N° **{immat_propre}** portant sur « **{objet_propre}** »."
+    
+    pdf.multi_cell(0, hauteur_ligne, txt=texte_p1, align='J', markdown=True)
     pdf.ln(5)
 
     # --- PARAGRAPHE 2 ---
-    paragraphe_2 = (
-        f"Après avoir procédé à la vérification et au constat de la conformité des offres reçues (voir PV d'analyse, "
-        f"d'évaluation et d'attribution des offres de la commission des marchés en date du "
-        f"{date_commission}), l'entreprise « {entreprise} » a été déclarée moins disante."
-    )
-    pdf.multi_cell(0, hauteur_ligne, txt=clean_text(paragraphe_2), align='J')
+    texte_p2 = f"Après avoir procédé à la vérification et au constat de la conformité des offres reçues (voir PV d'analyse, d'évaluation et d'attribution des offres de la commission des marchés en date du **{date_commission}**), l'entreprise « **{entreprise_propre}** » a été déclarée moins disante."
+    
+    pdf.multi_cell(0, hauteur_ligne, txt=texte_p2, align='J', markdown=True)
     pdf.ln(5)
     
     # --- PARAGRAPHE 3 ---
-    paragraphe_3 = "En conséquence le procès-verbal d'attribution est établi pour servir et valoir ce que de droit."
-    pdf.multi_cell(0, hauteur_ligne, txt=clean_text(paragraphe_3), align='J')
+    texte_p3 = "En conséquence le présent procès-verbal d'attribution est établi pour servir et valoir ce que de droit."
+    
+    pdf.multi_cell(0, hauteur_ligne, txt=texte_p3, align='J', markdown=True)
 
     # ==========================================
-    # --- 5. SECONDE SIGNATURE (BAS À GAUCHE) ---
+    # --- 5. SECONDE SIGNATURE (BAS À DROITE) ---
     # ==========================================
-    pdf.ln(25) 
-    pdf.set_x(20) 
+    pdf.ln(25) # On laisse un bon espace pour la signature
+    
+    # On pousse le bloc vers la droite (tu peux ajuster ce chiffre : 120, 130...)
+    X_SIGNATURE_DROITE = 125 
+    pdf.set_x(X_SIGNATURE_DROITE) 
     
     pdf.set_font("Arial", 'B', 12)
     pdf.set_text_color(0, 0, 0)
     
-    texte_signature_bas = data.get('signataire_bas', '')
-    pdf.multi_cell(90, 6, txt=clean_text(texte_signature_bas), align='L')
+    texte_signature_bas = data.get('signataire_bas', "Le signataire")
+    
+    # multi_cell(0) va prendre tout l'espace restant entre X=125 et la marge droite
+    # align='C' va centrer le nom du signataire proprement dans cet espace
+    pdf.multi_cell(0, 6, txt=clean_text(texte_signature_bas), align='C')
 
     # ==========================================
     # --- 6. PIED DE PAGE ---
@@ -1085,28 +1110,33 @@ def dessiner_en_tete(pdf, data):
     # 📌 On mémorise la fin du bloc de gauche
     fin_bloc_gauche = pdf.get_y()
 
+    # On définit une nouvelle position X pour décaler tout le bloc vers la droite.
+    # (+15 millimètres par rapport à avant, tu peux changer ce nombre si besoin)
+    X_DROITE = POS_X_NUMERO + 15 
+
     # --- 2. RÉFÉRENCES ET DATE ---
-    pdf.set_xy(POS_X_NUMERO, y_start_text + 5)
-    texte_num = clean_text(f"N° {num_ordre}  ")
-    pdf.set_font("Arial", '', 11); pdf.set_text_color(0, 0, 0)
-    largeur_num = pdf.get_string_width(texte_num) 
+    # On remonte le bloc en enlevant le "+ 5" qu'il y avait avant
+    pdf.set_xy(X_DROITE, y_start_text) 
     
-    # On écrit le numéro (le curseur reste sur la même ligne par défaut)
-    pdf.cell(largeur_num, 5, txt=texte_num)
+    # 1. Le Numéro et la Réf Service 
+    pdf.set_font("Arial", 'B', 11) 
+    pdf.set_text_color(0, 0, 0)
+    texte_ref_complet = clean_text(f"N° {num_ordre} {ref_service}")
+    pdf.cell(0, 5, txt=texte_ref_complet, new_x="LMARGIN", new_y="NEXT")
     
-    # Réf Service juste à côté
-    pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 5, txt=clean_text(ref_service), new_x="LMARGIN", new_y="NEXT")
-    
-    # Date 
-    pdf.set_xy(POS_X_DATE, pdf.get_y() + 10) # Positionnement précis
-    pdf.set_font("Arial", 'B', 11)
+    # 2. La Date 
+    # On aère un peu plus en descendant de 8mm (au lieu de 5mm)
+    pdf.set_xy(X_DROITE, pdf.get_y() + 8) 
     pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_lettre}"), new_x="LMARGIN", new_y="NEXT")
     
-    # Signataire
-    pdf.set_xy(POS_X_SIGNATAIRE, pdf.get_y() + 25) # Positionnement précis
+    # --- 3. LE SIGNATAIRE ---
+    # On descend pour laisser la place à la signature
+    pdf.set_xy(X_DROITE, pdf.get_y() + 25) 
     pdf.set_font("Arial", 'B', 16)
-    pdf.cell(50, 6, txt=clean_text(f"{signataire},"), align='C', new_x="LMARGIN", new_y="NEXT")
+    
+    # On utilise exactement la même configuration de cellule pour que ça soit 100% aligné à gauche.
+    # (Et j'ai enlevé la virgule qui causait le "Le Directeur,,")
+    pdf.cell(0, 6, txt=clean_text(f"{signataire}"), new_x="LMARGIN", new_y="NEXT")
 
     # 📌 On mémorise la fin du bloc de droite
     fin_bloc_droite = pdf.get_y()
@@ -1140,60 +1170,97 @@ def generer_pdf_lettre_invitation(data):
     pdf.cell(0, 8, txt=clean_text("Lettre d'invitation"), ln=True, align='C')
     pdf.ln(5)
     
+   # =========================================================
     # Objet
-    pdf.set_font("Arial", 'BU', 11)
-    pdf.cell(15, 6, txt="Objet : ", ln=0)
-    pdf.set_font("Arial", '', 11)
-    texte_objet = f"Demande de renseignements et de prix (DRP) relative à {objet_marche}"
-    pdf.multi_cell(0, 6, txt=clean_text(texte_objet))
-    pdf.ln(5)
+    # =========================================================
+    y_start = pdf.get_y()          
+    x_start = pdf.get_x()          
     
+    # 1. On écrit "Objet :"
+    pdf.set_font("Arial", 'BU', 11)
+    pdf.cell(16, 6, txt="Objet : ") # On repasse à 6 pour la hauteur
+    
+    # 2. On décale la marge gauche (notre mur invisible)
+    pdf.set_left_margin(x_start + 16)
+    pdf.set_xy(x_start + 16, y_start) # Alignement vertical naturel, plus besoin de tricher !
+    
+    # 3. 🪄 L'ASTUCE : On utilise multi_cell avec markdown=True
+    pdf.set_font("Arial", '', 11)
+    objet_propre = clean_text(objet_marche)
+    
+    # Le '6' de multi_cell gère l'espace entre les lignes. 
+    # Les '**' autour de la variable la mettent en gras !
+    texte_objet = f"Demande de renseignements et de prix (DRP) relative à **{objet_propre}**"
+    pdf.multi_cell(0, 6, txt=texte_objet, markdown=True)
+    
+    # 4. On remet la marge de la page à la normale
+    pdf.set_left_margin(x_start)
+    pdf.ln(8)
+
     # Salutations
     pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 6, txt="Messieurs,", ln=True)
     pdf.ln(3)
     
+    # =========================================================
     # Corps de la lettre
+    # =========================================================
     pdf.set_font("Arial", '', 11)
-    texte_intro = f"Il est prévu dans le cadre du marché cité en objet de procéder à {objet_marche} pour le compte de la Direction de l'Administration Générale et de l'Equipement."
-    pdf.multi_cell(0, 6, txt=clean_text(texte_intro))
+    
+    # On nettoie toutes les variables
+    objet_propre = clean_text(objet_marche)
+    date_propre = clean_text(date_heure)
+    adresse_propre = clean_text(adresse_depot)
+    
+    # 1. Premier paragraphe (avec multi_cell, hauteur 6, justifié et markdown pour le gras)
+    texte_intro = f"Il est prévu dans le cadre du marché cité en objet de procéder à **{objet_propre}** pour le compte de la Direction de l'Administration Générale et de l'Equipement."
+    
+    pdf.multi_cell(0, 6, txt=texte_intro, align='J', markdown=True)
+    pdf.ln(4) # Espace entre les deux paragraphes
+    
+    # 2. Deuxième paragraphe
+    texte_paragraphe_2 = f"A cet effet, vous trouverez, ci-joint, le bordereau descriptif quantitatif des prestations que je vous demande de bien vouloir chiffrer et me le retourner au plus tard le **{date_propre}** sous enveloppe cachetée adressée à {adresse_propre}, avec les mentions suivantes :"
+    
+    pdf.multi_cell(0, 6, txt=texte_paragraphe_2, align='J', markdown=True)
     pdf.ln(2)
     
-    pdf.write(6, clean_text("A cet effet, vous trouverez, ci-joint, le bordereau descriptif quantitatif des prestations que je vous demande de bien vouloir chiffrer et me le retourner au plus tard le "))
-    pdf.set_font("Arial", 'B', 11); pdf.set_text_color(255, 0, 0)
-    pdf.write(6, clean_text(f"{date_heure} "))
-    pdf.set_font("Arial", '', 11); pdf.set_text_color(0, 0, 0)
-    pdf.write(6, clean_text(f"sous enveloppe cachetée adressée à {adresse_depot}, avec les mentions suivantes :\n"))
-    
-    # Mentions
+    # Mentions (On laisse tes write() ici car ce sont des phrases courtes avec alinéa, pas besoin de justifier)
     pdf.set_font("Arial", '', 11)
-    
-    # 🛠️ CORRECTION 1 FPDF2 : On utilise set_x au lieu de cell(15) pour l'alinéa avant un write
     pdf.set_x(pdf.l_margin + 15) 
     pdf.write(6, clean_text("« Demande de Renseignements et de Prix n° "))
-    pdf.set_font("Arial", 'B', 11); pdf.set_text_color(255, 0, 0)
+    pdf.set_font("Arial", 'B', 11); pdf.set_text_color(0, 0, 0)
     pdf.write(6, clean_text(f"{immatriculation}"))
     pdf.set_font("Arial", '', 11); pdf.set_text_color(0, 0, 0)
     pdf.write(6, clean_text(" »\n"))
     
-    # 🛠️ CORRECTION 2 FPDF2 : Idem ici, set_x au lieu de cell(15)
     pdf.set_x(pdf.l_margin + 15) 
     pdf.cell(0, 6, txt=clean_text("« A n'ouvrir qu'en séance d'ouverture de plis »."), ln=True)
     pdf.ln(4)
     
-    pdf.write(6, clean_text(f"Les offres seront ouvertes en présence des représentants des candidats présents à l'adresse ci-après : "))
-    pdf.set_font("Arial", 'B', 11)
-    pdf.write(6, clean_text(f"{lieu_ouverture}. Les offres remises en retard ne seront pas acceptées.\n"))
+    # 3. Troisième paragraphe (On remplace write_html par multi_cell pour bien l'aérer)
+    lieu_propre = clean_text(lieu_ouverture)
+    
+    # On utilise les doubles étoiles ** pour mettre en gras
+    texte_paragraphe_3 = f"Les offres seront ouvertes en présence des représentants des candidats présents à l'adresse ci-après : **{lieu_propre}**. Les offres remises en retard ne seront pas acceptées."
+    
+    pdf.multi_cell(0, 6, txt=texte_paragraphe_3, align='J', markdown=True)
     pdf.ln(4)
     
+    # 4. Les derniers paragraphes simples (qui étaient déjà bons !)
     pdf.set_font("Arial", '', 11)
-    pdf.multi_cell(0, 6, txt=clean_text("Votre offre devra être chiffrée en toutes taxes comprises (TTC) et accompagnée des formulaires joints en annexe à la DRP. Les fournitures devront être livrées à compter de la réception du bon de commande."))
-    pdf.ln(4)
-    pdf.multi_cell(0, 6, txt=clean_text("Les offres sont valables pour une période de trente (30) jours."))
-    pdf.ln(4)
-    pdf.multi_cell(0, 6, txt=clean_text("La présente lettre a été adressée aux candidats présélectionnés, dont les noms figurent ci-après :"))
+    
+    texte_4 = "Votre offre devra être chiffrée en toutes taxes comprises (TTC) et accompagnée des formulaires joints en annexe à la DRP. Les fournitures devront être livrées à compter de la réception du bon de commande."
+    pdf.multi_cell(0, 6, txt=clean_text(texte_4), align='J')
     pdf.ln(4)
     
+    texte_5 = "Les offres sont valables pour une période de trente (30) jours."
+    pdf.multi_cell(0, 6, txt=clean_text(texte_5), align='J')
+    pdf.ln(4)
+    
+    texte_6 = "La présente lettre a été adressée aux candidats présélectionnés, dont les noms figurent ci-après :"
+    pdf.multi_cell(0, 6, txt=clean_text(texte_6), align='J')
+    pdf.ln(4)
+
     # =========================================================
     # TABLEAU PAGE 1 (Ajusté pour 170mm de large)
     # =========================================================
@@ -1218,14 +1285,14 @@ def generer_pdf_lettre_invitation(data):
         
         # --- Colonne 1 : Nom du prestataire ---
         pdf.set_font("Arial", 'B', 9)
-        pdf.set_text_color(255, 0, 0) # Rouge
+        pdf.set_text_color(0, 0, 0) # Rouge
         pdf.set_xy(x_start, y_start_row)
         pdf.multi_cell(col1_w, 6, txt=clean_text(p['nom'].upper()), border=0, align='L')
         y_end1 = pdf.get_y()
         
         # --- Colonne 2 : Adresses et Infos ---
         pdf.set_font("Arial", '', 9)
-        pdf.set_text_color(255, 0, 0) # Rouge
+        pdf.set_text_color(0, 0, 0) # Rouge
         pdf.set_xy(x_start + col1_w, y_start_row)
         
         compte = p.get('compte', '').strip()
@@ -1247,13 +1314,13 @@ def generer_pdf_lettre_invitation(data):
 
     pdf.ln(6)
     
-    # Fin de lettre
+   # Fin de lettre
     pdf.set_font("Arial", '', 11)
-    pdf.multi_cell(0, 6, txt=clean_text("Cette invitation ne peut être transférée à une autre société."))
+    pdf.multi_cell(0, 6, txt=clean_text("Cette invitation ne peut être transférée à une autre société."), align='J')
     pdf.ln(2)
-    pdf.multi_cell(0, 6, txt=clean_text("La passation de marché sera effectuée selon les dispositions du Code des Marchés publics."))
+    pdf.multi_cell(0, 6, txt=clean_text("La passation de marché sera effectuée selon les dispositions du Code des Marchés publics."), align='J')
     pdf.ln(2)
-    pdf.multi_cell(0, 6, txt=clean_text("La présente DRP comprend les sections suivantes :"))
+    pdf.multi_cell(0, 6, txt=clean_text("La présente DRP comprend les sections suivantes :"), align='J')
     pdf.ln(2) # Petit espacement visuel propre avant la liste
     
     # 🛠️ CORRECTION 3 FPDF2 : Affichage de la liste ligne par ligne (100% Sûr et propre)
@@ -1270,12 +1337,14 @@ def generer_pdf_lettre_invitation(data):
         pdf.cell(0, 6, txt=clean_text(ligne), ln=True)
         
     pdf.ln(4)
-    pdf.write(6, clean_text("Ces prestations sont à effectuer pour le compte de la Direction de l'Administration générale et de l'Equipement (DAGE) sise aux Almadies en face de la TFM - Dakar, dès "))
-    pdf.set_font("Arial", 'B', 11)
-    pdf.write(6, clean_text("la notification du marché.\n"))
+   # Remplacement du write_html par multi_cell pour garder un bel interligne :
+    texte_fin = "Ces prestations sont à effectuer pour le compte de la Direction de l'Administration générale et de l'Equipement (DAGE) sise aux Almadies en face de la TFM - Dakar, dès **la notification du marché.**"
+    
+    pdf.multi_cell(0, 6, txt=texte_fin, align='J', markdown=True)
     pdf.ln(6)
+    
     pdf.set_font("Arial", '', 11)
-    pdf.multi_cell(0, 6, txt=clean_text("Veuillez agréer, Madame, Monsieur, l'expression de ma considération distinguée."))
+    pdf.multi_cell(0, 6, txt=clean_text("Veuillez agréer, Madame, Monsieur, l'expression de ma considération distinguée."), align='J')
 
     # =========================================================
     # SECTION 2 : FICHE DE TRANSMISSION
@@ -1285,12 +1354,33 @@ def generer_pdf_lettre_invitation(data):
     
     dessiner_en_tete(pdf, data) 
 
-    pdf.set_font("Arial", 'BU', 10)
-    pdf.cell(15, 6, txt="Objet : ", ln=0)
-    pdf.set_font("Arial", '', 10)
-    pdf.write(6, clean_text("Demande de renseignements et de prix (DRP) relative à "))
-    pdf.set_text_color(255, 0, 0); pdf.write(6, clean_text(f"{objet_marche}\n")); pdf.set_text_color(0, 0, 0)
-    pdf.ln(5)
+        
+   # =========================================================
+    # Objet
+    # =========================================================
+    y_start = pdf.get_y()          
+    x_start = pdf.get_x()          
+    
+    # 1. On écrit "Objet :"
+    pdf.set_font("Arial", 'BU', 11)
+    pdf.cell(16, 6, txt="Objet : ") # On repasse à 6 pour la hauteur
+    
+    # 2. On décale la marge gauche (notre mur invisible)
+    pdf.set_left_margin(x_start + 16)
+    pdf.set_xy(x_start + 16, y_start) # Alignement vertical naturel, plus besoin de tricher !
+    
+    # 3. 🪄 L'ASTUCE : On utilise multi_cell avec markdown=True
+    pdf.set_font("Arial", '', 11)
+    objet_propre = clean_text(objet_marche)
+    
+    # Le '6' de multi_cell gère l'espace entre les lignes. 
+    # Les '**' autour de la variable la mettent en gras !
+    texte_objet = f"Demande de renseignements et de prix (DRP) relative à **{objet_propre}**"
+    pdf.multi_cell(0, 6, txt=texte_objet, markdown=True)
+    
+    # 4. On remet la marge de la page à la normale
+    pdf.set_left_margin(x_start)
+    pdf.ln(8)
 
     x_line = pdf.get_x(); y_line = pdf.get_y()
     pdf.line(x_line, y_line, 190, y_line) 
@@ -1322,7 +1412,7 @@ def generer_pdf_lettre_invitation(data):
         y_start_row = pdf.get_y()
         pdf.set_auto_page_break(False)
         
-        pdf.set_font("Arial", 'B', 9); pdf.set_text_color(255, 0, 0); pdf.set_xy(x_start, y_start_row + 2)
+        pdf.set_font("Arial", 'B', 9); pdf.set_text_color(0, 0, 0); pdf.set_xy(x_start, y_start_row + 2)
         pdf.multi_cell(col_cand, 5, txt=clean_text(p['nom'].upper()), align='C')
         y_end1 = pdf.get_y()
         
@@ -1404,22 +1494,23 @@ def generer_pdf_contrat(data):
 
     pdf.ln(12)
 
-    # Titre CONTRAT (Centrage mathématique précis pour FPDF2)
+    pdf.ln(15) # On laisse respirer sous l'en-tête
+
+    # ==========================================
+    # TITRE PRINCIPAL (EN HAUT)
+    # ==========================================
     pdf.set_font("Arial", "BU", 12)
     pdf.set_fill_color(225, 225, 225) 
     largeur_cellule = 25
     x_centre = (pdf.w - largeur_cellule) / 2
     pdf.set_x(x_centre) 
     pdf.cell(largeur_cellule, 6, "CONTRAT", new_x="LMARGIN", new_y="NEXT", align="C", fill=True)
-    pdf.ln(4)
     
-    # GESTION
-    pdf.set_font("Arial", "BU", 11)
-    pdf.cell(0, 6, ct(f"GESTION {data.get('gestion_annee', '2025')}"), new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.ln(15) # Espace avant de commencer les infos du titulaire
 
-    pdf.ln(12)
-
+    # ==========================================
     # Bloc 1 : Titulaire
+    # ==========================================
     pdf.set_font("Arial", "U", 11)
     pdf.cell(18, 6, "Titulaire", new_x="RIGHT", new_y="TOP")
     pdf.set_font("Arial", "", 11)
@@ -1442,7 +1533,7 @@ def generer_pdf_contrat(data):
     pdf.ln(12)
 
     # ==========================================
-    # OBJET DU MARCHÉ (Encadré par double ligne)
+    # Bloc 2 : OBJET DU MARCHÉ (Encadré par double ligne)
     # ==========================================
     y_line = pdf.get_y()
     pdf.line(10, y_line, 200, y_line)
@@ -1500,6 +1591,17 @@ def generer_pdf_contrat(data):
     pdf.cell(3, 6, " : ", new_x="RIGHT", new_y="TOP")
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 6, data.get('comptable', ''), new_x="LMARGIN", new_y="NEXT")
+
+    # ==========================================
+    # MENTION GESTION (EN BAS DE PAGE)
+    # ==========================================
+    # On force la position à 40 mm du bas de la page (tu peux ajuster ce chiffre : -30, -50...)
+    pdf.set_y(-40) 
+    
+    pdf.set_font("Arial", "BU", 11)
+    # ct() est ta fonction pour nettoyer le texte (clean_text)
+    texte_gestion = ct(f"GESTION {data.get('gestion_annee', '2025')}")
+    pdf.cell(0, 6, texte_gestion, new_x="LMARGIN", new_y="NEXT", align="C")
 
 
     # ==========================================

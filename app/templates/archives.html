@@ -273,12 +273,13 @@
         <td>
           <div class="btn-action-group">
             <a
-              href="{{ url_for('main.telecharger_protected_file', filename=doc.nom_fichier) }}"
+              href="{{ url_for('main.secure_download', folder='archives', filename=doc.nom_fichier) }}"
               target="_blank"
               class="btn btn-sm btn-outline-primary"
               title="Voir"
-              >👁️</a
             >
+              👁️
+            </a>
 
             {% if current_user.role in ['superadmin', 'admin'] %}
             <form
