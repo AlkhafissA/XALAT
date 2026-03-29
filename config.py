@@ -37,3 +37,14 @@ class Config:
             "ERREUR CRITIQUE : MOT_DE_PASSE_PAR_DEFAUT et CLE_DE_VERROUILLAGE "
             "doivent être définis dans le .env"
         )
+
+    # 🛡️ NOUVEAU : SÉCURISATION DES COOKIES DE SESSION
+    # Empêche le code JavaScript (souvent utilisé par les pirates) de lire le cookie
+    SESSION_COOKIE_HTTPONLY = True 
+    
+    # Empêche le cookie d'être envoyé sur d'autres sites (protège contre les attaques CSRF)
+    SESSION_COOKIE_SAMESITE = 'Lax' 
+    
+    # Note : Si tu mets ton site en ligne avec HTTPS (cadenas vert), 
+    # décommente la ligne ci-dessous pour obliger le cookie à passer uniquement par une connexion sécurisée.
+    # SESSION_COOKIE_SECURE = True

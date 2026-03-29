@@ -1,3 +1,4 @@
+from reportlab.lib.units import cm
 import os
 import io
 from flask import send_file
@@ -12,6 +13,8 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT, TA_JUSTIFY
 from reportlab.graphics.shapes import Drawing, Rect, Polygon
 from reportlab.graphics import renderPDF
+from reportlab.lib.colors import black
+
 import datetime
 
 try:
@@ -277,28 +280,31 @@ def generer_pdf_bordereau(buffer, data):
     col_gauche = [drapeau, txt_republique, txt_devise, separateur, txt_ministere, separateur, txt_direction, separateur]
     
     
-    # 1. On prépare les textes
-    ref_complete = f"N°  {data['numero']}  {data['service_ref']}"
+    
 
-        # On crée un nouveau style qui copie le tien, mais on force l'alignement à GAUCHE
+    # 1. On définit notre "style parfait" de zéro
     style_parfait = ParagraphStyle(
-        'StyleParfait',
-        parent=style_num_right,  # On hérite de ta police, ta taille, etc.
-        alignment=TA_LEFT        # Le fameux coup de grâce !
+        name='StyleParfait',
+        fontName='Helvetica', # Remplace par 'Arial' si tu as importé la police Arial
+        fontSize=11,
+        textColor=black,
+        alignment=TA_LEFT     # Aligné à gauche (dans sa propre colonne)
     )
 
-    # On applique ce nouveau style aux deux textes
-    ref_complete = f"N°  {data['numero']}  {data['service_ref']}"
+    # 2. On prépare le texte avec un simple espace entre les deux
+    ref_complete = f"N° {data.get('numero', '')} {data.get('service_ref', '')}"
+
+    # 3. On crée les paragraphes (la balise <b> met en gras)
     txt_numero = Paragraph(f"<b>{ref_complete}</b>", style_parfait)
-    txt_date = Paragraph(f"<b>Dakar, le {data['date']}</b>", style_parfait)
-    # 2. On empile les éléments avec le Spacer (comme tu l'avais pensé initialement !)
+    txt_date = Paragraph(f"<b>Dakar, le {data.get('date', '')}</b>", style_parfait)
+
+    # 4. On empile le tout
     col_droite = [
-        Spacer(1, 1*cm),       # Espace au-dessus du N°
-        txt_numero,            # Le N°
-        Spacer(1, 1.5*cm),     # L'écart vertical entre le N° et la date
+        Spacer(1, 1*cm),       # Espace au-dessus
+        txt_numero,            # N° et Réf sur la même ligne
+        Spacer(1, 1.5*cm),     # Espace avant la date
         txt_date               # La date
     ]
-
     # 3. La partie gauche ne change pas
     table_gauche = Table([[item] for item in col_gauche], colWidths=[9*cm])
     table_gauche.setStyle(TableStyle([
@@ -310,22 +316,41 @@ def generer_pdf_bordereau(buffer, data):
 
     # 4. On assemble l'en-tête (Gauche + Droite)
    # ✅ LE NOUVEAU CODE (On passe de 10 à 12 ou 12.5 cm pour pousser vers la droite)
-    header_table = Table([[table_gauche, col_droite]], colWidths=[13.5*cm, 5.5*cm])
+    # On réduit la gauche à 10 cm, et on augmente la droite à 9 cm !
+    # On élargit la gauche à 11.5 cm pour pousser le bloc de droite !
+    header_table = Table([[table_gauche, col_droite]], colWidths=[12*cm, 7*cm])
+    # ✅ LE NOUVEAU CODE : Alignement à DROITE
     header_table.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'), 
-        ('ALIGN', (1,0), (1,-1), 'LEFT'),  # <--- IMPORTANT : On aligne la colonne de droite à GAUCHE
-        ('LEFTPADDING', (1,0), (1,-1), 0)  # On enlève la marge interne pour que ça soit bien aligné
+        
+        # On dit à la colonne 1 (la droite) de s'aligner à DROITE
+        ('ALIGN', (1,0), (1,-1), 'RIGHT'), 
+        
+        # On remet les padding par défaut pour un bel espacement
+        ('LEFTPADDING', (1,0), (1,-1), 0),
+        
+        # Facultatif : on peut rajouter un peu de padding à droite
+        # pour éviter que ce soit collé à la marge de la feuille
+        ('RIGHTPADDING', (1,0), (1,-1), 0.5*cm) 
     ]))
 
     elements.append(header_table)
 
     # --- TITRE ET DESTINATAIRE ---
+    
+    # On récupère le destinataire (avec une valeur de sécurité au cas où)
+   # Dans utils.py, remplace la ligne par ça :
+    destinataire_texte = data.get('destinataire', 'TOTO LE TESTEUR')
+
     elements.append(Spacer(1, 0.5*cm))
     elements.append(Paragraph("<b>BORDEREAU D’ENVOI</b>", ParagraphStyle('TitreGros', parent=style_center_bold, fontSize=16)))
     elements.append(Paragraph("-----------------------------------", style_center_bold))
     elements.append(Spacer(1, 0.5*cm))
     elements.append(Paragraph("<b>A</b>", style_center_bold))
-    elements.append(Paragraph("Monsieur le Coordonnateur de la Cellule de Passation des Marchés Publics", ParagraphStyle('Dest', parent=style_center_bold, fontSize=11)))
+    
+    # ✅ ICI on utilise la variable destinataire_texte
+    elements.append(Paragraph(destinataire_texte, ParagraphStyle('Dest', parent=style_center_bold, fontSize=11)))
+    
     elements.append(Spacer(1, 0.5*cm))
 
     # --- LE TABLEAU ---
@@ -492,13 +517,13 @@ def generer_pdf_lettre_information(buffer, data):
     pdf.cell(0, 5, txt=texte_ref_complet, new_x="LMARGIN", new_y="NEXT")
     
     # 2. La Date 
-    pdf.set_xy(X_DROITE, pdf.get_y() + 8) 
+    pdf.set_xy(X_DROITE, pdf.get_y() + 15) 
     pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_lettre}"), new_x="LMARGIN", new_y="NEXT")
     
     # 3. Le Signataire
     pdf.set_xy(X_DROITE, pdf.get_y() + 30) 
     pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 6, txt=clean_text(f"{signataire},"), new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, txt=clean_text(f"{signataire}"), new_x="LMARGIN", new_y="NEXT")
 
     # --- 3. OBJET & CORPS DE LA LETTRE ---
     # On garde nos belles marges symétriques de 15mm pour un texte parfaitement centré
@@ -704,8 +729,8 @@ def generer_pdf_lettre_notification(buffer, data):
     pdf.cell(0, 5, txt=texte_ref_complet, new_x="LMARGIN", new_y="NEXT")
     
     # 2. La Date 
-    # On crée un petit écart propre de 8mm avec la référence
-    pdf.set_xy(X_DROITE, pdf.get_y() + 8) 
+    # On crée un petit écart propre de 15mm avec la référence
+    pdf.set_xy(X_DROITE, pdf.get_y() + 15) 
     pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_lettre}"), new_x="LMARGIN", new_y="NEXT")
     
     # --- 3. LE SIGNATAIRE ---
@@ -914,7 +939,7 @@ def generer_pdf_pv_attribution(buffer, data):
     pdf.cell(0, 5, txt=texte_ref_complet, new_x="LMARGIN", new_y="NEXT")
     
     # Date
-    pdf.set_xy(X_DROITE, pdf.get_y() + 8) 
+    pdf.set_xy(X_DROITE, pdf.get_y() + 15) 
     pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_lettre}"), new_x="LMARGIN", new_y="NEXT")
     
     # Signataire (Le Directeur)
@@ -1126,7 +1151,7 @@ def dessiner_en_tete(pdf, data):
     
     # 2. La Date 
     # On aère un peu plus en descendant de 8mm (au lieu de 5mm)
-    pdf.set_xy(X_DROITE, pdf.get_y() + 8) 
+    pdf.set_xy(X_DROITE, pdf.get_y() + 15) 
     pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_lettre}"), new_x="LMARGIN", new_y="NEXT")
     
     # --- 3. LE SIGNATAIRE ---

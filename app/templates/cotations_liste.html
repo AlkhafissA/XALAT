@@ -149,29 +149,27 @@
               <span class="badge bg-light text-primary border fw-bold rounded-pill px-3"> {{ cot.offres|length }} </span>
             </td>
             <td class="text-end pe-4">
-              <div class="btn-group">
+              <div class="d-flex justify-content-end align-items-center flex-wrap gap-1">
                 {# 1. Bouton PDF #}
                 <a
                   href="{{ url_for('main.telecharger_pv', id=cot.id) }}"
-                  class="btn btn-action btn-light text-success"
+                  class="btn btn-action btn-light text-success shadow-sm"
                   title="Télécharger les PV (PDF)"
+                  >📄</a
                 >
-                  📄
-                </a>
 
                 {# 2. Gestion du Scan (Voir ou Uploader) #} {% if cot.fichier_scanne %}
                 <a
                   href="{{ url_for('main.secure_download', folder='cotations', filename=cot.fichier_scanne) }}"
                   target="_blank"
-                  class="btn btn-action btn-light text-success"
+                  class="btn btn-action btn-light text-success shadow-sm"
                   title="Voir le PV scanné"
+                  >👁️</a
                 >
-                  👁️
-                </a>
                 {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
                 <button
                   type="button"
-                  class="btn btn-action btn-light text-warning"
+                  class="btn btn-action btn-light text-warning shadow-sm"
                   data-bs-toggle="modal"
                   data-bs-target="#modalScan{{ cot.id }}"
                   title="Joindre le PV scanné"
@@ -180,15 +178,17 @@
                 </button>
                 {% endif %} {% endif %} {# 3. Bouton Modifier (Verrouillé si scan présent) #} {% if current_user.role in ['superadmin', 'admin',
                 'agent'] %} {% if not cot.fichier_scanne %}
-                <a href="{{ url_for('main.modifier_cotation', id=cot.id) }}" class="btn btn-action btn-light text-primary" title="Modifier"> ✏️ </a>
+                <a href="{{ url_for('main.modifier_cotation', id=cot.id) }}" class="btn btn-action btn-light text-primary shadow-sm" title="Modifier"
+                  >✏️</a
+                >
                 {% else %}
-                <span class="btn btn-action btn-light text-muted" title="Modification verrouillée (Dossier scanné)"> 🔒 </span>
+                <span class="btn btn-action btn-light text-muted" title="Modification verrouillée (Dossier scanné)">🔒</span>
                 {% endif %} {% endif %} {# 4. Bouton Supprimer #} {% if current_user.role in ['superadmin', 'admin'] %}
-                <form action="{{ url_for('main.supprimer_cotation', id=cot.id) }}" method="POST" style="display: inline">
+                <form action="{{ url_for('main.supprimer_cotation', id=cot.id) }}" method="POST" class="m-0 p-0" style="display: inline-block">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                   <button
                     type="submit"
-                    class="btn btn-action btn-light text-danger"
+                    class="btn btn-action btn-light text-danger shadow-sm"
                     onclick="return confirm('Confirmer la suppression définitive ?');"
                     title="Supprimer"
                   >

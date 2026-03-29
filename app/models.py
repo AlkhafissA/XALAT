@@ -5,9 +5,11 @@ from app.extensions import db
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), unique=True)
-    password_hash = db.Column(db.String(200))
-    role = db.Column(db.String(20), default='admin')
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200), nullable=False)
+    # 🛡️ SÉCURITÉ : Le rôle par défaut est désormais un simple utilisateur (ou 'invite').
+    # Seul un SuperAdmin pourra changer ce rôle manuellement.
+    role = db.Column(db.String(20), default='Stagiaire')
 
 class Historique(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -76,6 +78,8 @@ class Bordereau(db.Model):
     numero = db.Column(db.String(50))
     service_ref = db.Column(db.String(50))
     date_signature = db.Column(db.Date)
+    # ✅ AJOUTE CETTE LIGNE POUR SAUVEGARDER LE DESTINATAIRE
+    destinataire = db.Column(db.String(255), default="Monsieur le Coordonnateur de la Cellule de Passation des Marchés Publics")
     observations = db.Column(db.String(200))
     # On stocke la liste des dossiers sous forme de texte (JSON)
     dossiers_data = db.Column(db.Text) 

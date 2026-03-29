@@ -249,70 +249,74 @@
               {% endif %}
             </td>
             <td class="text-end pe-4">
-              {% if current_user.role in ['superadmin', 'admin'] %} {% if "Retenu" not in candidat.statut %}
-              <button
-                type="button"
-                class="btn btn-action btn-light text-success"
-                data-bs-toggle="modal"
-                data-bs-target="#modalValidation"
-                data-id="{{ candidat.id }}"
-                data-nom="{{ candidat.nom_entreprise }}"
-                title="Valider"
-              >
-                ✓
-              </button>
-              {% endif %} {% endif %} {% if candidat.fichier_scanne %}
-              <a
-                href="{{ url_for('main.secure_download', folder='scans', filename=candidat.fichier_scanne) }}"
-                target="_blank"
-                class="btn btn-action btn-light text-success"
-                title="Voir l'agrément signé"
-                >👁️</a
-              >
-              {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
-              <button
-                type="button"
-                class="btn btn-action btn-light text-warning"
-                data-bs-toggle="modal"
-                data-bs-target="#modalScan{{ candidat.id }}"
-                title="Uploader l'agrément signé"
-              >
-                📤
-              </button>
-              {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
-              <a
-                href="{{ url_for('main.decision', id=candidat.id, type_decision='refuser') }}"
-                class="btn btn-action btn-light text-warning"
-                title="Rejeter"
-                >✕</a
-              >
-              {% endif %}
-              <a
-                href="{{ url_for('main.telecharger_agrement_vierge', id=candidat.id) }}"
-                class="btn btn-action btn-light text-secondary"
-                title="Brouillon"
-                >📄</a
-              >
-              {% if "Retenu" in candidat.statut %}
-              <a
-                href="{{ url_for('main.telecharger_agrement_final', id=candidat.id) }}"
-                class="btn btn-action btn-success text-white"
-                title="Télécharger Final"
-                >📥</a
-              >
-              {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
-              <form action="{{ url_for('main.supprimer', id=candidat.id) }}" method="POST" style="display: inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <div class="d-flex justify-content-end align-items-center flex-wrap gap-1">
+                {% if current_user.role in ['superadmin', 'admin'] %} {% if "Retenu" not in candidat.statut %}
                 <button
-                  type="submit"
-                  class="btn btn-danger btn-sm"
-                  title="Supprimer"
-                  onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.');"
+                  type="button"
+                  class="btn btn-action btn-light text-success shadow-sm"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalValidation"
+                  data-id="{{ candidat.id }}"
+                  data-nom="{{ candidat.nom_entreprise }}"
+                  title="Valider"
                 >
-                  <i class="bi bi-trash"></i>
+                  ✓
                 </button>
-              </form>
-              {% endif %}
+                {% endif %} {% endif %} {% if candidat.fichier_scanne %}
+                <a
+                  href="{{ url_for('main.secure_download', folder='scans', filename=candidat.fichier_scanne) }}"
+                  target="_blank"
+                  class="btn btn-action btn-light text-success shadow-sm"
+                  title="Voir l'agrément signé"
+                  >👁️</a
+                >
+                {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
+                <button
+                  type="button"
+                  class="btn btn-action btn-light text-warning shadow-sm"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalScan{{ candidat.id }}"
+                  title="Uploader l'agrément signé"
+                >
+                  📤
+                </button>
+                {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
+                <a
+                  href="{{ url_for('main.decision', id=candidat.id, type_decision='refuser') }}"
+                  class="btn btn-action btn-light text-danger shadow-sm"
+                  title="Rejeter"
+                  >✕</a
+                >
+                {% endif %}
+
+                <a
+                  href="{{ url_for('main.telecharger_agrement_vierge', id=candidat.id) }}"
+                  class="btn btn-action btn-light text-secondary shadow-sm"
+                  title="Brouillon"
+                  >📄</a
+                >
+
+                {% if "Retenu" in candidat.statut %}
+                <a
+                  href="{{ url_for('main.telecharger_agrement_final', id=candidat.id) }}"
+                  class="btn btn-action btn-success text-white shadow-sm"
+                  title="Télécharger Final"
+                  >📥</a
+                >
+                {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
+                <form action="{{ url_for('main.supprimer', id=candidat.id) }}" method="POST" style="display: inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button
+                    type="submit"
+                    class="btn btn-action btn-light text-danger shadow-sm"
+                    title="Supprimer"
+                    onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.');"
+                  >
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
             </td>
           </tr>
           {% else %}

@@ -96,8 +96,12 @@
             <td class="text-truncate" style="max-width: 250px" title="{{ lettre.objet_marche }}">{{ lettre.objet_marche }}</td>
             <td>{{ lettre.date_heure_limite }}</td>
             <td class="text-end pe-4">
-              <div class="btn-group shadow-sm">
-                <a href="{{ url_for('main.telecharger_lettre', id=lettre.id) }}" class="btn btn-sm btn-outline-primary" title="Télécharger le PDF">
+              <div class="d-flex justify-content-end align-items-center flex-wrap gap-1">
+                <a
+                  href="{{ url_for('main.telecharger_lettre', id=lettre.id) }}"
+                  class="btn btn-sm btn-outline-primary shadow-sm"
+                  title="Télécharger le PDF"
+                >
                   📄 PDF
                 </a>
 
@@ -105,7 +109,7 @@
                 <a
                   href="{{ url_for('main.secure_download', folder='scans', filename=lettre.fichier_scanne) }}"
                   target="_blank"
-                  class="btn btn-sm btn-outline-success"
+                  class="btn btn-sm btn-outline-success shadow-sm"
                   title="Voir le document signé"
                 >
                   👁️ Voir Scan
@@ -113,7 +117,7 @@
                 {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
                 <button
                   type="button"
-                  class="btn btn-sm btn-outline-warning"
+                  class="btn btn-sm btn-outline-warning shadow-sm"
                   data-bs-toggle="modal"
                   data-bs-target="#modalScan{{ lettre.id }}"
                   title="Joindre le document signé"
@@ -124,11 +128,12 @@
                 <form
                   action="{{ url_for('main.supprimer_lettre', id=lettre.id) }}"
                   method="POST"
-                  class="d-inline"
+                  class="m-0 p-0"
+                  style="display: inline-block"
                   onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette lettre ?');"
                 >
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                  <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">🗑️</button>
+                  <button type="submit" class="btn btn-sm btn-outline-danger shadow-sm" title="Supprimer">🗑️</button>
                 </form>
                 {% endif %}
               </div>
@@ -370,11 +375,22 @@
                 inputObjet.placeholder = "Aucun objet trouvé.";
               }
             })
-            .catch((error) => console.error("Erreur API:", error));
+            // 🛠️ ON REMPLACE LE .catch ICI :
+            .catch((error) => {
+              console.error("Erreur API:", error);
+
+              // 🛠️ Sécurité : On débloque le champ pour que l'utilisateur puisse taper à la main
+              if (inputObjet) {
+                inputObjet.value = "";
+                inputObjet.placeholder = "Erreur de connexion, veuillez saisir manuellement.";
+                inputObjet.style.transition = "background-color 0.5s ease";
+                inputObjet.style.backgroundColor = "#ffebee"; // Petit fond rouge
+                setTimeout(() => (inputObjet.style.backgroundColor = ""), 2000); // Enlève le rouge après 2 sec
+              }
+            });
         }
       });
     }
-
     // ==========================================================
     // --- PARTIE 2 : GESTION DES CHECKBOXES DES PRESTATAIRES ---
     // ==========================================================

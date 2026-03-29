@@ -137,10 +137,10 @@
               <span class="badge bg-light text-primary border fw-bold rounded-pill px-3"> {{ b.get_dossiers()|length }} </span>
             </td>
             <td class="text-end pe-4">
-              <div class="btn-group">
+              <div class="d-flex justify-content-end align-items-center flex-wrap gap-1">
                 <a
                   href="{{ url_for('main.download_bordereau_pdf', id=b.id) }}"
-                  class="btn btn-outline-danger btn-sm"
+                  class="btn btn-outline-danger btn-sm shadow-sm"
                   title="Télécharger le PDF"
                   target="_blank"
                 >
@@ -151,7 +151,7 @@
                 <a
                   href="{{ url_for('main.secure_download', folder='scans', filename=b.fichier_scanne) }}"
                   target="_blank"
-                  class="btn btn-sm btn-outline-success ms-1"
+                  class="btn btn-sm btn-outline-success shadow-sm"
                   title="Voir le bordereau signé"
                 >
                   👁️ Voir Scan
@@ -159,7 +159,7 @@
                 {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
                 <button
                   type="button"
-                  class="btn btn-sm btn-outline-warning ms-1"
+                  class="btn btn-sm btn-outline-warning shadow-sm"
                   data-bs-toggle="modal"
                   data-bs-target="#modalScan{{ b.id }}"
                   title="Joindre le bordereau signé"
@@ -167,11 +167,11 @@
                   📤 Joindre Scan
                 </button>
                 {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
-                <form action="{{ url_for('main.supprimer_bordereau', id=b.id) }}" method="POST" style="display: inline">
+                <form action="{{ url_for('main.supprimer_bordereau', id=b.id) }}" method="POST" class="m-0 p-0" style="display: inline-block">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                   <button
                     type="submit"
-                    class="btn btn-outline-secondary btn-sm ms-1"
+                    class="btn btn-outline-secondary btn-sm shadow-sm"
                     onclick="return confirm('Voulez-vous vraiment supprimer ce bordereau ?');"
                     title="Supprimer"
                   >
@@ -254,6 +254,19 @@
 
           <div class="text-end mb-3">
             <button type="button" class="btn btn-outline-primary btn-sm" onclick="ajouterDossier()">+ Ajouter un dossier</button>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-12">
+              <label class="form-label fw-bold">Destinataire</label>
+              <input
+                type="text"
+                class="form-control"
+                name="destinataire"
+                value="Monsieur le Coordonnateur de la Cellule de Passation des Marchés Publics"
+                required
+              />
+            </div>
           </div>
 
           <div class="row g-3">

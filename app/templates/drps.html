@@ -625,5 +625,29 @@ Générale et de l'Equipement</textarea
       alert("Vous devez garder au moins une ligne.");
     }
   }
+
+  function updateAdresseInfo(selectElement) {
+    var candidatId = selectElement.value;
+    var row = selectElement.closest("tr");
+    var inputAdresse = row.querySelector(".champ-adresse");
+
+    if (candidatId) {
+      inputAdresse.value = "Chargement..."; // ⏳ Petit confort visuel
+      fetch("/api/get_adresse/" + candidatId)
+        .then((response) => {
+          if (!response.ok) throw new Error("Erreur serveur");
+          return response.json();
+        })
+        .then((data) => {
+          inputAdresse.value = data.adresse || "Adresse non trouvée";
+        })
+        .catch((error) => {
+          console.error("Erreur:", error);
+          inputAdresse.value = "Erreur de récupération"; // 🚨 Alerte l'utilisateur
+        });
+    } else {
+      inputAdresse.value = "";
+    }
+  }
 </script>
 {% endblock %}

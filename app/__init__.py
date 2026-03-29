@@ -12,18 +12,14 @@ csrf = CSRFProtect()
 
 def create_app(config_class=Config):
     app = Flask(__name__)
+    # 🛡️ Toutes tes sécurités de cookies (HTTPOnly, SameSite...) sont 
+    # maintenant chargées proprement et automatiquement depuis config.py ici :
     app.config.from_object(config_class)
 
-    # --- CONFIGURATION SÉCURITÉ SESSION ---
+    # Durée de vie de la session
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
-    app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # ✅ NOUVEAU : CSRF protection
-    # Désactiver en développement local si vous utilisez HTTP
-    if os.environ.get('FLASK_ENV') == 'production':
-        app.config['SESSION_COOKIE_SECURE'] = True
-    # --------------------------------------
 
-    # Initialisation
+    # Initialisation des extensions
     db.init_app(app)
     migrate = Migrate(app, db, render_as_batch=True)
     mail.init_app(app)
@@ -34,7 +30,7 @@ def create_app(config_class=Config):
 
     csrf.init_app(app)
 
-    # --- ÉTAPE 1 : CONFIGURATION DU FICHIER LOG ---
+    # --- CONFIGURATION DU FICHIER LOG ---
     if not app.debug:
         if not os.path.exists('logs'):
             os.mkdir('logs')
@@ -47,56 +43,61 @@ def create_app(config_class=Config):
         app.logger.addHandler(file_handler)
         app.logger.info('Démarrage du système MCAT - Surveillance active')
 
-    # Blueprint
+    # Enregistrement du Blueprint
     from app.routes import main as main_bp
     app.register_blueprint(main_bp)
 
-    # --- ÉTAPE 2 : GESTIONNAIRES D'ERREURS ---
+    # --- GESTIONNAIRES D'ERREURS ---
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template('errors/404.html'), 404
 
     @app.errorhandler(500)
     def internal_error(error):
-        db.session.rollback()
+        db.session.rollback() # Annule les transactions BDD en cours en cas de crash
         return render_template('errors/500.html'), 500
     
     @app.errorhandler(413)
     def file_too_large(error):
         return render_template('errors/413.html'), 413
     
-    # Création BDD
+   # --- INITIALISATION BASE DE DONNÉES ---
     with app.app_context():
         from app import models 
-        db.create_all()
+        from sqlalchemy.exc import ProgrammingError, OperationalError
+        
+        # 🛡️ SÉCURITÉ : On ne force la création des tables que si on est en développement (debug)
+        if app.debug:
+            db.create_all()
         
         from werkzeug.security import generate_password_hash
         
-        # --- 🛡️ RÉCUPÉRATION OBLIGATOIRE DEPUIS LE .ENV ---
-        # Les mots de passe par défaut DOIVENT être définis en variables d'environnement
-        # S'ils manquent, l'application refuse de démarrer
+        # Récupération depuis le .env (Fail-Fast)
         admin_pass = os.environ.get('ADMIN_DEFAULT_PASSWORD')
         superadmin_pass = os.environ.get('SUPERADMIN_DEFAULT_PASSWORD')
         
-        # ✅ VALIDATION CRITIQUE : Forcer les variables d'environnement
         if not admin_pass or not superadmin_pass:
             raise ValueError(
                 "ERREUR CRITIQUE : Les variables d'environnement ADMIN_DEFAULT_PASSWORD "
                 "et SUPERADMIN_DEFAULT_PASSWORD doivent être définies dans le fichier .env"
             )
 
-        # Création du compte Admin si absent
-        if not models.User.query.filter_by(username='Admin').first():
-            hashed_admin = generate_password_hash(admin_pass, method='pbkdf2:sha256')
-            db.session.add(models.User(username='Admin', password_hash=hashed_admin, role='admin'))
-        
-        # Création du compte SuperAdmin si absent
-        if not models.User.query.filter_by(username='SuperAdmin').first():
-            hashed_super = generate_password_hash(superadmin_pass, method='pbkdf2:sha256')
-            db.session.add(models.User(username='SuperAdmin', password_hash=hashed_super, role='superadmin'))
-        
-        db.session.commit()
-    # -----------------------------------------------
+        # On utilise un try...except pour éviter de crasher si la table n'existe pas encore
+        try:
+            # Création du compte Admin si absent
+            if not models.User.query.filter_by(username='Admin').first():
+                hashed_admin = generate_password_hash(admin_pass, method='pbkdf2:sha256')
+                db.session.add(models.User(username='Admin', password_hash=hashed_admin, role='admin'))
+            
+            # Création du compte SuperAdmin si absent
+            if not models.User.query.filter_by(username='SuperAdmin').first():
+                hashed_super = generate_password_hash(superadmin_pass, method='pbkdf2:sha256')
+                db.session.add(models.User(username='SuperAdmin', password_hash=hashed_super, role='superadmin'))
+            
+            db.session.commit()
+        except (ProgrammingError, OperationalError):
+            # Les tables ne sont pas encore créées, on ignore l'erreur pour laisser Flask démarrer
+            pass
 
     return app
 

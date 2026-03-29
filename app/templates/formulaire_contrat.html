@@ -77,38 +77,41 @@
             <td>{{ contrat.entreprise_nom }}</td>
             <td class="fw-bold text-success">{{ contrat.montant_chiffres }} FCFA</td>
             <td class="text-end pe-4">
-              <a href="{{ url_for('main.telecharger_contrat', id=contrat.id) }}" class="btn btn-sm btn-outline-danger me-1"> 📄 PDF </a>
+              <div class="d-flex justify-content-end align-items-center flex-wrap gap-1">
+                <a href="{{ url_for('main.telecharger_contrat', id=contrat.id) }}" class="btn btn-sm btn-outline-danger shadow-sm"> 📄 PDF </a>
 
-              {% if contrat.fichier_scanne %}
-              <a
-                href="{{ url_for('main.secure_download', folder='scans', filename=contrat.fichier_scanne) }}"
-                target="_blank"
-                class="btn btn-sm btn-outline-success"
-                title="Voir le contrat signé"
-              >
-                👁️ Voir Scan
-              </a>
-              {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
-              <button
-                type="button"
-                class="btn btn-sm btn-outline-warning"
-                data-bs-toggle="modal"
-                data-bs-target="#modalScan{{ contrat.id }}"
-                title="Joindre le contrat signé"
-              >
-                📤 Joindre Scan
-              </button>
-              {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
-              <form
-                action="{{ url_for('main.supprimer_contrat', id=contrat.id) }}"
-                method="POST"
-                class="d-inline"
-                onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce contrat ?');"
-              >
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Supprimer">🗑️</button>
-              </form>
-              {% endif %}
+                {% if contrat.fichier_scanne %}
+                <a
+                  href="{{ url_for('main.secure_download', folder='scans', filename=contrat.fichier_scanne) }}"
+                  target="_blank"
+                  class="btn btn-sm btn-outline-success shadow-sm"
+                  title="Voir le contrat signé"
+                >
+                  👁️ Voir Scan
+                </a>
+                {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-warning shadow-sm"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalScan{{ contrat.id }}"
+                  title="Joindre le contrat signé"
+                >
+                  📤 Joindre Scan
+                </button>
+                {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
+                <form
+                  action="{{ url_for('main.supprimer_contrat', id=contrat.id) }}"
+                  method="POST"
+                  class="m-0 p-0"
+                  style="display: inline-block"
+                  onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce contrat ?');"
+                >
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button type="submit" class="btn btn-sm btn-outline-secondary shadow-sm" title="Supprimer">🗑️</button>
+                </form>
+                {% endif %}
+              </div>
             </td>
           </tr>
           {% endfor %} {% else %}
@@ -326,97 +329,26 @@
     }
 
     // =========================================================
-    // 2. CONVERSION DU MONTANT EN LETTRES
+    // 2. CONVERSION DU MONTANT EN LETTRES (VIA API PYTHON)
     // =========================================================
     const montantInput = document.getElementById("montantInput");
     const montantLettresInput = document.getElementById("montantLettresInput");
 
-    function numberToWords(number) {
-      let n = parseInt(number.toString().replace(/[\s\D]/g, ""), 10);
-      if (isNaN(n)) return "";
-      if (n === 0) return "zéro";
-
-      const units = [
-        "",
-        "un",
-        "deux",
-        "trois",
-        "quatre",
-        "cinq",
-        "six",
-        "sept",
-        "huit",
-        "neuf",
-        "dix",
-        "onze",
-        "douze",
-        "treize",
-        "quatorze",
-        "quinze",
-        "seize",
-        "dix-sept",
-        "dix-huit",
-        "dix-neuf",
-      ];
-      const tens = ["", "", "vingt", "trente", "quarante", "cinquante", "soixante", "soixante-dix", "quatre-vingt", "quatre-vingt-dix"];
-
-      function convertLess1000(num) {
-        let res = "";
-        let c = Math.floor(num / 100);
-        let rest = num % 100;
-        if (c > 0) {
-          if (c === 1) res += "cent ";
-          else res += units[c] + " cent ";
-        }
-        if (rest > 0) {
-          if (rest < 20) {
-            res += units[rest] + " ";
-          } else {
-            let d = Math.floor(rest / 10);
-            let u = rest % 10;
-            if (d === 7 || d === 9) {
-              res += tens[d - 1] + "-" + units[10 + u] + " ";
-            } else {
-              res += tens[d] + (u === 1 && d !== 8 ? " et " : u > 0 ? "-" : " ");
-              if (u > 0 && !(u === 1 && d !== 8)) res += units[u] + " ";
-              else if (u === 1 && d !== 8) res += "un ";
-            }
-          }
-        }
-        return res;
-      }
-
-      let result = "";
-      let billions = Math.floor(n / 1000000000);
-      n %= 1000000000;
-      let millions = Math.floor(n / 1000000);
-      n %= 1000000;
-      let thousands = Math.floor(n / 1000);
-      n %= 1000;
-
-      if (billions > 0) {
-        result += convertLess1000(billions) + (billions > 1 ? "milliards " : "milliard ");
-      }
-      if (millions > 0) {
-        result += convertLess1000(millions) + (millions > 1 ? "millions " : "million ");
-      }
-      if (thousands > 0) {
-        if (thousands === 1) result += "mille ";
-        else result += convertLess1000(thousands) + "mille ";
-      }
-      if (n > 0) {
-        result += convertLess1000(n);
-      }
-
-      return result.trim();
-    }
-
     if (montantInput) {
       montantInput.addEventListener("input", function (e) {
         let rawValue = this.value.replace(/\s/g, "");
+        console.log("Je viens de taper :", rawValue); // Debug dans la console pour voir ce qui est capturé
         if (!isNaN(rawValue) && rawValue !== "") {
-          let enLettres = numberToWords(rawValue);
-          montantLettresInput.value = enLettres;
+          montantLettresInput.value = "Calcul en cours..."; // Petit feedback visuel
+
+          fetch(`{{ url_for('main.convertir_montant') }}?montant=${rawValue}`)
+            .then((response) => response.json())
+            .then((data) => {
+              montantLettresInput.value = data.lettres;
+            })
+            .catch((error) => {
+              montantLettresInput.value = "Erreur de conversion";
+            });
         } else {
           montantLettresInput.value = "";
         }

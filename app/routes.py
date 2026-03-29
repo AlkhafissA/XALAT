@@ -107,7 +107,13 @@ def login():
             return redirect(url_for('main.super_dashboard'))
         return redirect(url_for('main.tableau_de_bord'))
 
-    user_ip = request.remote_addr 
+    # 🛡️ SÉCURITÉ : Récupère la vraie IP même si l'application est derrière un proxy
+    # S'il y a plusieurs IP (séparées par des virgules), la première est la vraie IP du client.
+    forwarded_for = request.headers.get('X-Forwarded-For')
+    if forwarded_for:
+        user_ip = forwarded_for.split(',')[0].strip()
+    else:
+        user_ip = request.remote_addr 
     record = LoginAttempt.query.filter_by(ip_address=user_ip).first()
     
     # 2. VÉRIFICATION DU BLOCAGE (Applicable à TOUT LE MONDE, pas d'immunité)
@@ -337,15 +343,20 @@ def nouvelle_cotation():
 
 @main.route('/modifier_cotation/<int:id>')
 @login_required
-@role_requis('superadmin', 'admin', 'agent') # 🛡️ Stagiaire bloqué
+@role_requis('superadmin', 'admin', 'agent')
 def modifier_cotation(id):
     cotation = db.session.get(Cotation, id)
+    # 🛡️ ROBUSTESSE : Si l'ID n'existe pas, on renvoie poliment l'utilisateur à la liste
+    if not cotation:
+        flash("Erreur : Ce dossier n'existe pas ou a été supprimé.", "danger")
+        return redirect(url_for('main.liste_cotations'))
+        
     candidats = Candidat.query.order_by(Candidat.nom_entreprise).all()
     return render_template('cotations_form.html', candidats=candidats, cotation=cotation)
 
 @main.route('/sauvegarder_cotation', methods=['POST'])
 @login_required
-@role_requis('superadmin', 'admin', 'agent') # 🛡️ Stagiaire bloqué
+@role_requis('superadmin', 'admin', 'agent')
 def sauvegarder_cotation():
     cotation_id = request.form.get('cotation_id')
     def get_date(f): 
@@ -371,15 +382,36 @@ def sauvegarder_cotation():
         )
         db.session.add(cotation)
     
-    db.session.commit()
+    # 🛠️ CORRECTION ICI : On utilise flush() au lieu de commit()
+    # Cela simule l'enregistrement pour obtenir le cotation.id, 
+    # mais garde la possibilité d'annuler si les montants sont faux !
+    db.session.flush() 
+    
     for i in range(1, 4):
         nom = request.form.get(f'candidat_{i}')
         mnt = request.form.get(f'montant_{i}')
         if nom and mnt:
-           db.session.add(Offre(cotation_id=cotation.id, nom_candidat=nom, montant=int(mnt)))
+            try:
+                montant_securise = int(mnt)
+                
+                # 🚨 LA VÉRIFICATION SÉCURITÉ ABSOLUE
+                if montant_securise >= 3000000:
+                    db.session.rollback() # 🔄 Annule TOUT (même la création de la cotation)
+                    flash(f"Alerte Sécurité : Le montant pour {nom} ({montant_securise} FCFA) dépasse le plafond autorisé de 3 Millions !", "danger")
+                    return redirect(url_for('main.nouvelle_cotation'))
+                
+                db.session.add(Offre(cotation_id=cotation.id, nom_candidat=nom, montant=montant_securise))
+            except ValueError:
+                db.session.rollback() # 🔄 Annule tout en cas d'erreur de frappe (lettres)
+                flash(f"Erreur : Le montant pour {nom} doit être un chiffre valide.", "danger")
+                return redirect(request.url)
+                
     action = "Modification Cotation" if cotation_id else "Création Cotation"
     log_action(action, cotation.objet)
-    db.session.commit()
+    
+    # 🛠️ TOUT EST VALIDE : On valide définitivement toute la transaction !
+    db.session.commit() 
+    
     return redirect(url_for('main.liste_cotations'))
 
 @main.route('/supprimer_cotation/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
@@ -400,6 +432,12 @@ def supprimer_cotation(id):
 @login_required
 def telecharger_pv(id):
     cotation = db.session.get(Cotation, id)
+    
+    # 🛡️ ROBUSTESSE : On protège le téléchargement du PDF si l'ID est faux
+    if not cotation:
+        flash("Erreur : Ce dossier n'existe pas.", "danger")
+        return redirect(url_for('main.liste_cotations'))
+        
     offres = sorted(cotation.offres, key=lambda x: x.montant)
     gagnant = offres[0] if offres else None
     
@@ -789,14 +827,19 @@ def verifier_mot_de_passe_temporaire():
         # Si la page qu'il essaie de visiter n'est pas dans la liste autorisée
         if request.endpoint not in pages_autorisees:
             
-            # On récupère le mot de passe par défaut
-            mdp_defaut = current_app.config.get('MOT_DE_PASSE_PAR_DEFAUT', 'Mcat@Temp2025')
+           # 🛡️ SÉCURITÉ : On récupère le mot de passe par défaut directement depuis le fichier .env
+            mdp_defaut = os.environ.get('MOT_DE_PASSE_PAR_DEFAUT')
             
-            # On vérifie si son mot de passe actuel EST le mot de passe par défaut
-            if check_password_hash(current_user.password_hash, mdp_defaut):
-                flash("Sécurité : Veuillez modifier votre mot de passe temporaire avant de continuer.", "warning")
-                # On le redirige de force !
-                return redirect(url_for('main.forcer_changement_mdp'))
+            # On s'assure que la variable a bien été trouvée dans le .env pour éviter un crash
+            if mdp_defaut:
+                # On vérifie si son mot de passe actuel EST le mot de passe par défaut
+                if check_password_hash(current_user.password_hash, mdp_defaut):
+                    flash("Sécurité : Veuillez modifier votre mot de passe temporaire avant de continuer.", "warning")
+                    # On le redirige de force !
+                    return redirect(url_for('main.forcer_changement_mdp'))
+            else:
+                # Petit message d'alerte dans ta console de développeur si le .env est mal lu
+                print("⚠️ Attention : MOT_DE_PASSE_PAR_DEFAUT est introuvable dans le fichier .env !")
 
 # --- ROUTE POUR LA PAGE DRPS  ---
 @main.route('/drps', methods=['GET', 'POST'])
@@ -965,6 +1008,8 @@ def ajouter_bordereau():
     service_ref = request.form.get('service_ref')
     date_str = request.form.get('date_signature')
     observations = request.form.get('observations')
+    # ✅ 1. ON RÉCUPÈRE LE DESTINATAIRE ICI
+    destinataire = request.form.get('destinataire')
     
     try:
         date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -987,6 +1032,7 @@ def ajouter_bordereau():
         service_ref=service_ref,
         date_signature=date_obj,
         observations=observations,
+        destinataire=destinataire, # 🔥 L'OUBLI ÉTAIT ICI : on le met dans la base !
         dossiers_data=json.dumps(dossiers_list)
     )
     
@@ -1010,6 +1056,8 @@ def download_bordereau_pdf(id):
         'service_ref': bordereau.service_ref,
         'date': bordereau.date_signature.strftime("%d/%m/%Y"),
         'dossiers': bordereau.get_dossiers(),
+        # 🔥 C'EST CETTE LIGNE QUI CHANGE TOUT ! ON LIT LA BASE DE DONNÉES :
+        'destinataire': bordereau.destinataire if bordereau.destinataire else 'Monsieur le Coordonnateur de la Cellule de Passation des Marchés Publics',
         'observations': bordereau.observations
     }
     
@@ -1289,12 +1337,18 @@ def ajouter_notification():
     # --- 4. GESTION DES PERDANTS (LETTRE D'INFORMATION) ---
     lettre_invit = LettreInvitation.query.filter_by(immatriculation=immatriculation).first()
     candidats_perdants_pdf = []
+    
     if lettre_invit and lettre_invit.form_data:
         invit_data = json.loads(lettre_invit.form_data)
         prestataires_invites = invit_data.get('prestataires', [])
+        
         for p in prestataires_invites:
             nom_p = p.get('nom')
-            if nom_p and nom_p != destinataire_nom:
+            # 🛠️ CORRECTION : On récupère l'ID du prestataire de la liste et on le compare à l'ID du gagnant
+            id_p = str(p.get('id') or p.get('candidat_id') or p.get('prestataire_id') or '')
+            
+            # On vérifie qu'on a un nom, et que l'ID est différent de celui du gagnant
+            if nom_p and id_p != str(prestataire_id):
                 candidats_perdants_pdf.append({
                     'nom_entreprise': nom_p,
                     'adresse': p.get('adresse', ''),
@@ -1314,11 +1368,17 @@ def ajouter_notification():
         db.session.add(nouvelle_info)
         print(f"✅ DEBUG - Lettre d'Information créée ({len(candidats_perdants_pdf)} perdants)")
 
+    # 👇 C'EST ICI QUE TU REMPLACES L'ANCIENNE FINALISATION 👇
     # --- FINALISATION ---
-    db.session.commit()
-    log_action("Génération Complète Marché", immatriculation)
-    
-    flash(f"Succès ! Notification, Information et PV d'Attribution générés pour {immatriculation}", "success")
+    try:
+        db.session.commit()
+        log_action("Génération Complète Marché", immatriculation)
+        flash(f"Succès ! Notification, Information et PV d'Attribution générés pour {immatriculation}", "success")
+    except Exception as e:
+        db.session.rollback() # 🛠️ Sécurité : on annule tout en cas d'erreur
+        print(f"❌ ERREUR DB lors de la génération multiple : {str(e)}")
+        flash("Une erreur critique est survenue lors de l'enregistrement. Veuillez réessayer.", "danger")
+        
     return redirect(url_for('main.liste_notifications'))
 
 # --- ROUTE PDF NOTIFICATION (Gagnant) - DÉJÀ EXISTANTE ---
@@ -2614,3 +2674,16 @@ def page_changement_mot_de_passe():
         
     # 3. AFFICHAGE DE LA PAGE (Quand tu arrives sur la page)
     return render_template('changement_mdp.html')
+
+@main.route('/api/convertir_montant')
+def convertir_montant():
+    montant_str = request.args.get('montant', '0')
+    try:
+        montant = int(montant_str)
+        if montant <= 0:
+            return jsonify({'lettres': ''})
+        # Convertit en français
+        lettres = num2words(montant, lang='fr')
+        return jsonify({'lettres': lettres.capitalize() + ' francs CFA'})
+    except ValueError:
+        return jsonify({'lettres': ''})

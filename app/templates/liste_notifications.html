@@ -96,10 +96,10 @@
             <td><div class="fw-bold text-dark">{{ n.entreprise }}</div></td>
             <td>{{ n.date_creation.strftime('%d/%m/%Y') }}</td>
             <td class="text-end pe-4">
-              <div class="btn-group shadow-sm">
+              <div class="d-flex justify-content-end align-items-center flex-wrap gap-1">
                 <a
                   href="{{ url_for('main.download_notification_pdf', id=n.id) }}"
-                  class="btn btn-outline-danger btn-sm"
+                  class="btn btn-outline-danger btn-sm shadow-sm"
                   target="_blank"
                   title="Lettre de Notification (Gagnant)"
                 >
@@ -108,13 +108,17 @@
 
                 <a
                   href="{{ url_for('main.lettres_information') }}"
-                  class="btn btn-sm btn-outline-info"
+                  class="btn btn-sm btn-outline-info shadow-sm"
                   title="Aller vers la page des Lettres d'Information"
                 >
                   ℹ️ Info
                 </a>
 
-                <a href="{{ url_for('main.liste_pv') }}" class="btn btn-sm btn-outline-dark" title="Aller vers la page des PV d'Attribution">
+                <a
+                  href="{{ url_for('main.liste_pv') }}"
+                  class="btn btn-sm btn-outline-dark shadow-sm"
+                  title="Aller vers la page des PV d'Attribution"
+                >
                   📄 PV
                 </a>
 
@@ -122,7 +126,7 @@
                 <a
                   href="{{ url_for('main.secure_download', folder='scans', filename=n.fichier_scanne) }}"
                   target="_blank"
-                  class="btn btn-sm btn-outline-success"
+                  class="btn btn-sm btn-outline-success shadow-sm"
                   title="Voir la lettre signée"
                 >
                   👁️ Voir Scan
@@ -130,7 +134,7 @@
                 {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
                 <button
                   type="button"
-                  class="btn btn-sm btn-outline-warning"
+                  class="btn btn-sm btn-outline-warning shadow-sm"
                   data-bs-toggle="modal"
                   data-bs-target="#modalScan{{ n.id }}"
                   title="Joindre la lettre signée"
@@ -138,11 +142,11 @@
                   📤 Scan
                 </button>
                 {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
-                <form action="{{ url_for('main.supprimer_notification', id=n.id) }}" method="POST" style="display: inline">
+                <form action="{{ url_for('main.supprimer_notification', id=n.id) }}" method="POST" class="m-0 p-0" style="display: inline-block">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                   <button
                     type="submit"
-                    class="btn btn-outline-secondary btn-sm ms-1"
+                    class="btn btn-outline-secondary btn-sm shadow-sm"
                     onclick="return confirm('Supprimer cette notification ?');"
                     title="Supprimer"
                   >

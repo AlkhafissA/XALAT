@@ -151,7 +151,7 @@
           </div>
 
           <div class="section-title">2. Commission</div>
-          <div class="row">
+          <div class="row g-3">
             <div class="col-md-4">
               <label class="small">Président</label>
               <input type="text" class="form-control" name="president" value="{{ cotation.president if cotation else 'Mamadou Moustapha DIALLO' }}" />
@@ -172,16 +172,15 @@
           </div>
 
           {% for i in range(1, 4) %} 
-            {# Logique de récupération de l'offre existante si en mode édition #} 
             {% set offre = None %} 
             {% if cotation and cotation.offres|length >= i %} 
               {% set offre = cotation.offres[i-1] %} 
             {% endif %}
 
-            <div class="row mb-3 align-items-center p-2 border rounded bg-light">
-              <div class="col-1 fw-bold text-center h4 text-secondary">{{ i }}</div>
+            <div class="row mb-3 align-items-center p-3 border rounded bg-light mx-0">
+              <div class="col-12 col-md-1 fw-bold text-center h4 text-secondary mb-3 mb-md-0">{{ i }}</div>
               
-              <div class="col-md-6 mb-2 mb-md-0">
+              <div class="col-12 col-md-6 mb-3 mb-md-0">
                 <label class="small text-muted">Entreprise</label>
                 <select class="form-select" name="candidat_{{ i }}">
                   <option value="">-- Choisir --</option>
@@ -193,7 +192,7 @@
                 </select>
               </div>
               
-              <div class="col-md-5">
+              <div class="col-12 col-md-5">
                 <label class="small text-muted">Montant (FCFA)</label>
                 <input type="number" class="form-control input-montant" name="montant_{{ i }}" placeholder="Ex: 2500000" value="{{ offre.montant if offre else '' }}" oninput="verifierMontant(this)" />
                 <div class="error-message mt-1">⛔ Le montant doit être inférieur à 3 Millions !</div>
