@@ -28,7 +28,7 @@ from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.extensions import db, mail
-from app.models import User, Candidat, Cotation, Offre, Historique, LoginAttempt, LogAction
+from app.models import User, Candidat, Cotation, Offre, Historique, LoginAttempt, LogAction, Dossier, DocumentLibre
 from app.utils import clean_text, generer_lettre_agrement, num2words_fr, dessiner_entete_officiel
 
 # Création du "Blueprint"
@@ -2719,3 +2719,15 @@ def convertir_montant():
         return jsonify({'lettres': lettres.capitalize() + ' francs CFA'})
     except ValueError:
         return jsonify({'lettres': ''})
+
+@main.route('/suivi/dossier/<int:dossier_id>')
+@login_required
+def dossier_intelligent(dossier_id):
+    # 1. Tu récupères le dossier depuis ta base de données
+    dossier = Dossier.query.get_or_404(dossier_id)
+    
+    # 2. Tu récupères les documents additionnels créés librement
+    documents_libres = DocumentLibre.query.filter_by(dossier_id=dossier_id).all()
+    
+    # 3. Tu renvoies tout vers la nouvelle page HTML
+    return render_template('dossier_intelligent.html', dossier=dossier, documents_libres=documents_libres)

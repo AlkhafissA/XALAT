@@ -113,13 +113,18 @@ def generer_lettre_agrement(candidat, mode='vierge'):
         civilite = "Monsieur le Directeur"
         titre_destinataire = "Monsieur le Directeur"
 
-    # --- DESSIN GRAPHIQUE ---
-# --- DESSIN GRAPHIQUE ---
+  # --- DESSIN GRAPHIQUE ---
     x_flag_top = 43; y_flag_top = 10; w_band_top = 8; h_flag_top = 14 
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_flag_top, y_flag_top, w_band_top, h_flag_top, 'F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_flag_top + w_band_top, y_flag_top, w_band_top, h_flag_top, 'F')
-    pdf.set_xy(x_flag_top + w_band_top, y_flag_top + 5); pdf.set_text_color(0, 140, 60); pdf.set_font("Arial", '', 20) 
-    pdf.cell(w_band_top, h_flag_top - 4, "*", align='C')
+    
+    # 🌟 CENTRAGE PARFAIT - GRAND DRAPEAU
+    # Ajuste ce chiffre : si l'étoile est trop basse, mets 4.0 ou 3.5. Si elle est trop haute, mets 5.0.
+    decalage_y = 4.5 
+    pdf.set_xy(x_flag_top + w_band_top, y_flag_top + decalage_y); 
+    pdf.set_text_color(0, 140, 60); pdf.set_font("ZapfDingbats", '', 11) 
+    pdf.cell(w_band_top, 5, chr(72), align='C') # Hauteur de cellule fixée à 5 pour mieux contrôler
+    
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_flag_top + (w_band_top*2), y_flag_top, w_band_top, h_flag_top, 'F')
 
     y_start_text = y_flag_top + h_flag_top + 5 
@@ -132,8 +137,15 @@ def generer_lettre_agrement(candidat, mode='vierge'):
     y_barre = pdf.get_y() + 1; w_barre_total = 44; x_barre_start = 33; w_segment = w_barre_total / 3; h_barre = 1.5
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_barre_start, y_barre, w_segment, h_barre, 'F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_barre_start + w_segment, y_barre, w_segment, h_barre, 'F')
-    pdf.set_xy(x_barre_start + w_segment, y_barre - 0.5); pdf.set_font("Arial", '', 10); pdf.set_text_color(0, 140, 60) 
-    pdf.cell(w_segment, 4, "*", align='C'); pdf.set_fill_color(230, 30, 30); pdf.rect(x_barre_start + (w_segment*2), y_barre, w_segment, h_barre, 'F')
+    
+    # 🌟 CENTRAGE PARFAIT - PETITE BARRE TRICOLORE
+    # Pareil ici : on ajuste précisément le décalage (en négatif car on remonte par rapport à la barre)
+    decalage_y_barre = -1.2 
+    pdf.set_xy(x_barre_start + w_segment, y_barre + decalage_y_barre); 
+    pdf.set_font("ZapfDingbats", '', 5.5); pdf.set_text_color(0, 140, 60) 
+    pdf.cell(w_segment, 4, chr(72), align='C'); 
+    
+    pdf.set_fill_color(230, 30, 30); pdf.rect(x_barre_start + (w_segment*2), y_barre, w_segment, h_barre, 'F')
     pdf.set_xy(10, y_barre + 3); pdf.set_font("Arial", 'B', 30); pdf.set_text_color(0, 100, 0)
     pdf.cell(90, 12, txt="MCAT", ln=1, align='C')
     pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", 'B', 9)
@@ -211,42 +223,49 @@ Je vous prie de croire, {civilite}, à l'assurance de ma considération distingu
 
 # ... (Tout ton code existant reste au dessus) ...
 
+import math
+from reportlab.lib import colors
+from reportlab.lib.units import cm
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.graphics.shapes import Drawing, Rect, Polygon
+
+# ==========================================
+# 1. FONCTIONS DE DESSIN POUR LES DRAPEAUX ET ÉTOILES
+# ==========================================
+
+def dessiner_etoile(cx, cy, rayon, couleur):
+    """Dessine une étoile parfaite à 5 branches"""
+    points = []
+    r_in = rayon * 0.382 
+    for i in range(10):
+        angle = i * (math.pi / 5) - (math.pi / 2)
+        r = rayon if i % 2 == 0 else r_in
+        points.extend([cx + r * math.cos(angle), cy - r * math.sin(angle)])
+    return Polygon(points, fillColor=colors.HexColor(couleur), strokeColor=None)
+
 def dessiner_drapeau():
-    # Dimensions du drapeau
-    width = 1.5 * cm
-    height = 1.0 * cm
+    width = 1.6 * cm; height = 1.1 * cm; w_band = width / 3
     d = Drawing(width, height)
-    
-    # Largeur d'une bande
-    w_band = width / 3
-    
-    # Bande Verte
     d.add(Rect(0, 0, w_band, height, fillColor=colors.HexColor('#00853F'), strokeColor=None))
-    # Bande Jaune
     d.add(Rect(w_band, 0, w_band, height, fillColor=colors.HexColor('#FDEF42'), strokeColor=None))
-    # Bande Rouge
     d.add(Rect(w_band * 2, 0, w_band, height, fillColor=colors.HexColor('#E31B23'), strokeColor=None))
-    
-    # Étoile Verte (approximative) au centre
-    cx, cy = width / 2, height / 2
-    r = w_band * 0.35 # Rayon de l'étoile
-    # Points de l'étoile
-    points = [
-        cx, cy + r,
-        cx + r * 0.22, cy + r * 0.3,
-        cx + r * 0.95, cy + r * 0.3,
-        cx + r * 0.36, cy - r * 0.11,
-        cx + r * 0.58, cy - r * 0.8,
-        cx, cy - r * 0.38,
-        cx - r * 0.58, cy - r * 0.8,
-        cx - r * 0.36, cy - r * 0.11,
-        cx - r * 0.95, cy + r * 0.3,
-        cx - r * 0.22, cy + r * 0.3,
-    ]
-    d.add(Polygon(points, fillColor=colors.HexColor('#00853F'), strokeColor=None))
+    d.add(dessiner_etoile(w_band * 1.5, height / 2, w_band * 0.35, '#00853F'))
+    return d
+
+def dessiner_petite_barre():
+    width = 4.4 * cm; height = 0.15 * cm; w_band = width / 3
+    d = Drawing(width, height)
+    d.add(Rect(0, 0, w_band, height, fillColor=colors.HexColor('#00853F'), strokeColor=None))
+    d.add(Rect(w_band, 0, w_band, height, fillColor=colors.HexColor('#FDEF42'), strokeColor=None))
+    d.add(Rect(w_band * 2, 0, w_band, height, fillColor=colors.HexColor('#E31B23'), strokeColor=None))
+    d.add(dessiner_etoile(width / 2, height / 2, height * 0.45, '#00853F'))
     return d
 
 def generer_pdf_bordereau(buffer, data):
+    # Initialisation du document
     doc = SimpleDocTemplate(buffer, pagesize=A4,
                             rightMargin=1*cm, leftMargin=1.5*cm,
                             topMargin=0.5*cm, bottomMargin=1*cm)
@@ -254,88 +273,103 @@ def generer_pdf_bordereau(buffer, data):
     elements = []
     styles = getSampleStyleSheet()
     
-    # --- STYLES ---
+    # =========================================================================
+    # METS TOUS LES STYLES EXACTEMENT ICI (AVANT DE COMMENCER À CRÉER DU TEXTE)
+    # =========================================================================
+    
+    # 1. Tes anciens styles (nécessaires pour éviter l'erreur Pylance ligne 368)
     style_normal = ParagraphStyle(name='Times', parent=styles['Normal'], fontName='Times-Roman', fontSize=10, leading=12)
     style_center_bold = ParagraphStyle(name='CenterBold', parent=style_normal, alignment=TA_CENTER, fontName='Times-Bold')
     style_center_italic = ParagraphStyle(name='CenterItalic', parent=style_normal, alignment=TA_CENTER, fontName='Times-Italic', fontSize=9)
-    
-    # MODIFICATION 1 : On met textColor=colors.black (au lieu de colors.red)
     style_red_bold = ParagraphStyle(name='RedBold', parent=style_center_bold, textColor=colors.black)
-    
-    # MODIFICATION 2 : Le numéro en haut à droite en noir
     style_num_right = ParagraphStyle(name='NumRight', parent=style_normal, alignment=TA_RIGHT, fontName='Times-Bold', textColor=colors.black, fontSize=11)
-    
     style_date_right = ParagraphStyle(name='DateRight', parent=style_normal, alignment=TA_RIGHT, fontName='Times-Bold')
     
-    # --- EN-TÊTE ---
+    # 2. Les nouveaux styles sur-mesure pour le super en-tête MCAT
+    style_rep = ParagraphStyle(name='Rep', fontName='Times-Bold', fontSize=15, alignment=TA_CENTER, textColor=colors.black)
+    style_devise = ParagraphStyle(name='Dev', fontName='Times-Italic', fontSize=12, alignment=TA_CENTER, textColor=colors.HexColor('#000033'))
+    style_min = ParagraphStyle(name='Min', fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#006400'), alignment=TA_CENTER, leading=11)
+    style_mcat = ParagraphStyle(name='MCAT', fontName='Helvetica-Bold', fontSize=28, textColor=colors.HexColor('#006400'), alignment=TA_CENTER, leading=30)
+    style_dir = ParagraphStyle(name='Dir', fontName='Helvetica-Bold', fontSize=9, textColor=colors.black, alignment=TA_CENTER, leading=13)
+    
+    # =========================================================================
+    # FIN DES STYLES, ON COMMENCE À CONSTRUIRE LE DOCUMENT
+    # =========================================================================
+    # --- COLONNE GAUCHE (Le design exact) ---
     drapeau = dessiner_drapeau()
-    txt_republique = Paragraph("<b>REPUBLIQUE DU SENEGAL</b>", style_center_bold)
-    txt_devise = Paragraph("<i>Un Peuple – Un But – Une Foi</i>", style_center_italic)
-    separateur = Paragraph("--------------------", style_center_bold)
-    txt_ministere = Paragraph("<b>MINISTERE DU TOURISME<br/>ET DE L’ARTISANAT</b>", style_center_bold)
+    txt_republique = Paragraph("République du Sénégal", style_rep)
+    txt_devise = Paragraph("Un Peuple - Un But - Une Foi", style_devise)
+    txt_ministere = Paragraph("MINISTÈRE DE LA CULTURE, DE<br/>L'ARTISANAT ET DU TOURISME", style_min)
+    petite_barre = dessiner_petite_barre()
+    txt_mcat = Paragraph("MCAT", style_mcat)
     
-    # Utilisation du style noir défini plus haut
-    txt_direction = Paragraph(f"<b>{data['direction']}</b>", style_red_bold)
+    # On force le retour à la ligne après "GENERALE ET" pour correspondre exactement à l'image
+    direction_texte = data.get('direction', "DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT")
+    direction_texte = direction_texte.replace(" GENERALE ET DE ", " GENERALE ET<br/>DE ")
+    txt_direction = Paragraph(direction_texte, style_dir)
 
-    col_gauche = [drapeau, txt_republique, txt_devise, separateur, txt_ministere, separateur, txt_direction, separateur]
-    
-    
-    
-
-    # 1. On définit notre "style parfait" de zéro
-    style_parfait = ParagraphStyle(
-        name='StyleParfait',
-        fontName='Helvetica', # Remplace par 'Arial' si tu as importé la police Arial
-        fontSize=11,
-        textColor=black,
-        alignment=TA_LEFT     # Aligné à gauche (dans sa propre colonne)
-    )
-
-    # 2. On prépare le texte avec un simple espace entre les deux
-    ref_complete = f"N° {data.get('numero', '')} {data.get('service_ref', '')}"
-
-    # 3. On crée les paragraphes (la balise <b> met en gras)
-    txt_numero = Paragraph(f"<b>{ref_complete}</b>", style_parfait)
-    txt_date = Paragraph(f"<b>Dakar, le {data.get('date', '')}</b>", style_parfait)
-
-    # 4. On empile le tout
-    col_droite = [
-        Spacer(1, 1*cm),       # Espace au-dessus
-        txt_numero,            # N° et Réf sur la même ligne
-        Spacer(1, 1.5*cm),     # Espace avant la date
-        txt_date               # La date
+    # Empilement avec les espacements précis
+    col_gauche = [
+        drapeau, Spacer(1, 0.2*cm),
+        txt_republique, Spacer(1, 0.1*cm),
+        txt_devise, Spacer(1, 0.10*cm),
+        txt_ministere, Spacer(1, 0.1*cm),
+        petite_barre, Spacer(1, 0.1*cm),
+        txt_mcat, Spacer(1, 0.1*cm),
+        txt_direction
     ]
-    # 3. La partie gauche ne change pas
-    table_gauche = Table([[item] for item in col_gauche], colWidths=[9*cm])
+    
+    # --- COLONNE DROITE (Numéro et Date) ---
+    style_droite = ParagraphStyle(
+        name='StyleDroite', 
+        fontName='Helvetica-Bold', 
+        fontSize=11, 
+        textColor=colors.black, 
+        alignment=TA_LEFT,
+        leftIndent=1.6*cm  # ---> AJOUTE CECI : ça pousse le texte de 2 cm vers la droite
+    )
+    
+    ref_complete = f"N° {data.get('numero', '')} {data.get('service_ref', '')}"
+    
+    txt_numero = Paragraph(ref_complete, style_droite)
+    txt_date = Paragraph(f"Dakar, le {data.get('date', '')}", style_droite)
+
+    col_droite = [
+        Spacer(1, 1.7*cm),
+        txt_numero,
+        Spacer(1, 1.5*cm),
+        txt_date
+    ]
+    
+    # --- ASSEMBLAGE ---
+    # On gère l'alignement des éléments de gauche
+    table_gauche = Table([[item] for item in col_gauche], colWidths=[9.5*cm])
     table_gauche.setStyle(TableStyle([
         ('ALIGN', (0,0), (-1,-1), 'CENTER'), 
         ('VALIGN', (0,0), (-1,-1), 'TOP'), 
         ('LEFTPADDING', (0,0), (-1,-1), 0), 
-        ('BOTTOMPADDING', (0,0), (-1,-1), 1)
+        ('BOTTOMPADDING', (0,0), (-1,-1), 0.5) # Espacement réduit entre les éléments du tableau
     ]))
 
-    # 4. On assemble l'en-tête (Gauche + Droite)
-   # ✅ LE NOUVEAU CODE (On passe de 10 à 12 ou 12.5 cm pour pousser vers la droite)
-    # On réduit la gauche à 10 cm, et on augmente la droite à 9 cm !
-    # On élargit la gauche à 11.5 cm pour pousser le bloc de droite !
-    header_table = Table([[table_gauche, col_droite]], colWidths=[12*cm, 7*cm])
-    # ✅ LE NOUVEAU CODE : Alignement à DROITE
+    # L'en-tête global
+    header_table = Table([[table_gauche, col_droite]], colWidths=[11.5*cm, 7.5*cm])
+    
     header_table.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'), 
-        
-        # On dit à la colonne 1 (la droite) de s'aligner à DROITE
         ('ALIGN', (1,0), (1,-1), 'RIGHT'), 
         
-        # On remet les padding par défaut pour un bel espacement
-        ('LEFTPADDING', (1,0), (1,-1), 0),
+        # ---> C'EST CETTE LIGNE QUI FAIT TOUT LE TRAVAIL <---
+        # On applique un padding négatif sur la colonne 0 (celle de gauche)
+        ('LEFTPADDING', (0,0), (0,-1), -1.4*cm), 
         
-        # Facultatif : on peut rajouter un peu de padding à droite
-        # pour éviter que ce soit collé à la marge de la feuille
+        ('LEFTPADDING', (1,0), (1,-1), 0),
         ('RIGHTPADDING', (1,0), (1,-1), 0.5*cm) 
     ]))
 
     elements.append(header_table)
 
+    # La suite de ton document...
+    # doc.build(elements)
     # --- TITRE ET DESTINATAIRE ---
     
     # On récupère le destinataire (avec une valeur de sécurité au cas où)
@@ -491,12 +525,13 @@ def generer_pdf_lettre_information(buffer, data):
     # Bande Jaune
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_flag_top + w_band_top, y_flag_top, w_band_top, h_flag_top, style='F')
     
-    # --- L'ÉTOILE (Astérisque) ---
-    decalage_y_etoile = 6
+    # --- L'ÉTOILE (Vraie étoile avec ZapfDingbats) ---
+    # Ajuste à 4.0 ou 5.0 si tu veux la monter ou la descendre un poil
+    decalage_y_etoile = 4.5 
     pdf.set_xy(x_flag_top + w_band_top, y_flag_top + decalage_y_etoile) 
     pdf.set_text_color(0, 140, 60)
-    pdf.set_font("Arial", '', 22) 
-    pdf.cell(w_band_top, 5, txt="*", align='C') 
+    pdf.set_font("ZapfDingbats", '', 11) # Police magique et taille ajustée
+    pdf.cell(w_band_top, 5, txt=chr(72), align='C') # chr(72) dessine l'étoile
     
     # Bande Rouge
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_flag_top + (w_band_top*2), y_flag_top, w_band_top, h_flag_top, style='F')
@@ -513,8 +548,13 @@ def generer_pdf_lettre_information(buffer, data):
     y_barre = pdf.get_y() + 1; w_barre_total = 44; x_barre_start = 33; w_segment = w_barre_total / 3; h_barre = 1.5
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_barre_start, y_barre, w_segment, h_barre, style='F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_barre_start + w_segment, y_barre, w_segment, h_barre, style='F')
-    pdf.set_xy(x_barre_start + w_segment, y_barre - 0.5); pdf.set_font("Arial", '', 10); pdf.set_text_color(0, 140, 60) 
-    pdf.cell(w_segment, 4, txt="*", align='C')
+    
+    # --- Étoile de la petite barre tricolore ---
+    decalage_y_barre = -1.2 # On remonte un peu par rapport au Y de la barre
+    pdf.set_xy(x_barre_start + w_segment, y_barre + decalage_y_barre)
+    pdf.set_font("ZapfDingbats", '', 5.5); pdf.set_text_color(0, 140, 60) 
+    pdf.cell(w_segment, 4, txt=chr(72), align='C')
+    
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_barre_start + (w_segment*2), y_barre, w_segment, h_barre, style='F')                                                                                                     
     
     pdf.set_xy(10, y_barre + 3); pdf.set_font("Arial", 'B', 30); pdf.set_text_color(0, 100, 0)
@@ -682,12 +722,12 @@ def generer_pdf_lettre_notification(buffer, data):
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_flag_top, y_flag_top, w_band_top, h_flag_top, style='F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_flag_top + w_band_top, y_flag_top, w_band_top, h_flag_top, style='F')
     
-    # L'Étoile
-    decalage_y_etoile = 6
+    # --- L'Étoile du drapeau ---
+    decalage_y_etoile = 4.5 # Modifie cette valeur si besoin (ex: 4.0 pour monter, 5.0 pour descendre)
     pdf.set_xy(x_flag_top + w_band_top, y_flag_top + decalage_y_etoile) 
     pdf.set_text_color(0, 140, 60)
-    pdf.set_font("Arial", '', 22) 
-    pdf.cell(w_band_top, 5, txt="*", align='C') 
+    pdf.set_font("ZapfDingbats", '', 11) # Police magique
+    pdf.cell(w_band_top, 5, txt=chr(72), align='C') # chr(72) génère l'étoile
     
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_flag_top + (w_band_top*2), y_flag_top, w_band_top, h_flag_top, style='F')
     
@@ -705,8 +745,14 @@ def generer_pdf_lettre_notification(buffer, data):
     y_barre = pdf.get_y() + 1; w_barre_total = 44; x_barre_start = 33; w_segment = w_barre_total / 3; h_barre = 1.5
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_barre_start, y_barre, w_segment, h_barre, style='F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_barre_start + w_segment, y_barre, w_segment, h_barre, style='F')
-    pdf.set_xy(x_barre_start + w_segment, y_barre - 0.5); pdf.set_font("Arial", '', 10); pdf.set_text_color(0, 140, 60) 
-    pdf.cell(w_segment, 4, txt="*", align='C')
+    
+    # --- Étoile de la petite barre ---
+    decalage_y_barre = -1.0 # On remonte légèrement l'étoile par rapport à la barre
+    pdf.set_xy(x_barre_start + w_segment, y_barre + decalage_y_barre)
+    pdf.set_font("ZapfDingbats", '', 5.5)
+    pdf.set_text_color(0, 140, 60) 
+    pdf.cell(w_segment, 4, txt=chr(72), align='C')
+    
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_barre_start + (w_segment*2), y_barre, w_segment, h_barre, style='F')                                                                                                     
     
     # MCAT Logo texte
@@ -856,12 +902,12 @@ def generer_pdf_pv_attribution(buffer, data):
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_flag_top, y_flag_top, w_band_top, h_flag_top, style='F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_flag_top + w_band_top, y_flag_top, w_band_top, h_flag_top, style='F')
     
-    # L'Étoile
-    decalage_y_etoile = 6
+    # --- L'Étoile du grand drapeau ---
+    decalage_y_etoile = 4.5 # Ajuste cette valeur si besoin
     pdf.set_xy(x_flag_top + w_band_top, y_flag_top + decalage_y_etoile) 
     pdf.set_text_color(0, 140, 60)
-    pdf.set_font("Arial", '', 22) 
-    pdf.cell(w_band_top, 5, txt="*", align='C') 
+    pdf.set_font("ZapfDingbats", '', 11) # La police magique
+    pdf.cell(w_band_top, 5, txt=chr(72), align='C') # chr(72) dessine l'étoile
     
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_flag_top + (w_band_top*2), y_flag_top, w_band_top, h_flag_top, style='F')
     
@@ -879,8 +925,14 @@ def generer_pdf_pv_attribution(buffer, data):
     y_barre = pdf.get_y() + 1; w_barre_total = 44; x_barre_start = 33; w_segment = w_barre_total / 3; h_barre = 1.5
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_barre_start, y_barre, w_segment, h_barre, style='F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_barre_start + w_segment, y_barre, w_segment, h_barre, style='F')
-    pdf.set_xy(x_barre_start + w_segment, y_barre - 0.5); pdf.set_font("Arial", '', 10); pdf.set_text_color(0, 140, 60) 
-    pdf.cell(w_segment, 4, txt="*", align='C')
+    
+    # --- Étoile de la petite barre tricolore ---
+    decalage_y_barre = -1.2 # On remonte légèrement
+    pdf.set_xy(x_barre_start + w_segment, y_barre + decalage_y_barre)
+    pdf.set_font("ZapfDingbats", '', 5.5)
+    pdf.set_text_color(0, 140, 60) 
+    pdf.cell(w_segment, 4, txt=chr(72), align='C')
+    
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_barre_start + (w_segment*2), y_barre, w_segment, h_barre, style='F')                                                                                
     
     # MCAT Logo texte
@@ -1052,12 +1104,12 @@ def dessiner_en_tete(pdf, data):
     pdf.set_fill_color(0, 140, 60); pdf.rect(POS_X_DRAPEAU, y_flag_top, w_band_top, h_flag_top, style='F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(POS_X_DRAPEAU + w_band_top, y_flag_top, w_band_top, h_flag_top, style='F')
     
-    # L'Étoile
-    decalage_y_etoile = 6
+    # --- L'Étoile du grand drapeau ---
+    decalage_y_etoile = 4.5 # Ajuste à 4.0 ou 5.0 selon le rendu visuel
     pdf.set_xy(POS_X_DRAPEAU + w_band_top, y_flag_top + decalage_y_etoile) 
     pdf.set_text_color(0, 140, 60)
-    pdf.set_font("Arial", '', 22) 
-    pdf.cell(w_band_top, 5, txt="*", align='C') 
+    pdf.set_font("ZapfDingbats", '', 11) # La police magique
+    pdf.cell(w_band_top, 5, txt=chr(72), align='C') # L'étoile parfaite
     
     pdf.set_fill_color(230, 30, 30); pdf.rect(POS_X_DRAPEAU + (w_band_top*2), y_flag_top, w_band_top, h_flag_top, style='F')
     
@@ -1084,8 +1136,14 @@ def dessiner_en_tete(pdf, data):
     
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_barre_start, y_barre, w_segment, h_barre, style='F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_barre_start + w_segment, y_barre, w_segment, h_barre, style='F')
-    pdf.set_xy(x_barre_start + w_segment, y_barre - 0.5); pdf.set_font("Arial", '', 10); pdf.set_text_color(0, 140, 60) 
-    pdf.cell(w_segment, 4, txt="*", align='C')
+    
+    # --- Étoile de la petite barre tricolore ---
+    decalage_y_barre = -1.2 # On la remonte pour la centrer
+    pdf.set_xy(x_barre_start + w_segment, y_barre + decalage_y_barre)
+    pdf.set_font("ZapfDingbats", '', 5.5)
+    pdf.set_text_color(0, 140, 60) 
+    pdf.cell(w_segment, 4, txt=chr(72), align='C')
+    
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_barre_start + (w_segment*2), y_barre, w_segment, h_barre, style='F')                                                                              
     
     # MCAT Logo texte
@@ -1104,7 +1162,7 @@ def dessiner_en_tete(pdf, data):
 
     # On définit une nouvelle position X pour décaler tout le bloc vers la droite.
     # (+15 millimètres par rapport à avant, tu peux changer ce nombre si besoin)
-    X_DROITE = POS_X_NUMERO + 15 
+    X_DROITE = POS_X_NUMERO + 15
 
     # --- 2. RÉFÉRENCES ET DATE ---
     # On remonte le bloc en enlevant le "+ 5" qu'il y avait avant
@@ -1500,22 +1558,99 @@ def generer_pdf_contrat(data):
     # ==========================================
     pdf.add_page()
 
-    # En-tête Page 1
-    pdf.set_font("Arial", "B", 11)
-    pdf.cell(0, 5, ct("République du Sénégal"), new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 5, ct("Un Peuple - Un But - Une Foi"), new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.cell(0, 5, "______", new_x="LMARGIN", new_y="NEXT", align="C")
+    # Récupération de la direction (avec valeur par défaut si non fournie)
+    direction_nom = data.get('direction_name', "DIRECTION DE L'ADMINISTRATION GÉNÉRALE ET DE L'ÉQUIPEMENT")
+# ==========================================
+    # --- NOUVEL EN-TÊTE CENTRÉ (Drapeau + Textes) ---
+    # ==========================================
+    
+    # 1. Le Drapeau (Centré)
+    # Largeur page = 210mm. Centre = 105mm. Drapeau complet = 24mm (8x3). Position X = 105 - 12 = 93.
+    x_flag_top = 93 
+    y_flag_top = 10 
+    w_band_top = 8 
+    h_flag_top = 14 
+    
+    # Bande Verte
+    pdf.set_fill_color(0, 140, 60)
+    pdf.rect(x_flag_top, y_flag_top, w_band_top, h_flag_top, style='F')
+    
+    # Bande Jaune
+    pdf.set_fill_color(255, 215, 0)
+    pdf.rect(x_flag_top + w_band_top, y_flag_top, w_band_top, h_flag_top, style='F')
+    
+    # --- L'Étoile au centre de la bande jaune ---
+    decalage_y_etoile = 4.5 # Ajuste cette valeur si l'étoile est trop haute ou trop basse
+    pdf.set_xy(x_flag_top + w_band_top, y_flag_top + decalage_y_etoile) 
+    pdf.set_text_color(0, 140, 60)
+    pdf.set_font("ZapfDingbats", '', 11) # La police magique
+    pdf.cell(w_band_top, 5, txt=chr(72), align='C') # L'étoile parfaite
+    
+    # Bande Rouge
+    pdf.set_fill_color(230, 30, 30)
+    pdf.rect(x_flag_top + (w_band_top*2), y_flag_top, w_band_top, h_flag_top, style='F')
+    
+    # 2. Textes : République et Ministère (Centrés avec w=0)
+    y_start_text = y_flag_top + h_flag_top + 5 
+    pdf.set_y(y_start_text)
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", 'B', 14) 
+    pdf.cell(0, 6, txt=ct("République du Sénégal"), new_x="LMARGIN", new_y="NEXT", align='C')
+    
+    pdf.set_font("Arial", 'I', 11)
+    pdf.cell(0, 6, txt="Un Peuple - Un But - Une Foi", new_x="LMARGIN", new_y="NEXT", align='C')
+    
     pdf.ln(2)
-    pdf.set_font("Arial", "B", 11)
-    pdf.cell(0, 5, ct("Ministère du Tourisme et de l'Artisanat"), new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.cell(0, 5, "*********", new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.cell(0, 5, ct("DIRECTION DE L'ADMINISTRATION"), new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.cell(0, 5, ct("GÉNÉRALE ET DE L'ÉQUIPEMENT"), new_x="LMARGIN", new_y="NEXT", align="C")
-
-    pdf.ln(12)
-
-    pdf.ln(15) # On laisse respirer sous l'en-tête
+    pdf.set_font("Arial", 'B', 8)
+    pdf.set_text_color(0, 100, 0)
+    pdf.multi_cell(0, 4, txt=ct("MINISTÈRE DE LA CULTURE, DE\nL'ARTISANAT ET DU TOURISME"), align='C')
+    
+    # 3. La petite barre tricolore (Centrée)
+    y_barre = pdf.get_y() + 1
+    w_barre_total = 44
+    w_segment = w_barre_total / 3
+    h_barre = 1.5
+    # Centre = 105. Position X = 105 - (44/2) = 83.
+    x_barre_start = 83 
+    
+    pdf.set_fill_color(0, 140, 60)
+    pdf.rect(x_barre_start, y_barre, w_segment, h_barre, style='F') # Vert
+    
+    pdf.set_fill_color(255, 215, 0)
+    pdf.rect(x_barre_start + w_segment, y_barre, w_segment, h_barre, style='F') # Jaune
+    
+    # --- Petite étoile magique ---
+    decalage_y_barre = -1.2 # On remonte l'étoile pour la centrer
+    pdf.set_xy(x_barre_start + w_segment, y_barre + decalage_y_barre)
+    pdf.set_font("ZapfDingbats", '', 5.5)
+    pdf.set_text_color(0, 140, 60) 
+    pdf.cell(w_segment, 4, txt=chr(72), align='C') # Petite étoile
+    
+    pdf.set_fill_color(230, 30, 30)
+    pdf.rect(x_barre_start + (w_segment*2), y_barre, w_segment, h_barre, style='F') # Rouge                                                                              
+    
+    # 4. Le Logo MCAT et la Direction (Centrés proprement)
+    pdf.set_xy(10, y_barre + 3)
+    pdf.set_font("Arial", 'B', 30)
+    pdf.set_text_color(0, 100, 0)
+    pdf.cell(0, 12, txt="MCAT", new_x="LMARGIN", new_y="NEXT", align='C')
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", 'B', 9) 
+    
+    # --- LA MAGIE EST ICI ---
+    largeur_boite = 80 # Largeur de la zone de texte en mm
+    x_centre = (210 - largeur_boite) / 2 # Calcul pour centrer la boîte
+    pdf.set_x(x_centre) # On place le curseur au bon endroit
+    
+    # Ton texte avec le retour à la ligne forcé pour que ce soit joli
+    direction_affichee = ct(direction_nom).replace("Administration g", "Administration\ng").replace("Administration G", "Administration\nG")
+    
+    # On utilise largeur_boite au lieu de 0
+    pdf.multi_cell(largeur_boite, 5, txt=direction_affichee, align='C')
+    
+    pdf.ln(15)# On laisse respirer sous l'en-tête
 
     # ==========================================
     # TITRE PRINCIPAL (EN HAUT)
@@ -1630,34 +1765,102 @@ def generer_pdf_contrat(data):
     # ==========================================
     pdf.add_page()
 
-    # En-tête centré et stylisé (Page 2)
-    pdf.set_font("Times", "I", 14)
-    pdf.cell(0, 6, ct("République du Sénégal"), new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.set_font("Times", "BI", 10)
-    pdf.cell(0, 5, ct("Un Peuple - Un But - Une Foi"), new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.set_font("Times", "", 10)
-    pdf.cell(0, 2, "______", new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.ln(2)
-    
-    pdf.set_font("Times", "I", 12)
-    pdf.cell(0, 5, ct("Ministère du Tourisme et"), new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.cell(0, 5, "de l'Artisanat", new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.cell(0, 2, "______", new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.ln(2)
-    
-    pdf.set_font("Times", "I", 11)
-    pdf.cell(0, 5, ct("DIRECTION DE L'ADMINISTRATION"), new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.cell(0, 5, ct("GÉNÉRALE ET DE L'ÉQUIPEMENT"), new_x="LMARGIN", new_y="NEXT", align="C")
-    
-    pdf.ln(4)
-    pdf.set_line_width(0.6)
-    pdf.line(20, pdf.get_y(), 190, pdf.get_y())
-    pdf.set_line_width(0.2)
-    pdf.ln(4)
+    # Récupération de la direction (avec valeur par défaut si non fournie)
+    direction_nom = data.get('direction_name', "DIRECTION DE L'ADMINISTRATION GÉNÉRALE ET DE L'ÉQUIPEMENT")
 
-    pdf.ln(5) 
-
+   # ==========================================
+    # --- NOUVEL EN-TÊTE CENTRÉ (Drapeau + Textes) ---
     # ==========================================
+    
+    # 1. Le Drapeau (Centré)
+    # Largeur page = 210mm. Centre = 105mm. Drapeau complet = 24mm (8x3). Position X = 105 - 12 = 93.
+    x_flag_top = 93 
+    y_flag_top = 10 
+    w_band_top = 8 
+    h_flag_top = 14 
+    
+    # Bande Verte
+    pdf.set_fill_color(0, 140, 60)
+    pdf.rect(x_flag_top, y_flag_top, w_band_top, h_flag_top, style='F')
+    
+    # Bande Jaune
+    pdf.set_fill_color(255, 215, 0)
+    pdf.rect(x_flag_top + w_band_top, y_flag_top, w_band_top, h_flag_top, style='F')
+    
+    # --- L'Étoile au centre de la bande jaune ---
+    decalage_y_etoile = 4.5 # Ajuste cette valeur si l'étoile est trop haute ou trop basse
+    pdf.set_xy(x_flag_top + w_band_top, y_flag_top + decalage_y_etoile) 
+    pdf.set_text_color(0, 140, 60)
+    pdf.set_font("ZapfDingbats", '', 11) # La police magique
+    pdf.cell(w_band_top, 5, txt=chr(72), align='C') # L'étoile parfaite
+    
+    # Bande Rouge
+    pdf.set_fill_color(230, 30, 30)
+    pdf.rect(x_flag_top + (w_band_top*2), y_flag_top, w_band_top, h_flag_top, style='F')
+    
+    # 2. Textes : République et Ministère (Centrés avec w=0)
+    y_start_text = y_flag_top + h_flag_top + 5 
+    pdf.set_y(y_start_text)
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", 'B', 14) 
+    pdf.cell(0, 6, txt=ct("République du Sénégal"), new_x="LMARGIN", new_y="NEXT", align='C')
+    
+    pdf.set_font("Arial", 'I', 11)
+    pdf.cell(0, 6, txt="Un Peuple - Un But - Une Foi", new_x="LMARGIN", new_y="NEXT", align='C')
+    
+    pdf.ln(2)
+    pdf.set_font("Arial", 'B', 8)
+    pdf.set_text_color(0, 100, 0)
+    pdf.multi_cell(0, 4, txt=ct("MINISTÈRE DE LA CULTURE, DE\nL'ARTISANAT ET DU TOURISME"), align='C')
+    
+    # 3. La petite barre tricolore (Centrée)
+    y_barre = pdf.get_y() + 1
+    w_barre_total = 44
+    w_segment = w_barre_total / 3
+    h_barre = 1.5
+    # Centre = 105. Position X = 105 - (44/2) = 83.
+    x_barre_start = 83 
+    
+    pdf.set_fill_color(0, 140, 60)
+    pdf.rect(x_barre_start, y_barre, w_segment, h_barre, style='F') # Vert
+    
+    pdf.set_fill_color(255, 215, 0)
+    pdf.rect(x_barre_start + w_segment, y_barre, w_segment, h_barre, style='F') # Jaune
+    
+    # --- Petite étoile magique ---
+    decalage_y_barre = -1.2 # On remonte l'étoile pour la centrer
+    pdf.set_xy(x_barre_start + w_segment, y_barre + decalage_y_barre)
+    pdf.set_font("ZapfDingbats", '', 5.5)
+    pdf.set_text_color(0, 140, 60) 
+    pdf.cell(w_segment, 4, txt=chr(72), align='C') # Petite étoile
+    
+    pdf.set_fill_color(230, 30, 30)
+    pdf.rect(x_barre_start + (w_segment*2), y_barre, w_segment, h_barre, style='F') # Rouge                                                                              
+    
+    # 4. Le Logo MCAT et la Direction (Centrés proprement)
+    pdf.set_xy(10, y_barre + 3)
+    pdf.set_font("Arial", 'B', 30)
+    pdf.set_text_color(0, 100, 0)
+    pdf.cell(0, 12, txt="MCAT", new_x="LMARGIN", new_y="NEXT", align='C')
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", 'B', 9) 
+    
+    # --- LA MAGIE EST ICI ---
+    largeur_boite = 80 # Largeur de la zone de texte en mm
+    x_centre = (210 - largeur_boite) / 2 # Calcul pour centrer la boîte
+    pdf.set_x(x_centre) # On place le curseur au bon endroit
+    
+    # Ton texte avec le retour à la ligne forcé pour que ce soit joli
+    direction_affichee = ct(direction_nom).replace("Administration g", "Administration\ng").replace("Administration G", "Administration\nG")
+    
+    # On utilise largeur_boite au lieu de 0
+    pdf.multi_cell(largeur_boite, 5, txt=direction_affichee, align='C')
+    
+    pdf.ln(8) # On laisse respirer sous l'en-têten-tête
+
+   # ==========================================
     # RÉFÉRENCE ET DATE (Dynamiques)
     # ==========================================
     numero = data.get('numero', '..........................')
@@ -1666,22 +1869,23 @@ def generer_pdf_contrat(data):
 
     pdf.set_font("Arial", "B", 10)
     
-    # Remplacement du `pdf.cell(130)` par la vraie méthode de positionnement absolu :
-    pdf.set_x(130) 
+    pdf.set_x(150) 
     pdf.cell(0, 5, ct(f"N° {numero} {ref_service}"), new_x="LMARGIN", new_y="NEXT")
     
-    pdf.ln(4) 
+    pdf.ln(6) 
     
-    # Pareil pour la date :
-    pdf.set_x(130) 
+    pdf.set_x(150) 
     pdf.cell(0, 5, ct(f"Dakar, le {date_signature}"), new_x="LMARGIN", new_y="NEXT")
 
-    pdf.ln(10)
+    # On réduit un peu l'espace ici (de 10 à 6) pour remonter le texte
+    pdf.ln(6)
 
     # Titre du contrat
     pdf.set_font("Arial", "BU", 12)
     pdf.cell(0, 6, "CONTRAT DE PRESTATION", new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.ln(8)
+    
+    # On réduit ici aussi (de 8 à 5)
+    pdf.ln(5)
     
     # Soussignés
     pdf.set_font("Arial", "BU", 10)
@@ -1720,8 +1924,34 @@ def generer_pdf_contrat(data):
     montant_lettres = data.get('montant_lettres', '.......................')
     montant_chiffres = data.get('montant', '')
     annee = data.get('gestion_annee', '2025')
-    
-    texte_art1 = f"Le service consiste à effectuer: {objet} pour le compte de la DAGE du Ministère du Tourisme et de l'Artisanat pour un montant de {montant_lettres} ({montant_chiffres}) francs CFA toutes taxes comprises durant la gestion {annee}."
+
+    # 🤖 Le petit robot expert en Marchés Publics (Adapté pour l'Article 1)
+    # On s'assure d'utiliser ta variable "objet"
+    objet_test = str(objet).lower().strip()
+
+    # 1. Famille des TRAVAUX (BTP, infrastructures)
+    if objet_test.startswith(("travaux", "aménagement", "réhabilitation", "construction", "réfection", "extension")):
+        pont_francais = "la réalisation des "
+
+    # 2. Famille des FOURNITURES (Biens matériels, équipements)
+    elif objet_test.startswith(("fourniture", "équipement", "matériel", "dotation")):
+        pont_francais = "l'acquisition de "
+        
+    # 3. Mots d'ACTION directs (Si l'utilisateur a déjà écrit l'action)
+    elif objet_test.startswith(("acquisition", "achat", "livraison", "abonnement", "édition")):
+        pont_francais = "l'"
+
+    # 4. Famille des SERVICES et PRESTATIONS INTELLECTUELLES
+    elif objet_test.startswith(("prestation", "service", "mission")):
+        pont_francais = "l'exécution des "
+
+    # 5. FILET DE SÉCURITÉ INFAILLIBLE
+    else:
+        pont_francais = "la commande relative à l'objet suivant : "
+
+    # 🎯 Insertion dans le paragraphe de l'Article 1
+    texte_art1 = f"Le présent marché a pour objet {pont_francais}{objet} pour le compte de la DAGE du Ministère du Tourisme et de l'Artisanat pour un montant de {montant_lettres} ({montant_chiffres}) francs CFA toutes taxes comprises durant la gestion {annee}."
+# --- VOICI LA LIGNE QUI MANQUAIT POUR AFFICHER LE TEXTE 👇 ---
     pdf.multi_cell(0, 5, ct(texte_art1))
 
     pdf.ln(3)
@@ -1759,10 +1989,8 @@ def generer_pdf_contrat(data):
     pdf.set_font("Arial", "", 10)
     pdf.multi_cell(0, 5, ct("Les frais d'enregistrement et de timbre sont à la charge du prestataire."))
 
-    # ==========================================
-    # PAGE 3 : SAUT DE PAGE POUR L'ARTICLE 7 ET SIGNATURES
-    # ==========================================
-    pdf.add_page() 
+    # Fini la page 3 forcée ! On laisse un simple espace de 3mm entre l'article 6 et l'article 7
+    pdf.ln(3)
 
     # Article 7
     pdf.set_font("Arial", "BU", 10)
@@ -1774,11 +2002,11 @@ def generer_pdf_contrat(data):
     pdf.multi_cell(0, 5, ct("Les litiges survenus au cours de l'exécution des prestations seront traités à l'amiable ou à défaut par un tribunal compétent en la matière."))
 
     # Signatures
-    pdf.ln(15) 
+    pdf.ln(10) # Réduit de 15 à 10 pour que ça tienne bien en bas de la page 2
     pdf.set_font("Arial", "B", 10) 
     pdf.cell(0, 5, ct("Lu et accepté"), new_x="LMARGIN", new_y="NEXT", align="C") 
 
-    pdf.ln(10)
+    pdf.ln(8) # Réduit de 10 à 8
     pdf.set_font("Arial", "B", 10)
     pdf.cell(90, 5, "Le Prestataire", new_x="RIGHT", new_y="TOP", align="L")
     pdf.cell(0, 5, "Le Directeur de l'Administration", new_x="LMARGIN", new_y="NEXT", align="R")
