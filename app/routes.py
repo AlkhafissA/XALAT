@@ -1343,23 +1343,50 @@ def ajouter_notification():
         prestataires_invites = invit_data.get('prestataires', [])
         
         for p in prestataires_invites:
-            nom_p = p.get('nom')
-            # 🛠️ CORRECTION : On récupère l'ID du prestataire de la liste et on le compare à l'ID du gagnant
-            id_p = str(p.get('id') or p.get('candidat_id') or p.get('prestataire_id') or '')
+            # 1. On cherche l'ID du candidat
+            cand_id = p.get('id') or p.get('candidat_id') or p.get('prestataire_id')
             
-            # On vérifie qu'on a un nom, et que l'ID est différent de celui du gagnant
-            if nom_p and id_p != str(prestataire_id):
-                candidats_perdants_pdf.append({
-                    'nom_entreprise': nom_p,
-                    'adresse': p.get('adresse', ''),
-                    'rc': p.get('rc', 'N/A'),
-                    'ninea': p.get('ninea', 'N/A'),
-                    'tel': p.get('telephone', 'N/A')
-                })
+            # Si le JSON n'a pas gardé l'ID, on cherche par le nom en BDD
+            if not cand_id:
+                nom_p = p.get('nom') or p.get('nom_entreprise') or ''
+                c_db = Candidat.query.filter(Candidat.nom_entreprise.ilike(f"%{nom_p}%")).first()
+                if c_db:
+                    cand_id = c_db.id
+
+            # 2. Si on a trouvé un candidat valide
+            if cand_id:
+                cand_obj = db.session.get(Candidat, int(cand_id))
+                
+                if cand_obj:
+                    # 🚨 LE NOUVEAU FILTRE INFAILLIBLE 🚨
+                    # On compare strictement les vrais IDs en BDD !
+                    if int(cand_obj.id) == int(prestataire_id):
+                        print(f"⏩ {cand_obj.nom_entreprise} est le GAGNANT, on l'ignore.")
+                        continue 
+                    
+                    # 💡 CORRECTION : On récupère en priorité les infos du JSON de l'Invitation (p)
+                    # S'il n'y a rien, on retombe sur la base de données (cand_obj)
+                    rc_final = p.get('rc') or cand_obj.rc or 'N/A'
+                    ninea_final = p.get('ninea') or cand_obj.ninea or 'N/A'
+                    adresse_final = p.get('adresse') or cand_obj.adresse or 'Non renseignée'
+                    tel_final = p.get('tel') or cand_obj.telephone or 'N/A'
+
+                    candidats_perdants_pdf.append({
+                        'nom_entreprise': cand_obj.nom_entreprise,
+                        'adresse': adresse_final,
+                        'rc': rc_final,
+                        'ninea': ninea_final,
+                        'tel': tel_final
+                    })
 
     if candidats_perdants_pdf:
         data_info = data_pv.copy() # On reprend les bases
         data_info['perdants'] = candidats_perdants_pdf
+        
+        # 💡 NOUVEAU : On récupère le mot "FOURNISSEURS" stocké dans l'invitation,
+        # et on l'injecte dans les données de la Lettre d'Information !
+        type_entreprise_choisi = invit_data.get('type_entreprise', 'PRESTATAIRES')
+        data_info['type_entreprise'] = type_entreprise_choisi
         nouvelle_info = LettreInformation(
             immatriculation=immatriculation,
             objet_marche=objet_marche,
@@ -1597,7 +1624,10 @@ def creer_lettre_invitation():
         adresse_depot = request.form.get('adresse_depot')
         lieu_ouverture = request.form.get('lieu_ouverture')
         direction_nom = request.form.get('direction_nom', "Direction de l'Administration Générale et de l'Equipement")
-
+        # 💡 NOUVEAU : On récupère le type d'entreprise depuis le formulaire HTML
+        type_entreprise = request.form.get('type_entreprise', 'PRESTATAIRES')
+# juste après : type_entreprise = request.form.get('type_entreprise', 'PRESTATAIRES')
+        print(f"🚨 DEBUG - Le type d'entreprise reçu du HTML est : {type_entreprise}")
         # --- NOUVEAU : TRADUCTION DES DATES EN FRANÇAIS ---
         mois_fr = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
         jours_fr = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
@@ -1634,6 +1664,7 @@ def creer_lettre_invitation():
                 compte = request.form.get(f'compte_bancaire_{candidat.id}', '')
                 
                 prestataires_selectionnes.append({
+                    'id': candidat.id,
                     'nom': candidat.nom_entreprise,
                     'adresse': candidat.adresse,
                     'telephone': candidat.telephone,
@@ -1654,6 +1685,7 @@ def creer_lettre_invitation():
             'adresse_depot': adresse_depot,
             'lieu_ouverture': lieu_ouverture,
             'direction_nom': direction_nom,
+            'type_entreprise': type_entreprise, # 💡 NOUVEAU : On l'ajoute au dictionnaire JSON
             'prestataires': prestataires_selectionnes
         }
 
