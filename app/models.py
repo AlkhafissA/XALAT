@@ -163,9 +163,9 @@ class LettreInformation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     immatriculation = db.Column(db.String(100))
     objet_marche = db.Column(db.Text)
+    date_creation = db.Column(db.DateTime, default=datetime.utcnow) # <-- LA COLONNE MANQUANTE EST ICI
     form_data = db.Column(db.Text) # On va y stocker tout le JSON (dates, prestataires, etc.)
-    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
-    
+    fichier_scanne = db.Column(db.String(255), nullable=True)
 
 class ArchiveDocument(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -190,3 +190,10 @@ class LogAction(db.Model):
     details = db.Column(db.Text, nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+class DocumentLibre(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    immatriculation = db.Column(db.String(100), nullable=False) # L'identifiant clé du marché
+    titre = db.Column(db.String(150), nullable=False) # Ex: "Avenant Numéro 1"
+    nom_fichier = db.Column(db.String(255), nullable=False)
+    chemin_fichier = db.Column(db.String(255), nullable=False)
+    date_ajout = db.Column(db.DateTime, default=datetime.utcnow)

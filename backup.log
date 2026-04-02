@@ -72,3 +72,8 @@
  -> Dossier uploads ajouté.
  -> Succès ! Backup créé : AUTO_MCAT_Backup_2026-03-31_02h00.zip
  -> Ancien backup supprimé (Nettoyage) : AUTO_MCAT_Backup_2026-03-19_02h00.zip
+[2026-04-02 02:00:01] Démarrage du robot de sauvegarde...
+ -> Base de données ajoutée.
+ -> Dossier uploads ajouté.
+ -> Succès ! Backup créé : AUTO_MCAT_Backup_2026-04-02_02h00.zip
+ -> Ancien backup supprimé (Nettoyage) : AUTO_MCAT_Backup_2026-03-20_02h00.zip

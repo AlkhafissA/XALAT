@@ -74,7 +74,7 @@
     border-radius: 24px 24px 0 0 !important;
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
     border: none;
-    height: 60vh !important; /* Prend 60% de l'écran */
+    height: 60vh !important;
   }
   .tiroir-header {
     background: linear-gradient(to right, #003366, #00509e);
@@ -145,45 +145,56 @@
     dossier.etapes.etape_1_invitation and dossier.etapes.etape_2_pv and dossier.etapes.etape_3_notification and dossier.etapes.etape_4_information and
     dossier.etapes.etape_5_contrat %} {% if not est_cloture %} {% if stats.update({'actifs': stats.actifs + 1}) %}{% endif %}
 
-    <div class="card shadow-sm mb-4 card-dossier bg-white">
+    <div class="card shadow-sm mb-4 card-dossier bg-white" style="border-radius: 16px; overflow: hidden">
       <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h5 class="fw-bold text-primary mb-0"><i class="fas fa-file-signature me-2"></i> Réf : {{ dossier.immatriculation }}</h5>
-        <span class="badge bg-light text-dark border px-3 py-2 text-wrap text-start" style="font-size: 0.85rem; max-width: 500px">
-          {{ dossier.objet_marche | truncate(80) }}
-        </span>
+
+        <div class="d-flex align-items-center gap-3">
+          <span class="badge bg-light text-dark border px-3 py-2 text-wrap text-start shadow-sm" style="font-size: 0.85rem; max-width: 500px">
+            {{ dossier.objet_marche | truncate(80) }}
+          </span>
+
+          <a
+            href="{{ url_for('main.dossier_intelligent', immat=dossier.immatriculation) }}"
+            class="btn btn-primary btn-sm rounded-pill px-4 py-2 shadow-sm fw-bold transition-all"
+          >
+            <i class="fas fa-folder-open me-2"></i>Consulter
+          </a>
+        </div>
       </div>
 
-      <div class="card-body px-4 pb-4">
+      <div class="card-body bg-white px-4 pb-4">
         <div class="timeline-container mt-2">
           <div class="timeline">
             <div class="step {% if dossier.etapes.etape_1_invitation %}completed{% endif %}">
-              <div class="step-icon">{% if dossier.etapes.etape_1_invitation %}<i class="fas fa-check"></i>{% else %}1{% endif %}</div>
+              <div class="step-icon">{% if dossier.etapes.etape_1_invitation %}✔{% else %}1{% endif %}</div>
               <div class="step-label">Invitations<br /><small class="text-muted fw-normal">Envoyées</small></div>
             </div>
 
             <div class="step {% if dossier.etapes.etape_2_pv %}completed{% endif %}">
-              <div class="step-icon">{% if dossier.etapes.etape_2_pv %}<i class="fas fa-check"></i>{% else %}2{% endif %}</div>
+              <div class="step-icon">{% if dossier.etapes.etape_2_pv %}✔{% else %}2{% endif %}</div>
               <div class="step-label">Commission<br /><small class="text-muted fw-normal">PV Signé</small></div>
             </div>
 
             <div class="step {% if dossier.etapes.etape_3_notification %}completed{% endif %}">
-              <div class="step-icon">{% if dossier.etapes.etape_3_notification %}<i class="fas fa-check"></i>{% else %}3{% endif %}</div>
+              <div class="step-icon">{% if dossier.etapes.etape_3_notification %}✔{% else %}3{% endif %}</div>
               <div class="step-label">Attributaire<br /><small class="text-muted fw-normal">Notifié</small></div>
             </div>
 
             <div class="step {% if dossier.etapes.etape_4_information %}completed{% endif %}">
-              <div class="step-icon">{% if dossier.etapes.etape_4_information %}<i class="fas fa-check"></i>{% else %}4{% endif %}</div>
+              <div class="step-icon">{% if dossier.etapes.etape_4_information %}✔{% else %}4{% endif %}</div>
               <div class="step-label">Candidats<br /><small class="text-muted fw-normal">Informés</small></div>
             </div>
 
             <div class="step {% if dossier.etapes.etape_5_contrat %}completed{% endif %}">
-              <div class="step-icon">{% if dossier.etapes.etape_5_contrat %}<i class="fas fa-check"></i>{% else %}5{% endif %}</div>
+              <div class="step-icon">{% if dossier.etapes.etape_5_contrat %}✔{% else %}5{% endif %}</div>
               <div class="step-label">Contrat<br /><small class="text-muted fw-normal">Édité</small></div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
     {% else %} {% if stats.update({'clotures': stats.clotures + 1}) %}{% endif %} {% endif %} {% endfor %} {% if stats.actifs == 0 %}
     <div class="alert alert-info shadow-sm p-5 text-center rounded-4 border-0 bg-white" role="alert">
       <div style="font-size: 3rem; color: #0d6efd; margin-bottom: 15px">🚀</div>
@@ -237,7 +248,10 @@
                 <span class="badge bg-success rounded-pill px-3"><i class="fas fa-check me-1"></i> Clôturé</span>
               </td>
               <td class="text-end pe-4">
-                <a href="{{ url_for('main.page_archives') }}" class="btn btn-sm btn-outline-primary rounded-pill me-2">
+                <a
+                  href="{{ url_for('main.dossier_intelligent', immat=dossier.immatriculation) }}"
+                  class="btn btn-sm btn-outline-primary rounded-pill me-2"
+                >
                   <i class="fas fa-eye"></i> Consulter
                 </a>
 

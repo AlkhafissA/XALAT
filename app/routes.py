@@ -28,7 +28,7 @@ from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.extensions import db, mail
-from app.models import User, Candidat, Cotation, Offre, Historique, LoginAttempt, LogAction, Dossier, DocumentLibre
+from app.models import User, Candidat, Cotation, Offre, Historique, LoginAttempt, LogAction, DocumentLibre
 from app.utils import clean_text, generer_lettre_agrement, num2words_fr, dessiner_entete_officiel
 
 # Création du "Blueprint"
@@ -2171,16 +2171,19 @@ def supprimer_lettre_information(id):
 # --- ROUTES : GESTION DES SCANS ET UPLOADS ---
 # ==========================================
 
-@main.route('/voir_scan/<nom_fichier>')
+
+@main.route('/voir_scan/<path:nom_fichier>') # <-- Ajout de "path:" ici
 @login_required
 def voir_scan(nom_fichier):
     # Log de l'action
     log_action("Consultation Scan", nom_fichier)
     db.session.commit()
     
-    # On délègue tout le travail à la route sécurisée, pas besoin de code mort en dessous !
-    return redirect(url_for('main.secure_download', folder='scans', filename=nom_fichier))
+    # On nettoie le nom : si c'est 'scans/mon_fichier.pdf', ça devient juste 'mon_fichier.pdf'
+    nom_fichier_propre = os.path.basename(nom_fichier)
     
+    # On délègue à la route sécurisée avec le nom propre
+    return redirect(url_for('main.secure_download', folder='scans', filename=nom_fichier_propre))
     
 @main.route('/uploader_scan', methods=['POST'])
 @login_required
@@ -2433,7 +2436,21 @@ def page_suivi_dossiers():
         if not doc_contrat and objet_du_marche != "Objet non défini":
             doc_contrat = Contrat.query.filter_by(objet_marche=objet_du_marche).first()
         # 👆 FIN DE LA RECHERCHE 👆
-
+# ==========================================
+        # 🕵️‍♂️ MODE DÉTECTIVE ACTIVÉ (C'EST ICI QU'IL FAUT LE METTRE !)
+        # ==========================================
+        print(f"\n--- RECHERCHE POUR LE DOSSIER : {immat} ---")
+        print(f"Ref extraite du PV : {reference_du_pv}")
+        
+        # On regarde TOUS les contrats pour voir à quoi ils ressemblent en base
+        tous_les_contrats = Contrat.query.all()
+        for c in tous_les_contrats:
+            print(f"Contrat ID {c.id} en base -> Ref: {getattr(c, 'ref_service', 'N/A')} | Immat: {getattr(c, 'immatriculation', 'N/A')} | Fichier: {c.fichier_scanne}")
+        
+        print(f"Contrat finalement trouvé par Flask : {doc_contrat}")
+        # ==========================================
+        # FIN DU MODE DÉTECTIVE
+        # ==========================================
         # 👇 C'EST ICI QUE LA MAGIE OPÈRE 👇
         dossier = {
             'immatriculation': immat,
@@ -2720,14 +2737,100 @@ def convertir_montant():
     except ValueError:
         return jsonify({'lettres': ''})
 
-@main.route('/suivi/dossier/<int:dossier_id>')
+import os
+from werkzeug.utils import secure_filename
+from flask import request, redirect, url_for, flash
+
+@main.route('/suivi/dossier/<path:immat>', methods=['GET', 'POST'])
 @login_required
-def dossier_intelligent(dossier_id):
-    # 1. Tu récupères le dossier depuis ta base de données
-    dossier = Dossier.query.get_or_404(dossier_id)
+def dossier_intelligent(immat):
+    from app.models import LettreInvitation, ProcesVerbal, LettreNotification, LettreInformation, Contrat, DocumentLibre
     
-    # 2. Tu récupères les documents additionnels créés librement
-    documents_libres = DocumentLibre.query.filter_by(dossier_id=dossier_id).all()
+    # 1. GESTION DE L'UPLOAD DE NOUVEAUX DOCUMENTS LIBRES
+    if request.method == 'POST':
+        titre = request.form.get('titre_document')
+        fichier = request.files.get('fichier_pdf')
+        
+        if not titre or not fichier:
+            flash("Veuillez fournir un titre et un fichier PDF.", "danger")
+            return redirect(url_for('main.dossier_intelligent', immat=immat))
+            
+        if fichier and fichier.filename.endswith('.pdf'):
+            filename = secure_filename(fichier.filename)
+            
+            # --- MODIFICATION ICI : On cible stockage_prive ---
+            from pathlib import Path
+            
+            # On remonte au dossier parent de l'application (comme dans secure_download)
+            root_dir = Path(current_app.root_path).parent.resolve()
+            scans_dir = (root_dir / 'stockage_prive' / 'scans').resolve()
+            
+            # On s'assure que le dossier existe, sinon on le crée
+            scans_dir.mkdir(parents=True, exist_ok=True)
+            
+            upload_path = scans_dir / filename
+            fichier.save(str(upload_path))
+            # --------------------------------------------------
+            
+            nouveau_doc = DocumentLibre(
+                immatriculation=immat,
+                titre=titre,
+                nom_fichier=filename,
+                # On sauvegarde juste le nom propre, plus de chemin "uploads/scans/..."
+                chemin_fichier=filename 
+            )
+            db.session.add(nouveau_doc)
+            db.session.commit()
+            
+            flash("Nouveau document ajouté au dossier avec succès !", "success")
+            return redirect(url_for('main.dossier_intelligent', immat=immat))
+        else:
+            flash("Seuls les fichiers PDF sont acceptés.", "warning")
+
+    # 2. RÉCUPÉRATION DES DOCUMENTS OFFICIELS EXISTANTS
+    doc_invitation = LettreInvitation.query.filter_by(immatriculation=immat).first()
+    doc_pv = ProcesVerbal.query.filter_by(numero_drp=immat).first()
+    doc_notif = LettreNotification.query.filter_by(immatriculation=immat).first()
+    doc_info = LettreInformation.query.filter_by(immatriculation=immat).first()
     
-    # 3. Tu renvoies tout vers la nouvelle page HTML
-    return render_template('dossier_intelligent.html', dossier=dossier, documents_libres=documents_libres)
+    # Recherche du contrat (selon ta logique de la timeline)
+    doc_contrat = Contrat.query.filter_by(immatriculation=immat).first()
+    if not doc_contrat and doc_pv and doc_pv.form_data:
+        try:
+            data_pv = json.loads(doc_pv.form_data)
+            ref_pv = data_pv.get('ref_service')
+            if ref_pv:
+                doc_contrat = Contrat.query.filter_by(ref_service=ref_pv).first()
+        except:
+            pass
+            
+    # Déduire l'objet du marché
+    objet_du_marche = "Objet non défini"
+    if doc_invitation and doc_invitation.objet_marche:
+        objet_du_marche = doc_invitation.objet_marche
+    elif doc_pv and doc_pv.objet:
+        objet_du_marche = doc_pv.objet
+
+    # 3. RÉCUPÉRATION DES DOCUMENTS LIBRES
+    documents_libres = DocumentLibre.query.filter_by(immatriculation=immat).order_by(DocumentLibre.date_ajout.desc()).all()
+
+    # 4. PRÉPARATION DES DONNÉES POUR LE TEMPLATE
+    dossier = {
+        'immatriculation': immat,
+        'objet_marche': objet_du_marche,
+        'docs_officiels': {
+            'invitation': doc_invitation,
+            'pv': doc_pv,
+            'notification': doc_notif,
+            'information': doc_info,
+            'contrat': doc_contrat
+        },
+        'docs_libres': documents_libres
+    }
+
+    # Calcul du pourcentage d'avancement officiel
+    nb_officiels_scannes = sum(1 for doc in dossier['docs_officiels'].values() if doc and doc.fichier_scanne)
+    pourcentage = int((nb_officiels_scannes / 5) * 100)
+    dossier['pourcentage'] = pourcentage
+
+    return render_template('dossier_intelligent.html', dossier=dossier)
