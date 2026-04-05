@@ -157,7 +157,8 @@ class Contrat(db.Model):
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
     fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
     immatriculation = db.Column(db.String(100)) # <-- AJOUT POUR L'ARCHIVAGE
-
+    # 👇 AJOUTE CETTE LIGNE POUR SAUVEGARDER LE VOCABLE ! 👇
+    vocable = db.Column(db.String(50), default="Prestataire")
 
 class LettreInformation(db.Model):
     id = db.Column(db.Integer, primary_key=True)

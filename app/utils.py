@@ -326,7 +326,7 @@ def generer_pdf_bordereau(buffer, data):
         fontSize=11, 
         textColor=colors.black, 
         alignment=TA_LEFT,
-        leftIndent=1.6*cm  # ---> AJOUTE CECI : ça pousse le texte de 2 cm vers la droite
+        leftIndent=3*cm  # ---> AJOUTE CECI : ça pousse le texte de 2 cm vers la droite
     )
     
     ref_complete = f"N° {data.get('numero', '')} {data.get('service_ref', '')}"
@@ -352,7 +352,7 @@ def generer_pdf_bordereau(buffer, data):
     ]))
 
     # L'en-tête global
-    header_table = Table([[table_gauche, col_droite]], colWidths=[11.5*cm, 7.5*cm])
+    header_table = Table([[table_gauche, col_droite]], colWidths=[9.5*cm, 9.5*cm])
     
     header_table.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'), 
@@ -416,7 +416,7 @@ def generer_pdf_bordereau(buffer, data):
         reference_finale = f"N°{ref_saisie} ;"
 
         # 3. On insère ça dans le texte du tableau
-        texte_designation = f"""- Demande de Renseignements et de Prix Restreinte relative aux 
+        texte_designation = f"""-Demande de Renseignements et de Prix Restreinte ayant pour objet : 
         « {dossier['objet']} »<br/>
         {reference_finale}"""
         
@@ -578,15 +578,30 @@ def generer_pdf_lettre_information(buffer, data):
     texte_ref_complet = clean_text(f"N° {num_ordre} {ref_service}")
     pdf.cell(0, 5, txt=texte_ref_complet, new_x="LMARGIN", new_y="NEXT")
     
-    # 2. La Date 
+    # ==========================================
+    # CORRECTION DU FORMAT DE LA DATE
+    # ==========================================
+    date_brute = str(date_lettre).strip()
+    
+    if len(date_brute) >= 10 and date_brute[4] == '-' and date_brute[7] == '-':
+        annee = date_brute[0:4]
+        mois = date_brute[5:7]
+        jour = date_brute[8:10]
+        date_formatee = f"{jour}/{mois}/{annee}"
+    elif date_brute == "" or date_brute == "None":
+        date_formatee = "---------------------------------"
+    else:
+        date_formatee = date_brute
+
+    # 2. La Date (On utilise notre date_formatee)
     pdf.set_xy(X_DROITE, pdf.get_y() + 15) 
-    pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_lettre}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_formatee}"), new_x="LMARGIN", new_y="NEXT")
     
     # 3. Le Signataire
     pdf.set_xy(X_DROITE, pdf.get_y() + 30) 
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 6, txt=clean_text(f"{signataire}"), new_x="LMARGIN", new_y="NEXT")
-
+    
     # --- 3. OBJET & CORPS DE LA LETTRE (ÉQUILIBRÉ) ---
     marge_gauche_texte = 15 
     pdf.set_left_margin(marge_gauche_texte)
@@ -774,8 +789,24 @@ def generer_pdf_lettre_notification(buffer, data):
     texte_ref_complet = clean_text(f"N° {num_ordre} {ref_service}")
     pdf.cell(0, 5, txt=texte_ref_complet, new_x="LMARGIN", new_y="NEXT")
     
+    # ==========================================
+    # CORRECTION DU FORMAT DE LA DATE
+    # ==========================================
+    date_brute = str(date_lettre).strip()
+    
+    if len(date_brute) >= 10 and date_brute[4] == '-' and date_brute[7] == '-':
+        annee = date_brute[0:4]
+        mois = date_brute[5:7]
+        jour = date_brute[8:10]
+        date_formatee = f"{jour}/{mois}/{annee}"
+    elif date_brute == "" or date_brute == "None":
+        date_formatee = "---------------------------------"
+    else:
+        date_formatee = date_brute
+
+    # On utilise date_formatee ici 👇
     pdf.set_xy(X_DROITE, pdf.get_y() + 15) 
-    pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_lettre}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_formatee}"), new_x="LMARGIN", new_y="NEXT")
     
     pdf.set_xy(X_DROITE, pdf.get_y() + 30) 
     pdf.set_font("Arial", 'B', 16)
@@ -957,9 +988,24 @@ def generer_pdf_pv_attribution(buffer, data):
     texte_ref_complet = clean_text(f"N° {num_ordre} {ref_service}")
     pdf.cell(0, 5, txt=texte_ref_complet, new_x="LMARGIN", new_y="NEXT")
     
-    # Date
+    # ==========================================
+    # CORRECTION DU FORMAT DE LA DATE
+    # ==========================================
+    date_brute = str(date_lettre).strip()
+    
+    if len(date_brute) >= 10 and date_brute[4] == '-' and date_brute[7] == '-':
+        annee = date_brute[0:4]
+        mois = date_brute[5:7]
+        jour = date_brute[8:10]
+        date_formatee = f"{jour}/{mois}/{annee}"
+    elif date_brute == "" or date_brute == "None":
+        date_formatee = "---------------------------------"
+    else:
+        date_formatee = date_brute
+
+    # Date (On utilise date_formatee maintenant !)
     pdf.set_xy(X_DROITE, pdf.get_y() + 15) 
-    pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_lettre}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_formatee}"), new_x="LMARGIN", new_y="NEXT")
     
     # Signataire (Le Directeur)
     pdf.set_xy(X_DROITE, pdf.get_y() + 30) 
@@ -1012,8 +1058,12 @@ def generer_pdf_pv_attribution(buffer, data):
     pdf.set_font("Arial", '', 12) # Taille 12 pour le PV, c'est très bien !
     pdf.set_text_color(0, 0, 0) 
     
-    # --- PARAGRAPHE 1 ---
-    texte_p1 = f"La **{direction_propre}** du Ministère de la Culture, de l'Artisanat et du Tourisme, **{adresse_propre}**, a procédé à l'attribution des offres reçues dans le cadre de la demande de renseignements et de prix restreinte N° **{immat_propre}** ayant pour objet : « **{objet_propre}** »."
+   # --- PARAGRAPHE 1 ---
+    # 1. On formate le texte pour avoir "Direction de l'Administration..." au lieu de tout en majuscules
+    direction_pv = direction_propre.title().replace(" De ", " de ").replace(" Et ", " et ")
+    
+    # 2. On l'intègre sans les ** pour éviter le gras
+    texte_p1 = f"La {direction_pv} du Ministère de la Culture, de l'Artisanat et du Tourisme, **{adresse_propre}**, a procédé à l'attribution des offres reçues dans le cadre de la demande de renseignements et de prix restreinte N° **{immat_propre}** ayant pour objet : « **{objet_propre}** »."
     
     pdf.multi_cell(0, hauteur_ligne, txt=texte_p1, align='J', markdown=True)
     pdf.ln(5)
@@ -1174,11 +1224,29 @@ def dessiner_en_tete(pdf, data):
     texte_ref_complet = clean_text(f"N° {num_ordre} {ref_service}")
     pdf.cell(0, 5, txt=texte_ref_complet, new_x="LMARGIN", new_y="NEXT")
     
+    # ==========================================
+    # CORRECTION DU FORMAT DE LA DATE
+    # ==========================================
+    date_brute = str(date_lettre).strip()
+    
+    # On vérifie si c'est au format YYYY-MM-DD
+    if len(date_brute) >= 10 and date_brute[4] == '-' and date_brute[7] == '-':
+        annee = date_brute[0:4]
+        mois = date_brute[5:7]
+        jour = date_brute[8:10]
+        date_formatee = f"{jour}/{mois}/{annee}"
+    elif date_brute == "" or date_brute == "None":
+        date_formatee = "---------------------------------"
+    else:
+        date_formatee = date_brute # On garde la valeur d'origine si le format n'est pas reconnu
+
     # 2. La Date 
     # On aère un peu plus en descendant de 8mm (au lieu de 5mm)
     pdf.set_xy(X_DROITE, pdf.get_y() + 15) 
-    pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_lettre}"), new_x="LMARGIN", new_y="NEXT")
     
+    # 👇 On utilise la 'date_formatee' ici 👇
+    pdf.cell(0, 5, txt=clean_text(f"Dakar, le {date_formatee}"), new_x="LMARGIN", new_y="NEXT")
+
     # --- 3. LE SIGNATAIRE ---
     # On descend pour laisser la place à la signature
     pdf.set_xy(X_DROITE, pdf.get_y() + 25) 
@@ -1865,7 +1933,20 @@ def generer_pdf_contrat(data):
     # ==========================================
     numero = data.get('numero', '..........................')
     ref_service = data.get('ref_service', 'MTA/SG/DAGE/ges') 
-    date_signature = data.get('date_lettre', '---------------------------------')
+    
+    # 1. On force la valeur en texte et on enlève les espaces invisibles
+    date_brute = str(data.get('date_lettre', '')).strip()
+
+    # 2. Méthode blindée : Si le texte fait au moins 10 caractères et a des tirets au bon endroit (YYYY-MM-DD)
+    if len(date_brute) >= 10 and date_brute[4] == '-' and date_brute[7] == '-':
+        annee = date_brute[0:4]
+        mois = date_brute[5:7]
+        jour = date_brute[8:10]
+        date_signature = f"{jour}/{mois}/{annee}"
+    elif date_brute == "" or date_brute == "None":
+        date_signature = "---------------------------------"
+    else:
+        date_signature = date_brute # Sécurité : on affiche ce qui vient si on ne reconnaît pas le format
 
     pdf.set_font("Arial", "B", 10)
     
@@ -1983,13 +2064,24 @@ def generer_pdf_contrat(data):
     pdf.set_font("Arial", "", 10)
     pdf.multi_cell(0, 5, ct("Les dispositions relatives au code des marchés sont applicables au présent contrat qui prend effet à compter de sa signature."))
 
-    pdf.ln(3)
+    # 1. On vérifie s'il reste assez de place en bas de page (pour éviter la séparation)
+    if pdf.get_y() > 260:
+        pdf.add_page()
+    else:
+        pdf.ln(3) # Petit espace AVANT le titre de l'article 6
+
+    # 2. Le Titre
     pdf.set_font("Arial", "BU", 10)
     pdf.cell(60, 5, ct("Article 6 : Enregistrement et timbre"), new_x="LMARGIN", new_y="NEXT")
+    
+    # 3. Le texte, collé juste en dessous (grâce au new_y="NEXT" ci-dessus, et sans pdf.ln() au milieu)
     pdf.set_font("Arial", "", 10)
-    pdf.multi_cell(0, 5, ct("Les frais d'enregistrement et de timbre sont à la charge du prestataire."))
+    
+    # On récupère le vocable en minuscules (ex: fournisseur, prestataire...)
+    vocable_min = str(data.get('vocable', 'prestataire')).lower()
+    
+    pdf.multi_cell(0, 5, ct(f"Les frais d'enregistrement et de timbre sont à la charge du {vocable_min}."))
 
-    # Fini la page 3 forcée ! On laisse un simple espace de 3mm entre l'article 6 et l'article 7
     pdf.ln(3)
 
     # Article 7

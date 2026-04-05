@@ -118,21 +118,30 @@ def login():
     
     # 2. VÉRIFICATION DU BLOCAGE (Applicable à TOUT LE MONDE, pas d'immunité)
     if record and record.is_blocked:
-        if datetime.utcnow() - record.last_attempt > timedelta(minutes=15):
-            # Déblocage auto après 15 minutes
-            record.is_blocked = False
-            record.attempts = 0
-            db.session.commit()
-        else:
-            flash("Trop de tentatives échouées. Veuillez réessayer dans 15 minutes.", "danger")
-            return render_template('login.html')
-
+            # On calcule la différence de temps une seule fois
+            delta = datetime.utcnow() - record.last_attempt
+            
+            if delta > timedelta(minutes=15):
+                # Déblocage auto après 15 minutes
+                record.is_blocked = False
+                record.attempts = 0
+                db.session.commit()
+            else:
+                # ⏱️ Calcul du temps restant en secondes pour le chronomètre
+                temps_restant = int((timedelta(minutes=15) - delta).total_seconds())
+                
+                # On enlève la mention "15 minutes" du message flash vu qu'il y a le chrono
+                flash("Trop de tentatives échouées. Votre compte est temporairement bloqué.", "danger")
+                
+                # 🔄 C'est ICI qu'on envoie le temps restant à ta page HTML
+                return render_template('login.html', block_time=temps_restant)
     if request.method == 'POST':
         # --- 3. PIÈGE POT DE MIEL (Sécurisé contre le DoS) ---
         honeypot = request.form.get('confirm_email_address')
         if honeypot:
             # C'est un bot ! On simule un échec SANS bloquer l'IP pour éviter de bannir des innocents
             log_action("ALERTE_HONEYPOT", f"Tentative de bot ignorée depuis l'IP {user_ip}")
+            db.session.commit() # ✅ LIGNE MAGIQUE AJOUTÉE ICI !
             flash("Identifiant ou mot de passe incorrect.", "danger")
             return render_template('login.html')
 
@@ -153,13 +162,13 @@ def login():
             session.permanent = True  
             
             log_action("Connexion réussie", f"Utilisateur {user.username}")
+            db.session.commit()
             
             # Redirection selon le rôle
             if user.role == 'superadmin':
                 return redirect(url_for('main.super_dashboard'))
             return redirect(url_for('main.tableau_de_bord'))
-
-        # --- 5. CAS : ÉCHEC DE CONNEXION ---
+# --- 5. CAS : ÉCHEC DE CONNEXION ---
         else:
             if not record:
                 record = LoginAttempt(ip_address=user_ip, attempts=1, last_attempt=datetime.utcnow())
@@ -169,15 +178,25 @@ def login():
                 record.last_attempt = datetime.utcnow()
 
             # On bloque à 5 tentatives (MÊME si c'est le compte admin !)
-            if record.attempts >= 5:
+            if record.attempts >= 3:
                 record.is_blocked = True
                 log_action("ALERTE_SECURITE", f"IP {user_ip} BANNIE temporairement (Cible: {username})")
-                flash("Compte temporairement bloqué suite à 5 échecs. Attendez 15 minutes.", "danger")
-            else:
-                flash(f"Identifiant ou mot de passe incorrect ({record.attempts}/5).", "danger")
-            
-            db.session.commit()
                 
+                # 1. On sauvegarde l'état bloqué dans la base de données TOUT DE SUITE
+                db.session.commit()
+                
+                # 2. On affiche le message (sans préciser 15 min puisque le chrono le fera)
+                flash("Compte temporairement bloqué suite à 3 échecs.", "danger")
+                
+                # 3. 🚀 ON LANCE LE CHRONOMÈTRE DE 900 SECONDES (15 minutes * 60)
+                return render_template('login.html', block_time=900)
+                
+            else:
+                flash(f"Identifiant ou mot de passe incorrect ({record.attempts}/3).", "danger")
+                # On sauvegarde juste l'incrémentation (1/5, 2/5, etc.)
+                db.session.commit()
+                
+    # Renvoi classique si ce n'est pas un blocage
     return render_template('login.html')
 
 @main.route('/logout')
@@ -1213,17 +1232,23 @@ def get_infos_invitation():
                 nom = p.get('nom_entreprise') or p.get('nom')
                 p_id = p.get('id') or p.get('candidat_id') or p.get('prestataire_id')
                 
-                # Si on n'a pas l'ID mais qu'on a le nom, on cherche l'ID dans la base de données !
-                if not p_id and nom:
+                # On cherche l'objet Candidat pour avoir son genre
+                candidat_db = None
+                if p_id:
+                    candidat_db = db.session.get(Candidat, int(p_id))
+                elif nom:
                     candidat_db = Candidat.query.filter(Candidat.nom_entreprise.ilike(f"%{nom}%")).first()
                     if candidat_db:
                         p_id = candidat_db.id
+
+                # On récupère le genre (ou par défaut "Monsieur")
+                genre_trouve = candidat_db.genre if candidat_db and candidat_db.genre else "Monsieur"
                 
-                # On n'ajoute que les prestataires qui ont bien un ID et un Nom valides
                 if nom and p_id:
                     prestataires_propres.append({
                         "id": p_id,
-                        "nom": nom
+                        "nom": nom,
+                        "civilite": genre_trouve # 👈 NOUVEAU : On l'ajoute au colis pour le JS
                     })
             # -----------------------------------------------
             
@@ -1869,6 +1894,7 @@ def creer_contrat():
             numero=numero,
             ref_service=ref_service,
             date_lettre=date_lettre,
+            vocable=vocable, # 👈 AJOUTE CETTE LIGNE ICI POUR SAUVEGARDER LE CHOIX !
             immatriculation=immatriculation_marche # 👈 LA PIÈCE MANQUANTE EST ICI !
         )
         
@@ -1963,7 +1989,7 @@ def telecharger_contrat(id):
         'imputation': contrat.imputation,
         'programme': contrat.programme,
         'comptable': contrat.comptable_assignataire,
-        'vocable': 'Prestataire',
+        'vocable': getattr(contrat, 'vocable', 'Prestataire'), # ✅ On va chercher la vraie valeur
         'numero': getattr(contrat, 'numero', ''), 
         'ref_service': getattr(contrat, 'ref_service', ''), 
         'date_lettre': getattr(contrat, 'date_lettre', '') 

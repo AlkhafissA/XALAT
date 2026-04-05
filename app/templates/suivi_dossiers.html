@@ -171,19 +171,19 @@
               <div class="step-label">Invitations<br /><small class="text-muted fw-normal">Envoyées</small></div>
             </div>
 
-            <div class="step {% if dossier.etapes.etape_2_pv %}completed{% endif %}">
-              <div class="step-icon">{% if dossier.etapes.etape_2_pv %}✔{% else %}2{% endif %}</div>
-              <div class="step-label">Commission<br /><small class="text-muted fw-normal">PV Signé</small></div>
-            </div>
-
             <div class="step {% if dossier.etapes.etape_3_notification %}completed{% endif %}">
-              <div class="step-icon">{% if dossier.etapes.etape_3_notification %}✔{% else %}3{% endif %}</div>
+              <div class="step-icon">{% if dossier.etapes.etape_3_notification %}✔{% else %}2{% endif %}</div>
               <div class="step-label">Attributaire<br /><small class="text-muted fw-normal">Notifié</small></div>
             </div>
 
             <div class="step {% if dossier.etapes.etape_4_information %}completed{% endif %}">
-              <div class="step-icon">{% if dossier.etapes.etape_4_information %}✔{% else %}4{% endif %}</div>
+              <div class="step-icon">{% if dossier.etapes.etape_4_information %}✔{% else %}3{% endif %}</div>
               <div class="step-label">Candidats<br /><small class="text-muted fw-normal">Informés</small></div>
+            </div>
+
+            <div class="step {% if dossier.etapes.etape_2_pv %}completed{% endif %}">
+              <div class="step-icon">{% if dossier.etapes.etape_2_pv %}✔{% else %}4{% endif %}</div>
+              <div class="step-label">Commission<br /><small class="text-muted fw-normal">PV Signé</small></div>
             </div>
 
             <div class="step {% if dossier.etapes.etape_5_contrat %}completed{% endif %}">

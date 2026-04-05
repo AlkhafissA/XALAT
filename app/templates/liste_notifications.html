@@ -341,7 +341,7 @@ Le Directeur de l'Administration Générale et de l'Equipement</textarea
       });
     }
 
-    // Script d'auto-remplissage
+    // Script d'auto-remplissage via Python
     if (selectReference) {
       selectReference.addEventListener("change", function () {
         const immat = this.value;
@@ -351,7 +351,9 @@ Le Directeur de l'Administration Générale et de l'Equipement</textarea
 
           inputImmat.value = immat;
 
-          const apiUrl = `{{ url_for('main.get_infos_invitation') }}?immat=${encodeURIComponent(immat)}`;
+          // On empêche la mise en cache pour toujours avoir les bonnes infos
+          const noCache = new Date().getTime();
+          const apiUrl = `{{ url_for('main.get_infos_invitation') }}?immat=${encodeURIComponent(immat)}&_=${noCache}`;
 
           fetch(apiUrl)
             .then((response) => response.json())
@@ -367,10 +369,13 @@ Le Directeur de l'Administration Générale et de l'Equipement</textarea
                   data.prestataires.forEach((prestataire) => {
                     const nom = prestataire.nom_entreprise || prestataire.nom;
                     const id = prestataire.id || prestataire.candidat_id;
+                    const civilite = prestataire.civilite || "Monsieur"; // NOUVEAU
+
                     if (nom && id && id !== "undefined") {
                       const option = document.createElement("option");
                       option.value = id;
                       option.textContent = nom;
+                      option.setAttribute("data-civilite", civilite); // On cache l'info
                       selectEntreprise.appendChild(option);
                     }
                   });
@@ -378,7 +383,6 @@ Le Directeur de l'Administration Générale et de l'Equipement</textarea
 
                 statusText.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Données chargées !</span>';
 
-                // Petit effet visuel pour confirmer le chargement
                 inputObjet.style.transition = "background-color 0.5s ease";
                 inputObjet.style.backgroundColor = "#e8f5e9";
                 setTimeout(() => (inputObjet.style.backgroundColor = ""), 1000);
@@ -393,6 +397,35 @@ Le Directeur de l'Administration Générale et de l'Equipement</textarea
         }
       });
     }
+
+    // 🎯 Écouteur DANS LE BON BLOC pour remplir la civilité automatiquement !
+    if (selectEntreprise) {
+      selectEntreprise.addEventListener("change", function () {
+        const optionSelectionnee = this.options[this.selectedIndex];
+        const inputCivilite = document.querySelector('input[name="civilite_representant"]');
+
+        if (optionSelectionnee && optionSelectionnee.dataset.civilite) {
+          // On passe tout en minuscules pour faciliter la comparaison
+          let civ = optionSelectionnee.dataset.civilite.trim().toLowerCase();
+
+          // On ajoute "homme" et "femme" dans nos vérifications !
+          if (civ === "m." || civ === "monsieur" || civ === "homme" || civ === "h" || civ === "m") {
+            inputCivilite.value = "Monsieur le Directeur Général,";
+          } else if (civ === "mme" || civ === "madame" || civ === "femme" || civ === "f") {
+            inputCivilite.value = "Madame la Directrice Générale,";
+          } else {
+            // Si c'est un mot qu'on ne connaît pas, on remet la valeur d'origine avec sa majuscule
+            inputCivilite.value = optionSelectionnee.dataset.civilite.trim();
+          }
+
+          // Petit effet visuel orange pour te confirmer l'action
+          inputCivilite.style.transition = "background-color 0.5s ease";
+          inputCivilite.style.backgroundColor = "#ffe0b2";
+          setTimeout(() => (inputCivilite.style.backgroundColor = ""), 1000);
+        }
+      });
+    }
+    // FIN DU BLOC DOMContentLoaded
   });
 </script>
 {% endblock %}
