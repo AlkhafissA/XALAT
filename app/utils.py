@@ -601,7 +601,7 @@ def generer_pdf_lettre_information(buffer, data):
     pdf.set_xy(X_DROITE, pdf.get_y() + 30) 
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 6, txt=clean_text(f"{signataire}"), new_x="LMARGIN", new_y="NEXT")
-    
+
     # --- 3. OBJET & CORPS DE LA LETTRE (ÉQUILIBRÉ) ---
     marge_gauche_texte = 15 
     pdf.set_left_margin(marge_gauche_texte)
@@ -1735,10 +1735,8 @@ def generer_pdf_contrat(data):
     # ==========================================
     # Bloc 1 : Titulaire
     # ==========================================
-    pdf.set_font("Arial", "U", 11)
-    pdf.cell(18, 6, "Titulaire", new_x="RIGHT", new_y="TOP")
     pdf.set_font("Arial", "", 11)
-    pdf.cell(3, 6, " : ", new_x="RIGHT", new_y="TOP")
+    pdf.cell(18, 6, "Titulaire : ", new_x="RIGHT", new_y="TOP")
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 6, data.get('titulaire', '').upper(), new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
