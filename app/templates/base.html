@@ -27,7 +27,7 @@
         padding-bottom: 50px;
       }
 
-      /* Ajout de la classe btn-white manquante */
+      /* Ajout de la classe btn-white */
       .btn-white {
         background-color: #ffffff;
         color: #344767;
@@ -274,7 +274,7 @@
       const csrfTokenTag = document.querySelector('meta[name="csrf-token"]');
       if (csrfTokenTag) {
         const csrfToken = csrfTokenTag.getAttribute("content");
-        // Ajoute automatiquement le token à toutes les requêtes 'fetch'
+        // On Ajoute automatiquement le token à toutes les requêtes 'fetch'
         window.csrfFetchOptions = {
           headers: {
             "X-CSRFToken": csrfToken,

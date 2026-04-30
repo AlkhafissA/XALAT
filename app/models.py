@@ -15,7 +15,7 @@ class Historique(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     utilisateur = db.Column(db.String(100))
     action = db.Column(db.String(200))
-    # On utilise db.Text pour accepter une longueur illimitée de caractères
+    # j'utilise db.Text pour accepter une longueur illimitée de caractères
     cible = db.Column(db.Text) 
     date_action = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -39,13 +39,13 @@ class Candidat(db.Model):
     titre_signataire = db.Column(db.String(150), default="Le Directeur") 
     rc = db.Column(db.String(100))               # <-- NOUVEAU
     compte_bancaire = db.Column(db.String(200))  # <-- NOUVEAU
-    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTONS CECI
     contrats = db.relationship('Contrat', backref='parent_candidat', cascade="all, delete-orphan")
 class Cotation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     objet = db.Column(db.Text, nullable=False)
     
-    # --- NOUVEAUX CHAMPS POUR LA LETTRE D'INFORMATION ---
+    # --- CHAMPS POUR LA LETTRE D'INFORMATION ---
     num_ordre_lettre = db.Column(db.String(50))
     ref_service_lettre = db.Column(db.String(100), default="MCAT/SG/DAGE/ms")
     immatriculation = db.Column(db.String(100))
@@ -78,7 +78,7 @@ class Bordereau(db.Model):
     numero = db.Column(db.String(50))
     service_ref = db.Column(db.String(50))
     date_signature = db.Column(db.Date)
-    # ✅ AJOUTE CETTE LIGNE POUR SAUVEGARDER LE DESTINATAIRE
+    # ✅ On AJOUTE CETTE LIGNE POUR SAUVEGARDER LE DESTINATAIRE
     destinataire = db.Column(db.String(255), default="Monsieur le Coordonnateur de la Cellule de Passation des Marchés Publics")
     observations = db.Column(db.String(200))
     # On stocke la liste des dossiers sous forme de texte (JSON)
@@ -102,7 +102,7 @@ class LettreNotification(db.Model):
     # Ce champ va stocker TOUTES les données du formulaire sous forme de texte (JSON)
     # pour pouvoir régénérer le PDF exactement pareil plus tard.
     form_data = db.Column(db.Text)
-    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- ON AJOUTE CECI
 
 
 class ProcesVerbal(db.Model):
@@ -112,7 +112,7 @@ class ProcesVerbal(db.Model):
     entreprise = db.Column(db.String(200)) # L'entreprise déclarée moins disante
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
     form_data = db.Column(db.Text) # Pour stocker toutes les infos du formulaire en JSON
-    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <--ON AJOUTE CECI
 
 
 class LettreInvitation(db.Model):
@@ -155,17 +155,17 @@ class Contrat(db.Model):
     date_lettre = db.Column(db.String(50), nullable=True)
     
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
-    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- ON AJOUTE CECI
     immatriculation = db.Column(db.String(100)) # <-- AJOUT POUR L'ARCHIVAGE
-    # 👇 AJOUTE CETTE LIGNE POUR SAUVEGARDER LE VOCABLE ! 👇
+    # 👇ON AJOUTE CETTE LIGNE POUR SAUVEGARDER LE VOCABLE ! 👇
     vocable = db.Column(db.String(50), default="Prestataire")
 
 class LettreInformation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     immatriculation = db.Column(db.String(100))
     objet_marche = db.Column(db.Text)
-    date_creation = db.Column(db.DateTime, default=datetime.utcnow) # <-- LA COLONNE MANQUANTE EST ICI
-    form_data = db.Column(db.Text) # On va y stocker tout le JSON (dates, prestataires, etc.)
+    date_creation = db.Column(db.DateTime, default=datetime.utcnow) # <-- ON AJOUTE CECI
+    form_data = db.Column(db.Text) # On stocke tout le JSON (dates, prestataires, etc.)
     fichier_scanne = db.Column(db.String(255), nullable=True)
 
 class ArchiveDocument(db.Model):

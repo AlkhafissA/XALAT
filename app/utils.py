@@ -119,11 +119,11 @@ def generer_lettre_agrement(candidat, mode='vierge'):
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_flag_top + w_band_top, y_flag_top, w_band_top, h_flag_top, 'F')
     
     # 🌟 CENTRAGE PARFAIT - GRAND DRAPEAU
-    # Ajuste ce chiffre : si l'étoile est trop basse, mets 4.0 ou 3.5. Si elle est trop haute, mets 5.0.
+    # Ajustement de chiffre : si l'étoile est trop basse, on mets 4.0 ou 3.5. Si elle est trop haute, on mets 5.0.
     decalage_y = 4.5 
     pdf.set_xy(x_flag_top + w_band_top, y_flag_top + decalage_y); 
     pdf.set_text_color(0, 140, 60); pdf.set_font("ZapfDingbats", '', 11) 
-    pdf.cell(w_band_top, 5, chr(72), align='C') # Hauteur de cellule fixée à 5 pour mieux contrôler
+    pdf.cell(w_band_top, 5, chr(72), align='C') # Hauteur de cellule fixée à 5 pour mieux la contrôler
     
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_flag_top + (w_band_top*2), y_flag_top, w_band_top, h_flag_top, 'F')
 
@@ -183,14 +183,14 @@ Je vous prie de croire, {civilite}, à l'assurance de ma considération distingu
     pdf.cell(0, 5, txt="Ampliation :", ln=1, align='L')
 
     # 2. Le réglage pour "- CPM"
-    pdf.ln(7)      # <--- AJOUTE ÇA : Petit saut vertical de 2mm pour détacher
-    pdf.set_x(35)  # <--- AJOUTE ÇA : On décale le curseur à 30mm du bord gauche (au lieu de 10)
+    pdf.ln(7)      # <--- Petit saut vertical de 2mm pour détacher
+    pdf.set_x(35)  # <--- On décale le curseur à 30mm du bord gauche (au lieu de 10)
 
     # 3. On écrit "- CPM" (qui sera donc décalé)
     pdf.set_font("Arial", '', 11)
     pdf.cell(0, 5, txt="- CPM", ln=1, align='L')
 
-    # CHANGE LE -22 EN -30 (ou -35 pour monter encore plus haut)
+    # ON CHANGE LE -22 EN -30 (ou -35 pour monter encore plus haut)
     pdf.set_y(-25)  
     
     # Le reste ne change pas, la ligne va suivre automatiquement
@@ -218,10 +218,9 @@ Je vous prie de croire, {civilite}, à l'assurance de ma considération distingu
     pdf.output(chemin_complet)
 
     # On retourne uniquement le nom du fichier
-    # (Tes routes s'occuperont de construire le chemin complet)
+    # (Mes routes s'occuperont de construire le chemin complet)
     return nom_fichier
 
-# ... (Tout ton code existant reste au dessus) ...
 
 import math
 from reportlab.lib import colors
@@ -274,10 +273,10 @@ def generer_pdf_bordereau(buffer, data):
     styles = getSampleStyleSheet()
     
     # =========================================================================
-    # METS TOUS LES STYLES EXACTEMENT ICI (AVANT DE COMMENCER À CRÉER DU TEXTE)
+    # TOUS MES STYLES SONT EXACTEMENT ICI (AVANT DE COMMENCER À CRÉER DU TEXTE)
     # =========================================================================
     
-    # 1. Tes anciens styles (nécessaires pour éviter l'erreur Pylance ligne 368)
+    # 1. Mes anciens styles (nécessaires pour éviter l'erreur Pylance qui me cassait les pieds)
     style_normal = ParagraphStyle(name='Times', parent=styles['Normal'], fontName='Times-Roman', fontSize=10, leading=12)
     style_center_bold = ParagraphStyle(name='CenterBold', parent=style_normal, alignment=TA_CENTER, fontName='Times-Bold')
     style_center_italic = ParagraphStyle(name='CenterItalic', parent=style_normal, alignment=TA_CENTER, fontName='Times-Italic', fontSize=9)
@@ -293,7 +292,7 @@ def generer_pdf_bordereau(buffer, data):
     style_dir = ParagraphStyle(name='Dir', fontName='Helvetica-Bold', fontSize=9, textColor=colors.black, alignment=TA_CENTER, leading=13)
     
     # =========================================================================
-    # FIN DES STYLES, ON COMMENCE À CONSTRUIRE LE DOCUMENT
+    # FIN DES STYLES, ON COMMENCE MAINTENANT À CONSTRUIRE LE DOCUMENT
     # =========================================================================
     # --- COLONNE GAUCHE (Le design exact) ---
     drapeau = dessiner_drapeau()
@@ -326,7 +325,7 @@ def generer_pdf_bordereau(buffer, data):
         fontSize=11, 
         textColor=colors.black, 
         alignment=TA_LEFT,
-        leftIndent=3*cm  # ---> AJOUTE CECI : ça pousse le texte de 2 cm vers la droite
+        leftIndent=3*cm  # ---> ON AJOUTE CECI : ça pousse le texte de 2 cm vers la droite
     )
     
     ref_complete = f"N° {data.get('numero', '')} {data.get('service_ref', '')}"
@@ -368,12 +367,12 @@ def generer_pdf_bordereau(buffer, data):
 
     elements.append(header_table)
 
-    # La suite de ton document...
+    # La suite de mon document...
     # doc.build(elements)
     # --- TITRE ET DESTINATAIRE ---
     
     # On récupère le destinataire (avec une valeur de sécurité au cas où)
-   # Dans utils.py, remplace la ligne par ça :
+   
     destinataire_texte = data.get('destinataire', 'TOTO LE TESTEUR')
 
     elements.append(Spacer(1, 0.5*cm))
@@ -407,7 +406,7 @@ def generer_pdf_bordereau(buffer, data):
     for index, dossier in enumerate(dossiers):
         num_ordre = str(index + 1)
         
-        # --- C'EST ICI QUE TU APPRENDS LA TECHNIQUE ---
+        # --- C'EST ICI LA TECHNIQUE ---
         # 1. On récupère ce que l'utilisateur a tapé (ex: T_DAGE_208)
         ref_saisie = dossier['ref']
         
@@ -421,7 +420,7 @@ def generer_pdf_bordereau(buffer, data):
         {reference_finale}"""
         
         p_designation = Paragraph(texte_designation, style_cell_left)
-        # ... la suite du code reste pareille ...
+        
         
         if index == 0:
             str_total = f"{total_count:02d}"
@@ -497,11 +496,11 @@ def generer_pdf_lettre_information(buffer, data):
             # Textes
             self.set_text_color(0, 0, 0)
             self.set_font("Times", '', 11) 
-            # (On n'a pas besoin de clean_text ici car on maîtrise ces chaînes en dur)
+            # (On n'a pas besoin de clean_text ici car je maîtrise ces chaînes en dur)
             self.cell(0, 5, txt="Ministère de la Culture, de l'Artisanat et du Tourisme,", align='C', new_x="LMARGIN", new_y="NEXT")
             self.cell(0, 5, txt="Route des Almadies, Dakar Sénégal", align='C', new_x="LMARGIN", new_y="NEXT")
 
-    # On utilise notre nouvelle classe au lieu de FPDF() classique
+    # J'utilise ma nouvelle classe au lieu de FPDF() classique
     pdf = PDFInformation()
     pdf.add_page()
     # ⚠️ TRÈS IMPORTANT : On dit au PDF de sauter de page s'il arrive à 30mm du bas !
@@ -526,7 +525,7 @@ def generer_pdf_lettre_information(buffer, data):
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_flag_top + w_band_top, y_flag_top, w_band_top, h_flag_top, style='F')
     
     # --- L'ÉTOILE (Vraie étoile avec ZapfDingbats) ---
-    # Ajuste à 4.0 ou 5.0 si tu veux la monter ou la descendre un poil
+    # Ajusté à 4.0 ou 5.0 si on veut la monter ou la descendre un poil
     decalage_y_etoile = 4.5 
     pdf.set_xy(x_flag_top + w_band_top, y_flag_top + decalage_y_etoile) 
     pdf.set_text_color(0, 140, 60)
@@ -738,7 +737,7 @@ def generer_pdf_lettre_notification(buffer, data):
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_flag_top + w_band_top, y_flag_top, w_band_top, h_flag_top, style='F')
     
     # --- L'Étoile du drapeau ---
-    decalage_y_etoile = 4.5 # Modifie cette valeur si besoin (ex: 4.0 pour monter, 5.0 pour descendre)
+    decalage_y_etoile = 4.5 # on peut Modifie cette valeur si besoin (ex: 4.0 pour monter, 5.0 pour descendre)
     pdf.set_xy(x_flag_top + w_band_top, y_flag_top + decalage_y_etoile) 
     pdf.set_text_color(0, 140, 60)
     pdf.set_font("ZapfDingbats", '', 11) # Police magique
@@ -856,8 +855,8 @@ def generer_pdf_lettre_notification(buffer, data):
     Y_ACTUEL = 210  # Hauteur de départ en mm
     X_GAUCHE = 15   # Position fixe depuis le bord gauche
     
-    # 👈 C'est ce chiffre (80) qui crée le "mur invisible" ! 
-    # Le texte ne dépassera jamais 80mm de largeur, il ira à la ligne.
+    # 👈 C'est ce chiffre (70) qui crée le "mur invisible" ! 
+    # Le texte ne dépassera jamais 70mm de largeur, il ira à la ligne.
     LARGEUR_BLOC = 70
     
     pdf.set_font("Arial", 'B', 11)
@@ -874,7 +873,7 @@ def generer_pdf_lettre_notification(buffer, data):
     # 1. Le "À"
     pdf.set_xy(X_GAUCHE + 15, Y_ACTUEL)
     pdf.cell(LARGEUR_BLOC, 6, txt="À", align='L')
-    # 2. Le nom (restera bloqué à 80mm de large grâce à multi_cell)
+    # 2. Le nom (restera bloqué à 70mm de large grâce à multi_cell)
     Y_ACTUEL += 6
     pdf.set_xy(X_GAUCHE, Y_ACTUEL)
     pdf.multi_cell(LARGEUR_BLOC, 6, txt=texte_nom, align='L')
@@ -979,7 +978,7 @@ def generer_pdf_pv_attribution(buffer, data):
     # ==========================================
     # --- 2. RÉFÉRENCES, DATE ET SIGNATAIRE ---
     # ==========================================
-    X_DROITE = 135  # Toujours notre variable magique pour l'alignement
+    X_DROITE = 135  # Toujours cette variable magique pour l'alignement
     
     # Numéro et Réf Service sur la même ligne
     pdf.set_xy(X_DROITE, y_start_text) 
@@ -1084,7 +1083,7 @@ def generer_pdf_pv_attribution(buffer, data):
     # ==========================================
     pdf.ln(25) # On laisse un bon espace pour la signature
     
-    # On pousse le bloc vers la droite (tu peux ajuster ce chiffre : 120, 130...)
+    # On pousse le bloc vers la droite (on peux ajuster ce chiffre : 120, 130...)
     X_SIGNATURE_DROITE = 125 
     pdf.set_x(X_SIGNATURE_DROITE) 
     
@@ -1211,7 +1210,7 @@ def dessiner_en_tete(pdf, data):
     fin_bloc_gauche = pdf.get_y()
 
     # On définit une nouvelle position X pour décaler tout le bloc vers la droite.
-    # (+15 millimètres par rapport à avant, tu peux changer ce nombre si besoin)
+    # (+15 millimètres par rapport à avant, on peux changer ce nombre si besoin)
     X_DROITE = POS_X_NUMERO + 15
 
     # --- 2. RÉFÉRENCES ET DATE ---
@@ -1253,7 +1252,7 @@ def dessiner_en_tete(pdf, data):
     pdf.set_font("Arial", 'B', 16)
     
     # On utilise exactement la même configuration de cellule pour que ça soit 100% aligné à gauche.
-    # (Et j'ai enlevé la virgule qui causait le "Le Directeur,,")
+    # (Et j'ai aussi enlevé la virgule qui causait le "Le Directeur,,")
     pdf.cell(0, 6, txt=clean_text(f"{signataire}"), new_x="LMARGIN", new_y="NEXT")
 
     # 📌 On mémorise la fin du bloc de droite
@@ -1298,9 +1297,9 @@ def generer_pdf_lettre_invitation(data):
     pdf.set_font("Arial", 'BU', 11)
     pdf.cell(16, 6, txt="Objet : ") # On repasse à 6 pour la hauteur
     
-    # 2. On décale la marge gauche (notre mur invisible)
+    # 2. On décale la marge gauche (pour le mur invisible)
     pdf.set_left_margin(x_start + 16)
-    pdf.set_xy(x_start + 16, y_start) # Alignement vertical naturel, plus besoin de tricher !
+    pdf.set_xy(x_start + 16, y_start) # Alignement vertical naturel, je n'est plus besoin de tricher !
     
     # 3. 🪄 L'ASTUCE : On utilise multi_cell avec markdown=True
     pdf.set_font("Arial", '', 11)
@@ -1330,7 +1329,7 @@ def generer_pdf_lettre_invitation(data):
     date_propre = clean_text(date_heure)
     adresse_propre = clean_text(adresse_depot)
     
-   # 🤖 Le petit robot expert en Marchés Publics
+   # 🤖 Le petit robot qui me permet d'anticiper les mauvaise francais j'espere qu'il sera a la hauteur
     objet_test = objet_propre.lower().strip()
 
     # 1. Famille des TRAVAUX (BTP, infrastructures)
@@ -1366,7 +1365,7 @@ def generer_pdf_lettre_invitation(data):
     pdf.multi_cell(0, 6, txt=texte_paragraphe_2, align='J', markdown=True)
     pdf.ln(2)
     
-    # Mentions (On laisse tes write() ici car ce sont des phrases courtes avec alinéa, pas besoin de justifier)
+    # Mentions (j'ai laissé les write() ici car ce sont des phrases courtes avec alinéa, pas besoin de justifier)
     pdf.set_font("Arial", '', 11)
     pdf.set_x(pdf.l_margin + 15) 
     pdf.write(6, clean_text("« Demande de Renseignements et de Prix n° "))
@@ -1512,7 +1511,7 @@ def generer_pdf_lettre_invitation(data):
     pdf.set_font("Arial", 'BU', 11)
     pdf.cell(16, 6, txt="Objet : ") # On repasse à 6 pour la hauteur
     
-    # 2. On décale la marge gauche (notre mur invisible)
+    # 2. On décale la marge gauche (pour le mur invisible)
     pdf.set_left_margin(x_start + 16)
     pdf.set_xy(x_start + 16, y_start) # Alignement vertical naturel, plus besoin de tricher !
     
@@ -1712,7 +1711,7 @@ def generer_pdf_contrat(data):
     x_centre = (210 - largeur_boite) / 2 # Calcul pour centrer la boîte
     pdf.set_x(x_centre) # On place le curseur au bon endroit
     
-    # Ton texte avec le retour à la ligne forcé pour que ce soit joli
+    # Le texte avec le retour à la ligne forcé pour que ce soit joli
     direction_affichee = ct(direction_nom).replace("Administration g", "Administration\ng").replace("Administration G", "Administration\nG")
     
     # On utilise largeur_boite au lieu de 0
@@ -1741,7 +1740,7 @@ def generer_pdf_contrat(data):
     pdf.cell(0, 6, data.get('titulaire', '').upper(), new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
 
-    # NINEA / RC
+    # NINEA / RC 
     pdf.set_font("Arial", "", 11)
     pdf.cell(0, 6, ct(f"NINEA : {data.get('ninea', '')}, RC : {data.get('rc', '')}"), new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
@@ -1817,11 +1816,11 @@ def generer_pdf_contrat(data):
     # ==========================================
     # MENTION GESTION (EN BAS DE PAGE)
     # ==========================================
-    # On force la position à 40 mm du bas de la page (tu peux ajuster ce chiffre : -30, -50...)
+    # On force la position à -40 mm du bas de la page (on peut aussi peux ajuster ce chiffre : -30, -50...)
     pdf.set_y(-40) 
     
     pdf.set_font("Arial", "BU", 11)
-    # ct() est ta fonction pour nettoyer le texte (clean_text)
+    # ct() est ma fonction pour nettoyer le texte (clean_text)
     texte_gestion = ct(f"GESTION {data.get('gestion_annee', '2025')}")
     pdf.cell(0, 6, texte_gestion, new_x="LMARGIN", new_y="NEXT", align="C")
 
@@ -1918,7 +1917,7 @@ def generer_pdf_contrat(data):
     x_centre = (210 - largeur_boite) / 2 # Calcul pour centrer la boîte
     pdf.set_x(x_centre) # On place le curseur au bon endroit
     
-    # Ton texte avec le retour à la ligne forcé pour que ce soit joli
+    # Mon texte avec le retour à la ligne forcé pour que ce soit joli
     direction_affichee = ct(direction_nom).replace("Administration g", "Administration\ng").replace("Administration G", "Administration\nG")
     
     # On utilise largeur_boite au lieu de 0
@@ -2005,7 +2004,7 @@ def generer_pdf_contrat(data):
     annee = data.get('gestion_annee', '2025')
 
     # 🤖 Le petit robot expert en Marchés Publics (Adapté pour l'Article 1)
-    # On s'assure d'utiliser ta variable "objet"
+    # On s'assure d'utiliser ma variable "objet"
     objet_test = str(objet).lower().strip()
 
     # 1. Famille des TRAVAUX (BTP, infrastructures)
@@ -2092,7 +2091,7 @@ def generer_pdf_contrat(data):
     pdf.multi_cell(0, 5, ct("Les litiges survenus au cours de l'exécution des prestations seront traités à l'amiable ou à défaut par un tribunal compétent en la matière."))
 
     # Signatures
-    pdf.ln(10) # Réduit de 15 à 10 pour que ça tienne bien en bas de la page 2
+    pdf.ln(10) # On Réduit de 15 à 10 pour que ça tienne bien en bas de la page 2
     pdf.set_font("Arial", "B", 10) 
     pdf.cell(0, 5, ct("Lu et accepté"), new_x="LMARGIN", new_y="NEXT", align="C") 
 

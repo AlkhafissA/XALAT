@@ -12,7 +12,7 @@ csrf = CSRFProtect()
 
 def create_app(config_class=Config):
     app = Flask(__name__)
-    # 🛡️ Toutes tes sécurités de cookies (HTTPOnly, SameSite...) sont 
+    # 🛡️ Toutes mes sécurités de cookies (HTTPOnly, SameSite...) sont 
     # maintenant chargées proprement et automatiquement depuis config.py ici :
     app.config.from_object(config_class)
 

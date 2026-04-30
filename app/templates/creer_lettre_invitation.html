@@ -478,7 +478,7 @@
     });
 
     $("#select_immatriculation").on("select2:select", function (e) {
-      // Ça simule un "vrai" clic sur l'ancienne balise pour déclencher ton script plus haut !
+      // Ça simule un "vrai" clic sur l'ancienne balise pour déclencher mon script plus haut !
       var selectElement = document.getElementById("select_immatriculation");
       var event = new Event("change", { bubbles: true });
       selectElement.dispatchEvent(event);

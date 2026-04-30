@@ -1,9 +1,20 @@
+#-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
+#-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
+#-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
+ 
+#-_-_-_-_-_-_-__--__PRECIOUS ALKHAFISSA CAMARA  JUNIOR__ -_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-
+#-_-_-_-_-_-_-__--__DE SON VRAI NOMS ABDOU AZIZ CAMARA__ -_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-
+
+#-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
+#-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
+#-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
+
 import os
 import zipfile
 import json
 import uuid
 from functools import wraps
-import filetype  # 🛡️ NOUVEAU : Pour lire l'ADN des fichiers
+import filetype  # 🛡️ Pour lire l'ADN des fichiers
 from werkzeug.utils import secure_filename
 from flask import send_file, make_response, abort
 from flask import send_from_directory, abort
@@ -67,7 +78,7 @@ def fichier_est_autorise(filename):
 def contenu_fichier_est_securise(file_stream):
     """ 2ème couche : Vérifie la vraie signature (Magic Bytes) à l'intérieur du fichier """
     header = file_stream.read(2048)
-    file_stream.seek(0) # IMPORTANT : remet le curseur à zéro
+    file_stream.seek(0) # IMPORTANT : on remet le curseur à zéro
     
     kind = filetype.guess(header)
     if kind is None:
@@ -94,9 +105,8 @@ def log_action(action, cible):
         current_app.logger.error(f"ERREUR SÉCURITÉ - Impossible d'enregistrer le log ({action}) : {str(e)}")
 
 # ==========================================================
-# ==========================================================
-
 # --- ROUTES AUTHENTIFICATION ---
+# ==========================================================
 
 @main.route('/', methods=['GET', 'POST'])
 @main.route('/login', methods=['GET', 'POST'])
@@ -107,7 +117,7 @@ def login():
             return redirect(url_for('main.super_dashboard'))
         return redirect(url_for('main.tableau_de_bord'))
 
-    # 🛡️ SÉCURITÉ : Récupère la vraie IP même si l'application est derrière un proxy
+    # 🛡️ SÉCURITÉ :on Récupère la vraie IP même si l'application est derrière un proxy
     # S'il y a plusieurs IP (séparées par des virgules), la première est la vraie IP du client.
     forwarded_for = request.headers.get('X-Forwarded-For')
     if forwarded_for:
@@ -133,13 +143,13 @@ def login():
                 # On enlève la mention "15 minutes" du message flash vu qu'il y a le chrono
                 flash("Trop de tentatives échouées. Votre compte est temporairement bloqué.", "danger")
                 
-                # 🔄 C'est ICI qu'on envoie le temps restant à ta page HTML
+                # 🔄 C'est ICI qu'on envoie le temps restant à la page HTML
                 return render_template('login.html', block_time=temps_restant)
     if request.method == 'POST':
         # --- 3. PIÈGE POT DE MIEL (Sécurisé contre le DoS) ---
         honeypot = request.form.get('confirm_email_address')
         if honeypot:
-            # C'est un bot ! On simule un échec SANS bloquer l'IP pour éviter de bannir des innocents
+            # Si C'est un bot ! On simule un échec SANS bloquer l'IP pour éviter de bannir des innocents
             log_action("ALERTE_HONEYPOT", f"Tentative de bot ignorée depuis l'IP {user_ip}")
             db.session.commit() # ✅ LIGNE MAGIQUE AJOUTÉE ICI !
             flash("Identifiant ou mot de passe incorrect.", "danger")
@@ -177,7 +187,7 @@ def login():
                 record.attempts += 1
                 record.last_attempt = datetime.utcnow()
 
-            # On bloque à 5 tentatives (MÊME si c'est le compte admin !)
+            # On bloque à 3 tentatives (MÊME si c'est le compte admin !)
             if record.attempts >= 3:
                 record.is_blocked = True
                 log_action("ALERTE_SECURITE", f"IP {user_ip} BANNIE temporairement (Cible: {username})")
@@ -244,7 +254,7 @@ def sauvegarder():
 @login_required
 def telecharger_agrement_vierge(id):
     candidat = db.session.get(Candidat, id)
-    # On génère le fichier (assure-toi que generer_lettre_agrement enregistre maintenant dans stockage_prive)
+    # On génère le fichier (on s'assure que generer_lettre_agrement enregistre maintenant dans stockage_prive)
     nom_fichier_relatif = generer_lettre_agrement(candidat, mode='vierge')
     
     # On récupère juste le nom du fichier pour utiliser notre route sécurisée
@@ -302,13 +312,13 @@ def valider_agrement_final():
             # Exemple: "0001" + " /SG/DAGE/ms" -> "0001 /SG/DAGE/ms"
             candidat.ref_interne = f"{ref_numero} {ref_suffixe}".strip()
             
-        # 3. On récupère les autres champs de ton formulaire HTML
+        # 3. On récupère les autres champs du formulaire HTML
         candidat.titre_signataire = request.form.get('titre_signataire', 'Le Directeur')
         candidat.date_signature_agrement = request.form.get('date_signature')
         candidat.ref_lettre_candidat = request.form.get('ref_lettre_candidat')
         # -----------------------------
 
-        # ... (début de ta fonction inchangé) ...
+        # ... (début de ma fonction inchangé) ...
         candidat.statut = "Retenu"
         db.session.commit()
         
@@ -334,7 +344,7 @@ def decision(id, type_decision):
         flash(f"Le dossier de {candidat.nom_entreprise} a été refusé.", "warning")
     return redirect(url_for('main.tableau_de_bord'))
 
-@main.route('/supprimer/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
+@main.route('/supprimer/<int:id>', methods=['POST']) # <-- ON AJOUTE methods=['POST']
 @login_required
 @role_requis('superadmin', 'admin') # 🛡️ SEULS LES CHEFS : Destruction de données interdite aux Agents/Stagiaires
 def supprimer(id):
@@ -345,7 +355,9 @@ def supprimer(id):
         db.session.commit()
     return redirect(url_for('main.tableau_de_bord'))
 
+# ==========================================================
 # --- ROUTES COTATIONS ---
+# ==========================================================
 
 @main.route('/cotations')
 @login_required
@@ -433,7 +445,7 @@ def sauvegarder_cotation():
     
     return redirect(url_for('main.liste_cotations'))
 
-@main.route('/supprimer_cotation/<int:id>', methods=['POST']) # <-- AJOUTE methods=['POST']
+@main.route('/supprimer_cotation/<int:id>', methods=['POST']) # <-- ON AJOUTE methods=['POST']
 @login_required
 @role_requis('superadmin', 'admin') # 🛡️ ACTION CRITIQUE : Seuls les chefs peuvent supprimer !
 def supprimer_cotation(id):
@@ -565,14 +577,14 @@ def telecharger_pv(id):
 
     # 1. On génère le PDF en mémoire (RAM)
     try:
-        pdf_bytes = bytes(pdf.output()) # Si tu utilises fpdf2
+        pdf_bytes = bytes(pdf.output()) # Si on utilises fpdf2
     except TypeError:
-        pdf_bytes = pdf.output(dest='S').encode('latin1') # Si tu utilises l'ancien fpdf
+        pdf_bytes = pdf.output(dest='S').encode('latin1') # Si on utilises l'ancien fpdf
 
     buffer = io.BytesIO(pdf_bytes)
     buffer.seek(0)
     
-    # 2. On garde ton historique d'action
+    # 2. Je garde mon historique d'action
     log_action("Téléchargement PV Cotation", cotation.objet)
     db.session.commit()
 
@@ -584,7 +596,9 @@ def telecharger_pv(id):
         mimetype='application/pdf'
     )
 
+# ==========================================================
 # --- ADMIN ROUTES ---
+# ==========================================================
 
 @main.route('/exporter_excel')
 @login_required
@@ -646,14 +660,13 @@ def sauvegarde_bdd():
     if current_user.role != 'superadmin': return redirect(url_for('main.tableau_de_bord'))
     db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
     return send_file(db_path, as_attachment=True)
+
 @main.route('/telecharger_backup_complet')
 @login_required
 def telecharger_backup_complet():
     # Sécurité absolue : seul le superadmin passe
     if current_user.role != 'superadmin': 
         return redirect(url_for('main.tableau_de_bord'))
-
-    
 
     # On prépare le fichier ZIP en mémoire
     memory_file = BytesIO()
@@ -684,7 +697,7 @@ def telecharger_backup_complet():
     date_str = datetime.now().strftime('%Y-%m-%d_%Hh%M')
     zip_filename = f"MCAT_Backup_Complet_{date_str}.zip"
     
-    # On enregistre l'action dans ton journal de surveillance
+    # On enregistre l'action dans le journal de surveillance
     log_action("Téléchargement Backup", "Base de données + Fichiers PDF")
     db.session.commit()
     
@@ -701,8 +714,6 @@ def download_backup():
     if current_user.role != 'admin': return "Interdit", 403
     db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
     return send_file(db_path, as_attachment=True, download_name='backup_mcat.db')
-
-# N'oublie pas que tu dois avoir importé ou créé ta fonction role_requis en haut du fichier !
 
 @main.route('/dashboard')
 @login_required
@@ -748,7 +759,7 @@ def super_dashboard():
 def creer_utilisateur():
     username = request.form.get('username')
     password = request.form.get('password')
-    # 👇 NOUVEAU : On récupère le rôle depuis le formulaire HTML !
+    # 👇 On récupère le rôle depuis le formulaire HTML !
     role_choisi = request.form.get('role', 'agent') # Par défaut, on met 'agent' par sécurité
     
     # Sécurité : On s'assure que personne ne bidouille le formulaire pour créer un faux superadmin
@@ -760,7 +771,7 @@ def creer_utilisateur():
         flash("Cet utilisateur existe déjà.", "warning")
     else:
         hashed_pw = generate_password_hash(password, method='pbkdf2:sha256')
-        # 👇 NOUVEAU : On applique le rôle choisi !
+        # 👇: On applique le rôle choisi !
         new_user = User(username=username, password_hash=hashed_pw, role=role_choisi)
         db.session.add(new_user)
         log_action(f"Création Utilisateur ({role_choisi})", username)
@@ -788,7 +799,7 @@ def supprimer_utilisateur(id):
 # 🛡️ SÉCURITÉ : Ajout de methods=['POST']
 @main.route('/reset_password/<int:id>', methods=['POST'])
 @login_required
-@role_requis('superadmin') # 👈 Utilisation de ton décorateur !
+@role_requis('superadmin') # 👈 Utilisation de mon décorateur !
 def reset_password(id):
     user_to_reset = db.session.get(User, id)
     
@@ -857,7 +868,7 @@ def verifier_mot_de_passe_temporaire():
                     # On le redirige de force !
                     return redirect(url_for('main.forcer_changement_mdp'))
             else:
-                # Petit message d'alerte dans ta console de développeur si le .env est mal lu
+                # Petit message d'alerte dans la console du développeur si le .env est mal lu
                 print("⚠️ Attention : MOT_DE_PASSE_PAR_DEFAUT est introuvable dans le fichier .env !")
 
 # --- ROUTE POUR LA PAGE DRPS  ---
@@ -1051,7 +1062,7 @@ def ajouter_bordereau():
         service_ref=service_ref,
         date_signature=date_obj,
         observations=observations,
-        destinataire=destinataire, # 🔥 L'OUBLI ÉTAIT ICI : on le met dans la base !
+        destinataire=destinataire, # 🔥 L'OUBLI ÉTAIT ICI : on le met dans la base  sa ma pris du temps avant de comrendre qu'il me manqué destinataire!
         dossiers_data=json.dumps(dossiers_list)
     )
     
@@ -1121,9 +1132,6 @@ def supprimer_bordereau(id):
     flash('Bordereau et ses fichiers associés supprimés.', 'success')
     return redirect(url_for('main.liste_bordereaux'))
 
-
-
-
 # NOUVEAU : La route attend maintenant le numéro du bordereau ET l'immatriculation
 @main.route('/api/get_infos_bordereau')
 @login_required
@@ -1140,11 +1148,11 @@ def get_infos_bordereau():
             dossiers = bordereau.get_dossiers() 
             
             for dossier in dossiers:
-                # 3. Dans votre HTML, vous aviez appelé ça "immatriculation" et "label"
+                # 3. Dans mon HTML, j'ai appelé ça "immatriculation" et "label"
                 ref_dossier = str(dossier.get('immatriculation', '') or dossier.get('ref', '')).strip()
                 
                 if ref_dossier == immatriculation:
-                    # BINGO ! On récupère le texte ("label" ou "objet")
+                    # On récupère le texte ("label" ou "objet")
                     texte_objet = dossier.get('label', '') or dossier.get('objet', '')
                     
                     return jsonify({
@@ -1383,8 +1391,8 @@ def ajouter_notification():
                 cand_obj = db.session.get(Candidat, int(cand_id))
                 
                 if cand_obj:
-                    # 🚨 LE NOUVEAU FILTRE INFAILLIBLE 🚨
-                    # On compare strictement les vrais IDs en BDD !
+                    # 🚨 LE FILTRE INFAILLIBLE 🚨
+                    # On compare strictement les vrais IDs en BDD 
                     if int(cand_obj.id) == int(prestataire_id):
                         print(f"⏩ {cand_obj.nom_entreprise} est le GAGNANT, on l'ignore.")
                         continue 
@@ -1420,7 +1428,7 @@ def ajouter_notification():
         db.session.add(nouvelle_info)
         print(f"✅ DEBUG - Lettre d'Information créée ({len(candidats_perdants_pdf)} perdants)")
 
-    # 👇 C'EST ICI QUE TU REMPLACES L'ANCIENNE FINALISATION 👇
+    # 👇 C'EST ICI QUE JE REMPLACES L'ANCIENNE FINALISATION 👇
     # --- FINALISATION ---
     try:
         db.session.commit()
@@ -1433,7 +1441,10 @@ def ajouter_notification():
         
     return redirect(url_for('main.liste_notifications'))
 
+# ==========================================================
 # --- ROUTE PDF NOTIFICATION (Gagnant) - DÉJÀ EXISTANTE ---
+# ==========================================================
+
 @main.route('/notifications/pdf/<int:id>')
 @login_required
 def download_notification_pdf(id):
@@ -1466,7 +1477,7 @@ def download_information_pdf(immatriculation):
     data = json.loads(info.form_data)
     
     buffer = io.BytesIO()
-    # ATTENTION : Il faudra créer cette fonction generer_pdf_lettre_information plus tard !
+
     from app.utils import generer_pdf_lettre_information 
     generer_pdf_lettre_information(buffer, data)
     buffer.seek(0)
@@ -1651,13 +1662,13 @@ def creer_lettre_invitation():
         direction_nom = request.form.get('direction_nom', "Direction de l'Administration Générale et de l'Equipement")
         # 💡 NOUVEAU : On récupère le type d'entreprise depuis le formulaire HTML
         type_entreprise = request.form.get('type_entreprise', 'PRESTATAIRES')
-# juste après : type_entreprise = request.form.get('type_entreprise', 'PRESTATAIRES')
+        # juste après : type_entreprise = request.form.get('type_entreprise', 'PRESTATAIRES')
         print(f"🚨 DEBUG - Le type d'entreprise reçu du HTML est : {type_entreprise}")
         # --- NOUVEAU : TRADUCTION DES DATES EN FRANÇAIS ---
         mois_fr = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
         jours_fr = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 
-        # Traduction de la Date de la lettre (ex: 2026-03-14 -> 14 mars 2026)
+        # Traduction de la Date de la lettre (ex: 2026-03-14 en 14 mars 2026)
         date_lettre_brute = request.form.get('date_lettre', '')
         date_lettre = date_lettre_brute
         if date_lettre_brute:
@@ -1667,7 +1678,7 @@ def creer_lettre_invitation():
             except ValueError:
                 pass
 
-        # Traduction de la Date et heure limite (ex: 2026-03-14T10:25 -> samedi 14 mars 2026 à 10 heures 25 minutes)
+        # Traduction de la Date et heure limite (ex: 2026-03-14T10:25 en samedi 14 mars 2026 à 10 heures 25 minutes)
         date_limite_brute = request.form.get('date_heure_limite')
         date_heure_limite = date_limite_brute
         if date_limite_brute:
@@ -1710,7 +1721,7 @@ def creer_lettre_invitation():
             'adresse_depot': adresse_depot,
             'lieu_ouverture': lieu_ouverture,
             'direction_nom': direction_nom,
-            'type_entreprise': type_entreprise, # 💡 NOUVEAU : On l'ajoute au dictionnaire JSON
+            'type_entreprise': type_entreprise, # 💡 NOUVEAU : On ajoute au dictionnaire JSON
             'prestataires': prestataires_selectionnes
         }
 
@@ -1783,7 +1794,7 @@ def creer_lettre_invitation():
             })
     return render_template('creer_lettre_invitation.html', 
                            candidats=candidats, 
-                           lettres=lettres_pour_tableau, # (ou juste 'lettres' selon votre ancien code)
+                           lettres=lettres_pour_tableau, # (ou juste 'lettres' selon mon ancien code)
                            groupes_bordereaux=groupes_bordereaux)
 
 @main.route('/telecharger_lettre/<int:id>')
@@ -1798,7 +1809,10 @@ def telecharger_lettre(id):
     pdf_path = generer_pdf_lettre_invitation(form_data_dict)
     return send_file(pdf_path, as_attachment=True)
 
+# ==========================================================
 # --- NOUVEAU : ROUTE POUR VOIR LE SCAN DE LA LETTRE ---
+# ==========================================================
+
 @main.route('/lettre_invitation/voir_scan/<int:id>')
 @login_required
 def voir_scan_lettre(id):
@@ -1894,15 +1908,15 @@ def creer_contrat():
             numero=numero,
             ref_service=ref_service,
             date_lettre=date_lettre,
-            vocable=vocable, # 👈 AJOUTE CETTE LIGNE ICI POUR SAUVEGARDER LE CHOIX !
-            immatriculation=immatriculation_marche # 👈 LA PIÈCE MANQUANTE EST ICI !
+            vocable=vocable, # 👈 ON AJOUTE CETTE LIGNE ICI POUR SAUVEGARDER LE CHOIX !
+            immatriculation=immatriculation_marche # 👈 LA PIÈCE MANQUANTE EST ICI SONONE NA FI TAMITE !
         )
         
         db.session.add(nouveau_contrat)
         log_action("Ajout Contrat", candidat_gagnant.nom_entreprise)
         db.session.commit()
 
-        # 2. ON PRÉPARE LES DONNÉES POUR LE PDF (Optionnel ici si téléchargé via le tableau)
+        # 2. ON PRÉPARE LES DONNÉES POUR LE PDF (Optionnel ici si téléchargé via le tableau KOME NONOU RK)
         flash("Contrat généré et sauvegardé avec succès !", "success")
         return redirect(url_for('main.creer_contrat'))
 
@@ -1920,7 +1934,7 @@ def creer_contrat():
     return render_template('formulaire_contrat.html', pvs=liste_pvs, contrats=contrats_sauvegardes)
 
 
-# === PARTIE 2 : LA NOUVELLE API MAGIQUE POUR LE PV ===
+# === PARTIE 2 : LA NOUVELLE API MAGIQUE POUR LE PV === MOUGUI BAX FII
 @main.route('/api/get_infos_pv')
 @login_required
 def get_infos_pv():
@@ -2039,7 +2053,7 @@ def supprimer_contrat(id):
 @main.route('/creer_lettre_information', methods=['POST'])
 @login_required
 def creer_lettre_information():
-    # 🛡️ SÉCURITÉ : Le Stagiaire ne peut pas générer de lettre d'information
+    # 🛡️ SÉCURITÉ : Le Stagiaire ne peut pas générer de lettre d'information 
     if current_user.role == 'stagiaire':
         flash("Accès refusé : Les stagiaires ne sont pas autorisés à générer des lettres d'information.", "danger")
         return redirect(url_for('main.lettres_information'))
@@ -2260,7 +2274,7 @@ def uploader_scan():
                             LettreNotification, Bordereau, ProcesVerbal, 
                             Cotation, Candidat)
                             
-    # 2. Dictionnaire de correspondance (beaucoup plus propre que les if/elif)
+    # 2. Dictionnaire de correspondance (les if/elif GNOME DAGNO MEUNA GOUDAL CODE SA C'est beaucoup plus propre)
     modeles_map = {
         'lettre_invitation': LettreInvitation,
         'contrat': Contrat,
@@ -2450,7 +2464,7 @@ def page_suivi_dossiers():
         # 👇 RECHERCHE DU CONTRAT GRÂCE AU NUMÉRO DE RÉFÉRENCE 👇
         doc_contrat = None
         
-        # 1. On cherche d'abord avec le numéro de référence (Ton idée !)
+        # 1. On cherche d'abord avec le numéro de référence 
         if reference_du_pv:
             doc_contrat = Contrat.query.filter_by(ref_service=reference_du_pv).first()
             
@@ -2462,7 +2476,7 @@ def page_suivi_dossiers():
         if not doc_contrat and objet_du_marche != "Objet non défini":
             doc_contrat = Contrat.query.filter_by(objet_marche=objet_du_marche).first()
         # 👆 FIN DE LA RECHERCHE 👆
-# ==========================================
+        # ==========================================
         # 🕵️‍♂️ MODE DÉTECTIVE ACTIVÉ (C'EST ICI QU'IL FAUT LE METTRE !)
         # ==========================================
         print(f"\n--- RECHERCHE POUR LE DOSSIER : {immat} ---")
@@ -2563,7 +2577,7 @@ def exporter_archives_excel():
     date_jour = datetime.now().strftime('%Y-%m-%d')
     nom_fichier_export = f"Registre_Archives_MCAT_{date_jour}.xlsx"
     
-    # 👇 AJOUTE CES DEUX LIGNES 👇
+    # 👇 ON AJOUTE CES DEUX LIGNES 👇
     log_action("Export Excel", "Registre des Archives Documentaires")
     db.session.commit()
     
@@ -2598,7 +2612,7 @@ def error_404(error):
 
 @main.app_errorhandler(500)
 def error_500(error):
-    db.session.rollback() # Très important : annule les bêtises en BDD si ça a planté
+    db.session.rollback() # Très important : on annule les bêtises en BDD si ça a planté
     return render_template('errors/500.html'), 500
 
 
@@ -2622,7 +2636,7 @@ def secure_download(folder, filename):
     if folder not in ALLOWED_FOLDERS:
         abort(403)
 
-    # --- 1. TON CODE DE SÉCURITÉ EXISTANT (On garde tout !) ---
+    # --- 1. le CODE DE SÉCURITÉ EXISTANT (On garde tout !) ---
     root_dir = Path(current_app.root_path).parent.resolve()
     base_path = (root_dir / 'stockage_prive' / folder).resolve()
 
@@ -2717,7 +2731,7 @@ def page_changement_mot_de_passe():
         flash("Accès refusé. Veuillez utiliser la clé de sécurité pour accéder à cette page.", "danger")
         return redirect(url_for('main.tableau_de_bord'))
     
-    # 2. TRAITEMENT DU FORMULAIRE (Quand tu cliques sur Valider)
+    # 2. TRAITEMENT DU FORMULAIRE (Quand on cliques sur Valider)
     if request.method == 'POST':
         nouveau_mdp = request.form.get('nouveau_mot_de_passe')
         confirmation_mdp = request.form.get('confirmation_mot_de_passe')
@@ -2745,7 +2759,7 @@ def page_changement_mot_de_passe():
         session.pop('acces_autorise_page_secrete', None)
         
         flash("Félicitations ! Votre mot de passe Super-Admin a été changé avec succès.", "success")
-        return redirect(url_for('main.tableau_de_bord')) # Redirige où tu veux (ex: la page des utilisateurs)
+        return redirect(url_for('main.tableau_de_bord')) # Redirigé vers la page des utilisateurs)
         
     # 3. AFFICHAGE DE LA PAGE (Quand tu arrives sur la page)
     return render_template('changement_mdp.html')
@@ -2819,7 +2833,7 @@ def dossier_intelligent(immat):
     doc_notif = LettreNotification.query.filter_by(immatriculation=immat).first()
     doc_info = LettreInformation.query.filter_by(immatriculation=immat).first()
     
-    # Recherche du contrat (selon ta logique de la timeline)
+    # Recherche du contrat (selon ma logique de la timeline)
     doc_contrat = Contrat.query.filter_by(immatriculation=immat).first()
     if not doc_contrat and doc_pv and doc_pv.form_data:
         try:
@@ -2860,3 +2874,15 @@ def dossier_intelligent(immat):
     dossier['pourcentage'] = pourcentage
 
     return render_template('dossier_intelligent.html', dossier=dossier)
+
+#-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
+#-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
+#-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
+
+#-_-_-_-_-_-_-__--REK MOU FIN ET VOICI COMMENT LE COEUR DE MON SYSTÉME FONCTIONNE DU MOINS POUR L'INSTANT 
+#-_-_-_-_-_-_-__--PRECIOUS ALKHAFISSA CAMARA 
+#-_-_-_-_-_-_-__--DE SON VRAI NOMS ABDOU AZIZ CAMARA
+
+#-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
+#-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
+#-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 

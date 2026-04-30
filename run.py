@@ -4,8 +4,8 @@ import os
 app = create_app()
 
 if __name__ == '__main__':
-    # 🛡️ RAPPEL SÉCURITÉ : Ce fichier est parfait pour ton ordinateur local.
-    # Mais en production (sur le vrai serveur), on n'utilise JAMAIS app.run().
+    # 🛡️ RAPPEL SÉCURITÉ : Ce fichier est parfait pour un ordinateur en local.
+    # Mais en production (sur un vrai serveur), on n'utilise JAMAIS app.run().
     # On utilisera un vrai serveur industriel comme Gunicorn.
     
     # On regarde si on a activé le mode debug dans le fichier .env
