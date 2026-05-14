@@ -3,8 +3,8 @@ import zipfile
 from datetime import datetime
 import shutil
 
-# --- CONFIGURATION (À vérifier selon ton PC/Serveur) ---
-# Chemin absolu vers ton projet (là où se trouve run.py)
+# --- CONFIGURATION (À vérifier selon le PC/Serveur) ---
+# Chemin absolu vers le projet (là où se trouve run.py)
 CHEMIN_PROJET = os.path.dirname(os.path.abspath(__file__))
 
 # Les éléments précieux à sauvegarder
@@ -20,26 +20,26 @@ MAX_BACKUPS_A_GARDER = 7
 def faire_le_backup():
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Démarrage du robot de sauvegarde...")
     
-    # 1. Créer le dossier des backups s'il n'existe pas
+    # 1. Créations du dossier des backups s'il n'existe pas
     if not os.path.exists(DOSSIER_BACKUPS):
         os.makedirs(DOSSIER_BACKUPS)
         
-    # 2. Préparer le nom du fichier ZIP
+    # 2. Préparation du nom du fichier ZIP
     date_str = datetime.now().strftime('%Y-%m-%d_%Hh%M')
     nom_zip = f"AUTO_MCAT_Backup_{date_str}.zip"
     chemin_zip = os.path.join(DOSSIER_BACKUPS, nom_zip)
     
-    # 3. Créer le fichier ZIP
+    # 3. Création du fichier ZIP
     try:
         with zipfile.ZipFile(chemin_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
-            # Ajouter la base de données
+            # On Ajouter la base de données
             if os.path.exists(CHEMIN_BDD):
                 zf.write(CHEMIN_BDD, os.path.basename(CHEMIN_BDD))
                 print(" -> Base de données ajoutée.")
             else:
                 print(" /!\\ AVERTISSEMENT : Base de données introuvable !")
                 
-            # Ajouter les PDF (dossier uploads)
+            # On Ajouter les PDF (dossier uploads)
             if os.path.exists(CHEMIN_UPLOADS):
                 for root, dirs, files in os.walk(CHEMIN_UPLOADS):
                     for file in files:
@@ -56,7 +56,7 @@ def faire_le_backup():
         print(f" [ERREUR CRITIQUE] Le backup a échoué : {e}")
         return
 
-    # 4. Nettoyage : supprimer les vieux backups pour faire de la place
+    # 4. Nettoyage : suppression des vieux backups pour faire de la place
     nettoyer_vieux_backups()
 
 def nettoyer_vieux_backups():
