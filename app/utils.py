@@ -126,52 +126,104 @@ def generer_lettre_agrement(candidat, mode='vierge'):
         civilite = "Monsieur le Directeur"
         titre_destinataire = "Monsieur le Directeur"
 
+  # --- PARAMÈTRES DU BLOC EN-TÊTE GAUCHE ---
+    x_bloc = 8  # On l'aligne exactement sur la marge de "Objet" (qui est à 20)
+    w_bloc = 70  # Largeur totale du bloc de texte
+    centre_bloc = x_bloc + (w_bloc / 2) # Calcule automatiquement le centre (55)
+
   # --- DESSIN GRAPHIQUE ---
-    x_flag_top = 43; y_flag_top = 10; w_band_top = 8; h_flag_top = 14 
+    w_band_top = 8; h_flag_top = 14 
+    w_flag_total = w_band_top * 3
+    x_flag_top = centre_bloc - (w_flag_total / 2) # Centre automatiquement le drapeau
+    y_flag_top = 10 
+    
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_flag_top, y_flag_top, w_band_top, h_flag_top, 'F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_flag_top + w_band_top, y_flag_top, w_band_top, h_flag_top, 'F')
     
     # 🌟 CENTRAGE PARFAIT - GRAND DRAPEAU
-    # Ajustement de chiffre : si l'étoile est trop basse, on mets 4.0 ou 3.5. Si elle est trop haute, on mets 5.0.
     decalage_y = 4.5 
-    pdf.set_xy(x_flag_top + w_band_top, y_flag_top + decalage_y); 
+    pdf.set_xy(x_flag_top + w_band_top, y_flag_top + decalage_y)
     pdf.set_text_color(0, 140, 60); pdf.set_font("ZapfDingbats", '', 11) 
-    pdf.cell(w_band_top, 5, chr(72), align='C') # Hauteur de cellule fixée à 5 pour mieux la contrôler
+    pdf.cell(w_band_top, 5, chr(72), align='C') 
     
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_flag_top + (w_band_top*2), y_flag_top, w_band_top, h_flag_top, 'F')
 
+    # --- TEXTES DE L'EN-TÊTE GAUCHE ---
     y_start_text = y_flag_top + h_flag_top + 5 
-    pdf.set_y(y_start_text); pdf.set_text_color(0, 0, 0); pdf.set_font("Times", 'B', 14)
-    pdf.cell(90, 6, txt=clean_text("République du Sénégal"), ln=1, align='C')
-    pdf.set_font("Times", 'I', 11); pdf.cell(90, 6, txt="Un Peuple - Un But - Une Foi", ln=1, align='C')
-    pdf.ln(2); pdf.set_font("Arial", 'B', 8); pdf.set_text_color(0, 100, 0)
-    pdf.multi_cell(90, 4, txt=clean_text("MINISTÈRE DE LA CULTURE, DE\nL'ARTISANAT ET DU TOURISME"), align='C')
+    pdf.set_y(y_start_text)
+    pdf.set_x(x_bloc) # On cale le texte sur X=20
+    pdf.set_text_color(0, 0, 0); pdf.set_font("Times", 'B', 14)
+    pdf.cell(w_bloc, 6, txt=clean_text("République du Sénégal"), ln=1, align='C')
     
-    y_barre = pdf.get_y() + 1; w_barre_total = 44; x_barre_start = 33; w_segment = w_barre_total / 3; h_barre = 1.5
+    pdf.set_x(x_bloc) # On recale à X=20 pour la ligne suivante
+    pdf.set_font("Times", 'I', 11)
+    pdf.cell(w_bloc, 6, txt="Un Peuple - Un But - Une Foi", ln=1, align='C')
+    
+    pdf.ln(2)
+    pdf.set_x(x_bloc) # On recale à X=20
+    pdf.set_font("Arial", 'B', 8); pdf.set_text_color(0, 100, 0)
+    pdf.multi_cell(w_bloc, 4, txt=clean_text("MINISTÈRE DE LA CULTURE, DE\nL'ARTISANAT ET DU TOURISME"), align='C')
+    
+    # --- PETITE BARRE TRICOLORE ---
+    y_barre = pdf.get_y() + 1
+    w_barre_total = 44
+    w_segment = w_barre_total / 3
+    x_barre_start = centre_bloc - (w_barre_total / 2) # Centre automatiquement la barre
+    h_barre = 1.5
+    
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_barre_start, y_barre, w_segment, h_barre, 'F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_barre_start + w_segment, y_barre, w_segment, h_barre, 'F')
     
-    # 🌟 CENTRAGE PARFAIT - PETITE BARRE TRICOLORE
-    # Pareil ici : on ajuste précisément le décalage (en négatif car on remonte par rapport à la barre)
+    # 🌟 ÉTOILE PETITE BARRE
     decalage_y_barre = -1.2 
-    pdf.set_xy(x_barre_start + w_segment, y_barre + decalage_y_barre); 
+    pdf.set_xy(x_barre_start + w_segment, y_barre + decalage_y_barre)
     pdf.set_font("ZapfDingbats", '', 5.5); pdf.set_text_color(0, 140, 60) 
-    pdf.cell(w_segment, 4, chr(72), align='C'); 
+    pdf.cell(w_segment, 4, chr(72), align='C')
     
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_barre_start + (w_segment*2), y_barre, w_segment, h_barre, 'F')
-    pdf.set_xy(10, y_barre + 3); pdf.set_font("Arial", 'B', 30); pdf.set_text_color(0, 100, 0)
-    pdf.cell(90, 12, txt="MCAT", ln=1, align='C')
+    
+    # --- TEXTE MCAT ---
+    pdf.set_xy(x_bloc, y_barre + 3) # On cale sur X=20
+    pdf.set_font("Arial", 'B', 30); pdf.set_text_color(0, 100, 0)
+    pdf.cell(w_bloc, 12, txt="MCAT", ln=1, align='C')
+
+    # 🌟 NOUVEAU : NOM DE LA DIRECTION (Sous MCAT)
+    texte_direction = getattr(candidat, 'nom_direction', "DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT")
+    
+    pdf.set_x(x_bloc)
+    pdf.set_font("Arial", 'B', 9) 
+    pdf.set_text_color(0, 0, 0) # Texte en noir
+    pdf.multi_cell(w_bloc, 5, txt=clean_text(texte_direction), align='C')
     pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", 'B', 9)
     
-    pdf.set_xy(105, y_start_text + 5); pdf.set_font("Arial", 'B', 10)
-    pdf.cell(0, 5, txt=val_ref_interne, ln=1, align='C')
-    pdf.ln(8); pdf.set_x(105); pdf.cell(0, 5, txt=f"Dakar, le {val_date_sign}", ln=1, align='C')
-    pdf.ln(15); pdf.set_x(105); pdf.set_font("Arial", 'B', 16); pdf.multi_cell(0, 6, txt=val_titre_signataire, align='C')
+  # --- BLOC DE DROITE (RÉFÉRENCES ET SIGNATAIRE) ---
+    x_droite = 130  # Augmente ce chiffre (ex: 125 ou 130) pour pousser encore plus à droite
 
-    pdf.set_left_margin(20); pdf.set_y(95); pdf.set_font("Arial", 'B', 11); pdf.cell(20, 6, txt="Objet :", align='L')
+   # ⬇️ POUR DESCENDRE : On change "- 5" par "+ 2" (ou + 5 si tu veux descendre encore plus)
+    pdf.set_xy(x_droite, y_start_text + 1)
+    pdf.set_font("Arial", 'B', 10)
+    
+    # 1. Le "N°" aligné à gauche
+    pdf.cell(0, 5, txt=val_ref_interne, ln=1, align='L')
+    
+    pdf.ln(8)
+    pdf.set_x(x_droite)
+    
+    # 2. "Dakar, le..." aligné à gauche
+    pdf.cell(0, 5, txt=f"Dakar, le {val_date_sign}", ln=1, align='L')
+    
+    # ⬇️ C'EST ICI : Augmente ce chiffre pour créer plus d'espace sous la date (ex: 22 ou 25 au lieu de 15)
+    pdf.ln(22)
+    pdf.set_x(x_droite)
+    pdf.set_font("Arial", 'B', 16)
+    
+    # 3. LE CHANGEMENT EST ICI : On passe "Le Directeur" en align='L' au lieu de 'C'
+    pdf.multi_cell(0, 6, txt=val_titre_signataire, align='L')
+
+    pdf.set_left_margin(20); pdf.set_right_margin(35); pdf.set_y(95); pdf.set_font("Arial", 'B', 11); pdf.cell(20, 6, txt="Objet :", align='L')
     pdf.set_font("Arial", '', 11); pdf.cell(0, 6, txt=clean_text("Votre demande d'agrément"), ln=1)
     pdf.set_font("Arial", 'B', 11); pdf.cell(25, 6, txt=clean_text("Référence :"), align='L')
-    pdf.set_font("Arial", '', 11); pdf.cell(0, 6, txt=f"Votre lettre SR/{val_ref_sr}", ln=1); pdf.ln(6)
+    pdf.set_font("Arial", '', 11); pdf.cell(0, 6, txt=f"Votre lettre {val_ref_sr}", ln=1); pdf.ln(6)
     pdf.cell(0, 6, txt=f"{civilite},", ln=1); pdf.ln(4)
 
     texte_corps = f"""J'accuse réception de votre lettre, citée en référence, par laquelle vous sollicitez un agrément pour les services que vous proposez.
@@ -179,7 +231,14 @@ En retour, je vous informe que votre entreprise est agréée et enregistrée dan
 
 Je vous prie de croire, {civilite}, à l'assurance de ma considération distinguée."""
 
-    pdf.multi_cell(0, 6, txt=clean_text(texte_corps)); pdf.ln(5) 
+   # 1. On définit la police Arial à Taille 12 pour le corps du texte
+    pdf.set_font("Arial", '', 12) 
+
+    # 2. On passe la hauteur de ligne à 8 pour simuler l'interligne 1.5 et on justifie (align='J')
+    pdf.multi_cell(0, 8, txt=clean_text(texte_corps), align='J')
+    
+    # 3. On garde ton grand saut de ligne pour détacher le reste
+    pdf.ln(25) 
     y_actuel = pdf.get_y(); pdf.set_xy(20, y_actuel); pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 5, txt="A", ln=1, align='L'); pdf.cell(0, 5, txt=f"{titre_destinataire} de", ln=1, align='L')
     pdf.cell(0, 5, txt=nom_entreprise.upper(), ln=1, align='L')
@@ -233,7 +292,6 @@ Je vous prie de croire, {civilite}, à l'assurance de ma considération distingu
     # On retourne uniquement le nom du fichier
     # (Mes routes s'occuperont de construire le chemin complet)
     return nom_fichier
-
 
 import math
 from reportlab.lib import colors

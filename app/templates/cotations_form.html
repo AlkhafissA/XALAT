@@ -123,6 +123,15 @@
           {% endif %}
 
           <div class="section-title">1. Informations Générales</div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Nom de la Direction (PRM)</label>
+            <input type="text" class="form-control text-uppercase" name="nom_direction" 
+                   value="{{ cotation.nom_direction if cotation else 'DIRECTION DE L\'ADMINISTRATION GENERALE ET DE L\'EQUIPEMENT' }}" 
+                   required />
+            <div class="form-text small">Ce nom s'affichera sur la ligne "PRM :" du procès-verbal.</div>
+          </div>
+
           <div class="mb-3">
             <label class="form-label fw-bold">Objet</label>
             <textarea class="form-control" name="objet" rows="2" required>{{ cotation.objet if cotation else '' }}</textarea>
@@ -143,10 +152,21 @@
             <div class="col-md-6 mb-3">
               <label class="form-label fw-bold">Date Ouverture</label>
               <input type="datetime-local" class="form-control" name="date_ouverture" value="{{ cotation.date_ouverture.strftime('%Y-%m-%dT%H:%M') if cotation else '' }}" required />
-            </div>
+              
+              <div class="mt-2 p-2 border rounded bg-light">
+                <label class="small text-primary mb-1">📝 Procès-verbal d'ouverture établi le :</label>
+                <input type="datetime-local" class="form-control form-control-sm" name="date_pv_ouverture" value="{{ cotation.date_pv_ouverture.strftime('%Y-%m-%dT%H:%M') if cotation and cotation.date_pv_ouverture else '' }}" />
+              </div>
+            </div> 
+
             <div class="col-md-6 mb-3">
               <label class="form-label fw-bold">Date Attribution</label>
               <input type="datetime-local" class="form-control" name="date_attribution" value="{{ cotation.date_attribution.strftime('%Y-%m-%dT%H:%M') if cotation else '' }}" required />
+            
+              <div class="mt-2 p-2 border rounded bg-light">
+                <label class="small text-primary mb-1">📝 Procès-verbal d'attribution établi le :</label>
+                <input type="datetime-local" class="form-control form-control-sm" name="date_pv_attribution" value="{{ cotation.date_pv_attribution.strftime('%Y-%m-%dT%H:%M') if cotation and cotation.date_pv_attribution else '' }}" />
+              </div>            
             </div>
           </div>
 

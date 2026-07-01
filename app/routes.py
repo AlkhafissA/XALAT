@@ -72,11 +72,13 @@ def role_requis(*roles_autorises):
 # 🛡️ OUTILS DE SÉCURITÉ ET D'HISTORIQUE
 # ==========================================================
 
-ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'}
+# On aligne les extensions avec les types MIME autorisés plus bas !
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx'}
 
 def fichier_est_autorise(filename):
-    """ 1ère couche : Vérifie si l'extension est autorisée """
+    # 1er couche : On vérifie la présence d'un point et on isole l'extension en minuscules
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 def contenu_fichier_est_securise(file_stream):
     """ 2ème couche : Vérifie la vraie signature (Magic Bytes) à l'intérieur du fichier """
@@ -88,11 +90,11 @@ def contenu_fichier_est_securise(file_stream):
         return False
         
     mimes_autorises = [
-        'application/pdf', 
-        'image/png', 
-        'image/jpeg',
-        'application/msword', 
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        'application/pdf',                                                            # PDF
+        'application/msword',                                                         # Ancien Word (.doc)
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',    # Nouveau Word (.docx)
+        'application/vnd.ms-excel',                                                   # Ancien Excel (.xls)
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'           # Nouveau Excel (.xlsx)
     ]
     
     return kind.mime in mimes_autorises
@@ -236,6 +238,9 @@ def afficher_formulaire():
 @login_required
 @role_requis('superadmin', 'admin', 'agent') # 🛡️ Le Stagiaire est bloqué ici
 def sauvegarder():
+    # 🌟 NOUVEAU : On récupère la direction et on la force en majuscules
+    direction = request.form.get('nom_direction', "DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT").upper()
+
     nouveau = Candidat(
         nom_entreprise=request.form.get('nom_entreprise'),
         adresse=request.form.get('adresse'),
@@ -245,7 +250,8 @@ def sauvegarder():
         nom_proprietaire=request.form.get('nom_proprietaire'),
         genre=request.form.get('genre'),
         email=request.form.get('email'),
-        telephone=request.form.get('telephone')
+        telephone=request.form.get('telephone'),
+        nom_direction=direction  # 🌟 L'AJOUT EST ICI
     )
     db.session.add(nouveau)
     log_action("Ajout Nouveau Candidat", nouveau.nom_entreprise)
@@ -317,7 +323,20 @@ def valider_agrement_final():
             
         # 3. On récupère les autres champs du formulaire HTML
         candidat.titre_signataire = request.form.get('titre_signataire', 'Le Directeur')
-        candidat.date_signature_agrement = request.form.get('date_signature')
+       # --- AVANT ---
+        # candidat.date_signature_agrement = request.form.get('date_signature')
+
+        # --- APRÈS 🟢 ---
+        date_str = request.form.get('date_signature')
+        if date_str:
+            try:
+                # Transforme le texte '2026-06-30' en vrai objet Date
+                candidat.date_signature_agrement = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                # Sécurité : Si le format est invalide, on log l'erreur ou on passe
+                print(f"⚠️ Format de date invalide reçu : {date_str}")
+        else:
+            candidat.date_signature_agrement = None
         candidat.ref_lettre_candidat = request.form.get('ref_lettre_candidat')
         # -----------------------------
 
@@ -400,6 +419,8 @@ def sauvegarder_cotation():
     if cotation_id:
         cotation = db.session.get(Cotation, int(cotation_id))
         cotation.objet = request.form.get('objet')
+        # 🌟 MODIFICATION ICI : On met à jour le nom de la direction
+        cotation.nom_direction = request.form.get('nom_direction', "DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT").upper()
         cotation.lieu = request.form.get('lieu')
         cotation.president = request.form.get('president')
         cotation.membre1 = request.form.get('membre1')
@@ -407,12 +428,20 @@ def sauvegarder_cotation():
         cotation.date_limite = get_date('date_limite')
         cotation.date_ouverture = get_date('date_ouverture')
         cotation.date_attribution = get_date('date_attribution')
+        # 🌟 AJOUT ICI (Modification)
+        cotation.date_pv_ouverture = get_date('date_pv_ouverture')
+        cotation.date_pv_attribution = get_date('date_pv_attribution')
         for o in cotation.offres: db.session.delete(o)
     else:
         cotation = Cotation(
             objet=request.form.get('objet'), lieu=request.form.get('lieu'),
+            # 🌟 MODIFICATION ICI : On enregistre le nom de la direction
+            nom_direction=request.form.get('nom_direction', "DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT").upper(),
             president=request.form.get('president'), membre1=request.form.get('membre1'), membre2=request.form.get('membre2'),
-            date_limite=get_date('date_limite'), date_ouverture=get_date('date_ouverture'), date_attribution=get_date('date_attribution')
+            date_limite=get_date('date_limite'), date_ouverture=get_date('date_ouverture'), date_attribution=get_date('date_attribution'),
+            # 🌟 AJOUT ICI (Création)
+            date_pv_ouverture=get_date('date_pv_ouverture'),
+            date_pv_attribution=get_date('date_pv_attribution')
         )
         db.session.add(cotation)
     
@@ -421,6 +450,12 @@ def sauvegarder_cotation():
     # mais garde la possibilité d'annuler si les montants sont faux !
     db.session.flush() 
     
+# 🌟 LOG 1 : Vérification à l'enregistrement
+    print("====== SÉCURITÉ ENREGISTREMENT ======")
+    print(f"Formulaire envoyé 'nom_direction' : {request.form.get('nom_direction')}")
+    print(f"Objet Cotation prêt à être sauvé : {cotation.nom_direction}")
+    print("=====================================")
+
     for i in range(1, 4):
         nom = request.form.get(f'candidat_{i}')
         mnt = request.form.get(f'montant_{i}')
@@ -471,6 +506,13 @@ def telecharger_pv(id):
     if not cotation:
         flash("Erreur : Ce dossier n'existe pas.", "danger")
         return redirect(url_for('main.liste_cotations'))
+    
+    # 🌟 LOG 2 : Vérification à la lecture du PDF
+    print("====== LECTURE POUR PDF ======")
+    print(f"ID du dossier : {cotation.id}")
+    print(f"Objet du dossier : {cotation.objet}")
+    print(f"Nom direction en BDD : {cotation.nom_direction}")
+    print("==============================")
         
     offres = sorted(cotation.offres, key=lambda x: x.montant)
     gagnant = offres[0] if offres else None
@@ -486,33 +528,47 @@ def telecharger_pv(id):
             x, y = pdf_obj.get_x(), pdf_obj.get_y()
             largeur_col2 = pdf_obj.epw - 70
             
-            # 1. Dessine la colonne de gauche (largeur 70)
-            pdf_obj.multi_cell(70, 8, txt=clean_text(lbl), border=1)
+            # 1. On écrit la colonne de gauche SANS bordure (border=0)
+            pdf_obj.multi_cell(70, 8, txt=clean_text(lbl), border=0)
             h_gauche = pdf_obj.get_y() - y
             
-            # 2. Se décale pour la colonne de droite
+            # 2. On se décale pour la colonne de droite
             pdf_obj.set_xy(x + 70, y)
             if bold: 
                 pdf_obj.set_font("Arial", 'B', 10)
                 
-            # ⚠️ CORRECTION FPDF2 : On décale temporairement la marge gauche
-            # pour éviter que le texte ne revienne s'écraser sur la colonne 1 !
+            # On décale temporairement la marge gauche
             marge_gauche_originale = pdf_obj.l_margin
             pdf_obj.set_left_margin(x + 70)
             
-            # 3. Dessine la colonne de droite
-            pdf_obj.multi_cell(largeur_col2, 8, txt=clean_text(val), border=1)
+            # 3. On écrit la colonne de droite SANS bordure (border=0)
+            pdf_obj.multi_cell(largeur_col2, 8, txt=clean_text(val), border=0)
             h_droite = pdf_obj.get_y() - y
             
-            # 4. On restaure la marge et on se place sous la plus grande cellule
+            # 4. On restaure la marge et la police
             pdf_obj.set_left_margin(marge_gauche_originale)
             pdf_obj.set_font("Arial", '', 10)
             
+            # 🌟 5. LA CORRECTION EST ICI : On calcule la plus grande hauteur...
             hauteur_max = max(h_gauche, h_droite)
+            
+            # ...et on trace des vrais rectangles pour fermer le tableau proprement !
+            pdf_obj.rect(x, y, 70, hauteur_max)
+            pdf_obj.rect(x + 70, y, largeur_col2, hauteur_max)
+            
+            # 6. On place le curseur pour la ligne suivante
             pdf_obj.set_xy(x, y + hauteur_max)
+
+
+        # 🌟 LOG 3 : Vérification avant injection dans le tableau
+        direction_dynamique = getattr(cotation, 'nom_direction', "VALEUR PAR DÉFAUT EXTRACT_ERROR")
+        print("====== INJECTION TABLEAU ======")
+        print(f"Valeur envoyée à row() : {direction_dynamique}")
+        print("===============================")
                 
         row("Désignation de l'AC", "MINISTERE DE LA CULTURE, DE L'ARTISANAT ET DU TOURISME")
-        row("PRM :", "DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT")
+        # ✅ LA CORRECTION : On utilise la variable que le log vient de valider
+        row("PRM :", clean_text(direction_dynamique).upper())
         row("Objet de la COTATION :", clean_text(titre_objet).upper(), bold=True)
         row("Procédure :", "Demande de COTATION")
         if not is_attribution: row("Date et heure limite de dépôt :", fmt_date(cotation.date_limite), bold=True)
@@ -543,11 +599,18 @@ def telecharger_pv(id):
     pdf.ln(5); commission(pdf); pdf.ln(5)
     pdf.set_font("Arial", 'BU', 11); pdf.cell(0, 8, clean_text("RESULTATS DE L'EXAMEN DES OFFRES :"), ln=1)
     
-    pdf.set_font("Arial", 'B', 9); pdf.cell(15, 8, clean_text("N°"), 1, 0, 'C'); pdf.cell(100, 8, "Candidat", 1, 0, 'C'); pdf.cell(75, 8, "Montant", 1, 1, 'C'); pdf.set_font("Arial", '', 10)
+    pdf.set_font("Arial", 'B', 9); pdf.cell(15, 8, clean_text("N°"), 1, 0, 'C'); pdf.cell(100, 8, "Candidats", 1, 0, 'C'); pdf.cell(75, 8, "Montants", 1, 1, 'C'); pdf.set_font("Arial", '', 10)
     for i, off in enumerate(cotation.offres, 1):
         pdf.cell(15, 10, str(i), 1, 0, 'C'); pdf.set_font("Arial", 'B', 10)
         pdf.cell(100, 10, clean_text(off.nom_candidat), 1); pdf.set_font("Arial", '', 10)
         pdf.cell(75, 10, "{:,} F TTC".format(off.montant).replace(',', ' '), 1, 1, 'R')
+
+        # 🌟 NOUVEAU : Affichage date établissement PV Ouverture
+    if cotation.date_pv_ouverture:
+        pdf.ln(10) # Saute un peu d'espace
+        pdf.set_font("Arial", 'I', 11)
+        texte_date = f"Procès-verbal établi le {fmt_date(cotation.date_pv_ouverture)}."
+        pdf.cell(0, 6, clean_text(texte_date), ln=1, align='L')
 
     pdf.add_page(); dessiner_entete_officiel(pdf, afficher_direction=True)
     pdf.set_y(55); pdf.set_font("Arial", 'BU', 12)
@@ -559,7 +622,7 @@ def telecharger_pv(id):
     pdf.set_font("Arial", 'BU', 11)
     pdf.cell(0, 8, clean_text("RÉSULTATS DE L'EXAMEN DES OFFRES"), 0, 1, 'L')
     
-    pdf.set_font("Arial", 'BU', 9); pdf.cell(10, 8, clean_text("N°"), 1, 0, 'C'); pdf.cell(90, 8, "Candidat", 1, 0, 'C'); pdf.cell(60, 8, "Montant", 1, 0, 'C'); pdf.cell(30, 8, "RANG", 1, 1, 'C'); pdf.set_font("Arial", '', 10)
+    pdf.set_font("Arial", 'B', 9); pdf.cell(10, 8, clean_text("N°"), 1, 0, 'C'); pdf.cell(90, 8, "Candidats", 1, 0, 'C'); pdf.cell(60, 8, "Montants", 1, 0, 'C'); pdf.cell(30, 8, "RANG", 1, 1, 'C'); pdf.set_font("Arial", '', 10)
     for i, off in enumerate(offres, 1):
         pdf.cell(10, 10, str(i), 1, 0, 'C'); pdf.set_font("Arial", 'B', 10)
         pdf.cell(90, 10, clean_text(off.nom_candidat), 1); pdf.set_font("Arial", '', 10)
@@ -576,6 +639,14 @@ def telecharger_pv(id):
         pdf.write(6, clean_text(gagnant.nom_candidat.upper())); pdf.set_font("Arial", '', 11)
         pdf.write(6, " dont l'offre est conforme et moins disante pour "); pdf.set_font("Arial", 'B', 11)
         pdf.write(6, clean_text(f"{mt_lettres} ({mt_chiffres}) F CFA TTC."))
+        pdf.ln(10) # Retour à la ligne après l'écriture
+
+        # 🌟 NOUVEAU : Affichage date établissement PV Attribution
+    if cotation.date_pv_attribution:
+        pdf.ln(5)
+        pdf.set_font("Arial", 'I', 11)
+        texte_date = f"Procès-verbal établi le {fmt_date(cotation.date_pv_attribution)}."
+        pdf.cell(0, 6, clean_text(texte_date), ln=1, align='L')
     
 
     # 1. On génère le PDF en mémoire (RAM)
@@ -1007,7 +1078,8 @@ def drps():
     
     lettres_pour_tableau = []
     for lettre in lettres_db:
-        data = json.loads(lettre.form_data) if lettre.form_data else {}
+        # On utilise directement lettre.form_data
+        data = lettre.form_data if lettre.form_data else {}
         lettres_pour_tableau.append({
             'id': lettre.id,
             'immatriculation': lettre.immatriculation,
@@ -1066,7 +1138,7 @@ def ajouter_bordereau():
         date_signature=date_obj,
         observations=observations,
         destinataire=destinataire, # 🔥 L'OUBLI ÉTAIT ICI : on le met dans la base  sa ma pris du temps avant de comrendre qu'il me manqué destinataire!
-        dossiers_data=json.dumps(dossiers_list)
+        dossiers_data=dossiers_list # 👈 On envoie directement la liste Python !
     )
     
     db.session.add(nouveau_bordereau)
@@ -1195,7 +1267,8 @@ def liste_notifications():
     for inv in invitations_brutes:
         if inv.form_data:
             try:
-                data = json.loads(inv.form_data)
+                # La base de données donne déjà un dictionnaire !
+                data = inv.form_data
                 # On récupère le num_ordre (Réf) depuis le JSON
                 num_ordre = data.get('num_ordre', 'Sans Réf')
                 lettres_invitation.append({
@@ -1223,7 +1296,7 @@ def get_infos_invitation():
     
     if lettre and lettre.form_data:
         try:
-            data = json.loads(lettre.form_data)
+            data = lettre.form_data
             
             # --- CORRECTION : NETTOYAGE DE LA DIRECTION ---
             nom_direction = data.get('direction_nom') or data.get('direction_name') or data.get('nom_direction') or data.get('direction') or data.get('direction_beneficiaire') or data.get('direction_retrait_pv')
@@ -1340,7 +1413,7 @@ def ajouter_notification():
         immatriculation=immatriculation,
         objet_marche=objet_marche,
         entreprise=destinataire_nom,
-        form_data=json.dumps(data_notif)
+        form_data=data_notif # 👈 Directement le dictionnaire data_notif
     )
     db.session.add(nouvelle_notif)
 
@@ -1365,7 +1438,7 @@ def ajouter_notification():
         numero_drp=immatriculation,
         objet=objet_marche,
         entreprise=destinataire_nom,
-        form_data=json.dumps(data_pv)
+        form_data=data_pv # 👈 Directement le dictionnaire data_pv
     )
     db.session.add(nouveau_pv)
     print(f"✅ DEBUG - PV d'Attribution créé pour {destinataire_nom}")
@@ -1375,7 +1448,7 @@ def ajouter_notification():
     candidats_perdants_pdf = []
     
     if lettre_invit and lettre_invit.form_data:
-        invit_data = json.loads(lettre_invit.form_data)
+        invit_data = lettre_invit.form_data
         prestataires_invites = invit_data.get('prestataires', [])
         
         for p in prestataires_invites:
@@ -1426,7 +1499,7 @@ def ajouter_notification():
         nouvelle_info = LettreInformation(
             immatriculation=immatriculation,
             objet_marche=objet_marche,
-            form_data=json.dumps(data_info)
+            form_data=data_info # 👈 Directement le dictionnaire data_info
         )
         db.session.add(nouvelle_info)
         print(f"✅ DEBUG - Lettre d'Information créée ({len(candidats_perdants_pdf)} perdants)")
@@ -1452,7 +1525,7 @@ def ajouter_notification():
 @login_required
 def download_notification_pdf(id):
     notif = LettreNotification.query.get_or_404(id)
-    data = json.loads(notif.form_data)
+    data = notif.form_data
     
     buffer = io.BytesIO()
     from app.utils import generer_pdf_lettre_notification
@@ -1477,7 +1550,7 @@ def download_information_pdf(immatriculation):
         flash("Aucune lettre d'information trouvée pour ce marché.", "danger")
         return redirect(url_for('main.liste_notifications'))
 
-    data = json.loads(info.form_data)
+    data = info.form_data
     
     buffer = io.BytesIO()
 
@@ -1574,7 +1647,7 @@ def ajouter_pv():
         numero_drp=data['immatriculation'],
         objet=data['objet_marche'],
         entreprise=entreprise_nom,
-        form_data=json.dumps(data)
+        form_data=data # 👈 Directement le dictionnaire data
     )
     db.session.add(nouveau_pv)
     log_action("Génération PV Attribution", entreprise_nom)
@@ -1590,7 +1663,7 @@ def download_pv_pdf(id):
     if not pv:
         abort(404)
     
-    data = json.loads(pv.form_data)
+    data = pv.form_data
     data['entreprise_attributaire'] = data.get('entreprise_nom', 'Entreprise non renseignée')
     
     buffer = io.BytesIO()
@@ -1732,7 +1805,7 @@ def creer_lettre_invitation():
         nouvelle_lettre = LettreInvitation(
             immatriculation=immatriculation,
             objet_marche=objet_marche,
-            form_data=json.dumps(form_data_dict)
+            form_data=form_data_dict # 👈 Directement le dictionnaire form_data_dict
         )
         db.session.add(nouvelle_lettre)
         # CORRECTION ICI : on log l'immatriculation pour éviter un crash si aucun candidat n'est coché
@@ -1751,7 +1824,7 @@ def creer_lettre_invitation():
     lettres_pour_tableau = []
     
     for lettre in lettres_db:
-        data = json.loads(lettre.form_data) if lettre.form_data else {}
+        data = lettre.form_data if lettre.form_data else {}
         lettres_pour_tableau.append({
             'id': lettre.id,
             'immatriculation': lettre.immatriculation,
@@ -1803,11 +1876,10 @@ def creer_lettre_invitation():
 @main.route('/telecharger_lettre/<int:id>')
 @login_required
 def telecharger_lettre(id):
-    import json
-    from app.utils import generer_pdf_lettre_invitation
+    from app.utils import generer_pdf_lettre_invitation # import json supprimé
     
     lettre = LettreInvitation.query.get_or_404(id)
-    form_data_dict = json.loads(lettre.form_data)
+    form_data_dict = lettre.form_data
     
     pdf_path = generer_pdf_lettre_invitation(form_data_dict)
     return send_file(pdf_path, as_attachment=True)
@@ -1951,7 +2023,7 @@ def get_infos_pv():
     candidat = Candidat.query.filter_by(nom_entreprise=pv.entreprise).first()
     
     # 1. On extrait les données du PV (Réf, Date, N° Ordre)
-    data_pv = json.loads(pv.form_data) if pv.form_data else {}
+    data_pv = pv.form_data if pv.form_data else {}
     immatriculation = pv.numero_drp
     
     # 2. On va chercher le RC et le Compte bancaire dans la lettre d'invitation d'origine
@@ -1961,7 +2033,7 @@ def get_infos_pv():
     
     if invit and invit.form_data:
         try:
-            data_invit = json.loads(invit.form_data)
+            data_invit = invit.form_data
             for p in data_invit.get('prestataires', []):
                 if p.get('nom') == pv.entreprise:
                     rc = p.get('rc', 'Non renseigné')
@@ -1990,7 +2062,7 @@ def telecharger_contrat(id):
     from app.utils import generer_pdf_contrat
     contrat = Contrat.query.get_or_404(id)
     candidat = db.session.get(Candidat, contrat.candidat_id)
-    
+
     data_contrat = {
         'titulaire': candidat.nom_entreprise if candidat else 'Inconnu',
         'ninea': getattr(candidat, 'ninea', 'N/A'),
@@ -2126,7 +2198,7 @@ def creer_lettre_information():
     nouvelle_lettre = LettreInformation(
         immatriculation=immatriculation,
         objet_marche=objet_marche,
-        form_data=json.dumps(data)
+        form_data=data # 👈 Directement le dictionnaire data
     )
     db.session.add(nouvelle_lettre)
     log_action("Ajout Lettre Information", immatriculation)
@@ -2145,7 +2217,7 @@ def lettres_information():
     
     lettres_pour_tableau = []
     for lettre in lettres_db:
-        data = json.loads(lettre.form_data) if lettre.form_data else {}
+        data = lettre.form_data if lettre.form_data else {}
         lettres_pour_tableau.append({
             'id': lettre.id,
             'immatriculation': lettre.immatriculation,
@@ -2160,11 +2232,11 @@ def lettres_information():
 @main.route('/telecharger_lettre_information/<int:id>')
 @login_required
 def telecharger_lettre_information(id):
-    import json, io
+    import io
     from app.utils import generer_pdf_lettre_information
     
     lettre = LettreInformation.query.get_or_404(id)
-    data = json.loads(lettre.form_data)
+    data = lettre.form_data
     
     buffer = io.BytesIO()
     generer_pdf_lettre_information(buffer, data)
@@ -2457,9 +2529,8 @@ def page_suivi_dossiers():
                 objet_du_marche = doc_pv.objet
             # On extrait la référence (ref_service) qui est cachée dans le JSON du PV
             if doc_pv.form_data:
-                import json
                 try:
-                    data_pv = json.loads(doc_pv.form_data)
+                    data_pv = doc_pv.form_data
                     reference_du_pv = data_pv.get('ref_service')
                 except:
                     pass
@@ -2840,7 +2911,8 @@ def dossier_intelligent(immat):
     doc_contrat = Contrat.query.filter_by(immatriculation=immat).first()
     if not doc_contrat and doc_pv and doc_pv.form_data:
         try:
-            data_pv = json.loads(doc_pv.form_data)
+            # Plus de json.loads, on lit le dictionnaire directement
+            data_pv = doc_pv.form_data
             ref_pv = data_pv.get('ref_service')
             if ref_pv:
                 doc_contrat = Contrat.query.filter_by(ref_service=ref_pv).first()

@@ -92,6 +92,26 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
             <div class="section-label">
+              <span>🏛️ Informations du Ministère (En-tête PDF)</span>
+            </div>
+
+            <div class="row g-4 mb-4">
+              <div class="col-12">
+                <label class="form-label">Nom de la Direction <span class="text-danger">*</span></label>
+                <input
+                  type="text"
+                  class="form-control form-control-lg fw-bold text-uppercase"
+                  name="nom_direction"
+                  value="DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT"
+                  required
+                />
+                <div class="form-text small">Ce texte apparaîtra en dessous de "MCAT" sur le PDF généré.</div>
+              </div>
+            </div>
+
+            <hr class="my-4" style="border-top: 1px dashed #b0b8c4" />
+
+            <div class="section-label">
               <span>🏢 Identité de l'Entreprise</span>
             </div>
 

@@ -32,18 +32,25 @@ class Candidat(db.Model):
     telephone = db.Column(db.String(20))
     statut = db.Column(db.String(50), default="En attente")
     date_enregistrement = db.Column(db.DateTime, default=datetime.utcnow)
-    
     ref_interne = db.Column(db.String(100))        
-    date_signature_agrement = db.Column(db.String(100)) 
+    # AVANT : date_signature_agrement = db.Column(db.String(100))
+    
+    # APRÈS 🟢 :
+    date_signature_agrement = db.Column(db.Date, nullable=True)
     ref_lettre_candidat = db.Column(db.String(100))     
-    titre_signataire = db.Column(db.String(150), default="Le Directeur") 
+    titre_signataire = db.Column(db.String(150), default="Le Directeur")
+    # 🌟 NOUVEAU : On ajoute la colonne pour stocker le nom de la direction
+    nom_direction = db.Column(db.String(255), default="DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT") 
     rc = db.Column(db.String(100))               # <-- NOUVEAU
     compte_bancaire = db.Column(db.String(200))  # <-- NOUVEAU
     fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTONS CECI
     contrats = db.relationship('Contrat', backref='parent_candidat', cascade="all, delete-orphan")
+
 class Cotation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     objet = db.Column(db.Text, nullable=False)
+    # 🌟 NOUVEAU CHAMP : Pour stocker le nom de la direction (PRM)
+    nom_direction = db.Column(db.String(255), default="DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT")
     
     # --- CHAMPS POUR LA LETTRE D'INFORMATION ---
     num_ordre_lettre = db.Column(db.String(50))
@@ -59,6 +66,9 @@ class Cotation(db.Model):
     date_limite = db.Column(db.DateTime)
     date_ouverture = db.Column(db.DateTime)
     date_attribution = db.Column(db.DateTime)
+    # 🌟 NOUVEAUX CHAMPS : Dates d'établissement des PV
+    date_pv_ouverture = db.Column(db.DateTime, nullable=True)
+    date_pv_attribution = db.Column(db.DateTime, nullable=True)
     president = db.Column(db.String(100))
     membre1 = db.Column(db.String(100))
     membre2 = db.Column(db.String(100))
@@ -81,49 +91,57 @@ class Bordereau(db.Model):
     # ✅ On AJOUTE CETTE LIGNE POUR SAUVEGARDER LE DESTINATAIRE
     destinataire = db.Column(db.String(255), default="Monsieur le Coordonnateur de la Cellule de Passation des Marchés Publics")
     observations = db.Column(db.String(200))
-    # On stocke la liste des dossiers sous forme de texte (JSON)
-    dossiers_data = db.Column(db.Text) 
-    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
+    # ❌ AVANT : dossiers_data = db.Column(db.Text)
+    # 🟢 APRÈS :
+    dossiers_data = db.Column(db.JSON) 
+    fichier_scanne = db.Column(db.String(255), nullable=True)
 
     def get_dossiers(self):
-        # Petite fonction pour récupérer la liste propre
+        # 🟢 APRÈS : Plus besoin de json.loads() !
         if self.dossiers_data:
-            return json.loads(self.dossiers_data)
+            return self.dossiers_data
         return []
-        
+    fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
 
 class LettreNotification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    immatriculation = db.Column(db.String(100))
+    # 🟢 APRÈS : On ajoute index=True
+    immatriculation = db.Column(db.String(100), index=True)
     objet_marche = db.Column(db.Text)
     entreprise = db.Column(db.String(200)) # L'entreprise gagnante
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Ce champ va stocker TOUTES les données du formulaire sous forme de texte (JSON)
     # pour pouvoir régénérer le PDF exactement pareil plus tard.
-    form_data = db.Column(db.Text)
+    #form_data = db.Column(db.Text)
+    # ❌ AVANT : form_data = db.Column(db.Text)
+    # 🟢 APRÈS :
+    form_data = db.Column(db.JSON)
     fichier_scanne = db.Column(db.String(255), nullable=True) # <-- ON AJOUTE CECI
 
 
 class ProcesVerbal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    numero_drp = db.Column(db.String(100)) # Ex: S_DAGE_373
+    # 🟢 APRÈS : On ajoute index=True
+    numero_drp = db.Column(db.String(100), index=True) # Ex: S_DAGE_373
     objet = db.Column(db.Text)
     entreprise = db.Column(db.String(200)) # L'entreprise déclarée moins disante
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
-    form_data = db.Column(db.Text) # Pour stocker toutes les infos du formulaire en JSON
+    # ❌ AVANT : form_data = db.Column(db.Text)
+    # 🟢 APRÈS :
+    form_data = db.Column(db.JSON)
     fichier_scanne = db.Column(db.String(255), nullable=True) # <--ON AJOUTE CECI
 
 
 class LettreInvitation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    immatriculation = db.Column(db.String(100)) # Ex: S_DAGE_483
+    immatriculation = db.Column(db.String(100), index=True) # Ex: S_DAGE_483
     objet_marche = db.Column(db.Text)
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Ce champ va stocker TOUTES les données du formulaire sous forme de texte (JSON)
     # Y compris la liste des prestataires choisis, les heures de dépôt, etc.
-    form_data = db.Column(db.Text)
+    form_data = db.Column(db.JSON) # 🟢 Modifié
     fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
 
 
@@ -162,15 +180,15 @@ class Contrat(db.Model):
 
 class LettreInformation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    immatriculation = db.Column(db.String(100))
+    immatriculation = db.Column(db.String(100), index=True)
     objet_marche = db.Column(db.Text)
     date_creation = db.Column(db.DateTime, default=datetime.utcnow) # <-- ON AJOUTE CECI
-    form_data = db.Column(db.Text) # On stocke tout le JSON (dates, prestataires, etc.)
+    form_data = db.Column(db.JSON) # On stocke tout le JSON (dates, prestataires, etc.)
     fichier_scanne = db.Column(db.String(255), nullable=True)
 
 class ArchiveDocument(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    reference = db.Column(db.String(100), nullable=False) # Ex: S_DAGE_198
+    reference = db.Column(db.String(100), nullable=False, index=True) # Ex: S_DAGE_198
     type_document = db.Column(db.String(50), nullable=False) # Ex: 'Bordereau', 'Lettre Invitation', 'Contrat'
     nom_fichier = db.Column(db.String(255), nullable=False) # Le nom du PDF sauvegardé
     date_ajout = db.Column(db.DateTime, default=datetime.utcnow) # Date d'upload
@@ -193,7 +211,7 @@ class LogAction(db.Model):
 
 class DocumentLibre(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    immatriculation = db.Column(db.String(100), nullable=False) # L'identifiant clé du marché
+    immatriculation = db.Column(db.String(100), nullable=False, index=True) # L'identifiant clé du marché
     titre = db.Column(db.String(150), nullable=False) # Ex: "Avenant Numéro 1"
     nom_fichier = db.Column(db.String(255), nullable=False)
     chemin_fichier = db.Column(db.String(255), nullable=False)
