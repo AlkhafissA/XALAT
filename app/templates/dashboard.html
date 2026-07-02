@@ -9,6 +9,7 @@
     transition: transform 0.3s ease;
     position: relative;
     overflow: hidden;
+    height: 100%; /* <-- Aligne toutes les cartes à la même hauteur */
   }
   .card-stat:hover {
     transform: translateY(-5px);
@@ -106,10 +107,16 @@
   }
 
   /* SEARCH BAR STYLE */
+  /* 🟢 APRÈS */
   .search-container {
     position: relative;
-    max-width: 300px;
-    width: 100%;
+    width: 100%; /* Prend 100% sur mobile */
+  }
+
+  @media (min-width: 768px) {
+    .search-container {
+      max-width: 300px; /* Reprend sa taille max de 300px uniquement sur grand écran */
+    }
   }
   .search-input {
     border-radius: 50px;
@@ -189,17 +196,19 @@
     </div>
   </div>
 
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-3">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center mb-3 gap-3">
     <div>
       <h5 class="fw-bold text-dark m-0">Demandes Récentes</h5>
       <p class="text-muted small mb-0">Gestion des dossiers de demande d'agrément.</p>
     </div>
 
-    <div class="search-container">
+    <div class="search-container w-100 w-md-auto">
       <span class="search-icon">🔍</span>
       <input type="text" id="searchInput" class="form-control search-input" placeholder="Rechercher (Nom, NINEA...)" />
     </div>
-    <a href="{{ url_for('main.exporter_excel') }}" class="btn btn-success btn-sm text-white fw-bold shadow-sm"> 📊 Exporter vers Excel</a>
+    <a href="{{ url_for('main.exporter_excel') }}" class="btn btn-success btn-sm text-white fw-bold shadow-sm w-100 w-md-auto">
+      📊 Exporter vers Excel</a
+    >
   </div>
 
   <div class="card card-table">
@@ -249,7 +258,7 @@
               {% endif %}
             </td>
             <td class="text-end pe-4">
-              <div class="d-flex justify-content-end align-items-center flex-wrap gap-1">
+              <div class="d-flex justify-content-end align-items-center text-nowrap gap-1">
                 {% if current_user.role in ['superadmin', 'admin'] %} {% if "Retenu" not in candidat.statut %}
                 <button
                   type="button"
