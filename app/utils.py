@@ -208,6 +208,14 @@ def generer_lettre_agrement(candidat, mode='vierge'):
     
     pdf.ln(8)
     pdf.set_x(x_droite)
+
+    # --- 🟢 NOUVEAU : Récupération et formatage de la date ---
+    if candidat.date_signature_agrement:
+        # Transforme l'objet date en texte "JJ/MM/AAAA"
+        val_date_sign = candidat.date_signature_agrement.strftime('%d/%m/%Y')
+    else:
+        # Sécurité au cas où la date serait vide
+        val_date_sign = "......................"
     
     # 2. "Dakar, le..." aligné à gauche
     pdf.cell(0, 5, txt=f"Dakar, le {val_date_sign}", ln=1, align='L')
