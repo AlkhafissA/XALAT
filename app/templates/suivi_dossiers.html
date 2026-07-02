@@ -115,7 +115,7 @@
     border: 3px solid var(--secondary-bg);
   }
 
-  /* À ajouter juste avant la fermeture </style> */
+  /* 🟢 LE CODE REPOSITIONNÉ CORRECTEMENT ICI AVANT LA FERMETURE DU STYLE */
   @media (max-width: 768px) {
     .timeline-container {
       overflow-x: auto;
@@ -123,7 +123,7 @@
       -webkit-overflow-scrolling: touch;
     }
     .timeline {
-      min-width: 750px; /* Force la timeline à garder sa taille sans s'écraser */
+      min-width: 750px;
       padding-right: 20px;
     }
   }
@@ -163,7 +163,10 @@
         <h5 class="fw-bold text-primary mb-0"><i class="fas fa-file-signature me-2"></i> Réf : {{ dossier.immatriculation }}</h5>
 
         <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 gap-sm-3 w-100 w-md-auto">
-          <span class="badge bg-light text-dark border px-3 py-2 text-wrap text-start shadow-sm w-100 w-sm-auto" style="font-size: 0.85rem; max-width: 500px">
+          <span
+            class="badge bg-light text-dark border px-3 py-2 text-wrap text-start shadow-sm w-100 w-sm-auto"
+            style="font-size: 0.85rem; max-width: 500px"
+          >
             {{ dossier.objet_marche | truncate(80) }}
           </span>
 
