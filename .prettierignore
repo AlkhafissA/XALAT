@@ -1,0 +1,2 @@
+# Ignorer tous les templates Jinja
+#app/templates/*.html

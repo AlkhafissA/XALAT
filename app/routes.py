@@ -26,7 +26,7 @@ import io
 from app.models import ArchiveDocument
 from app.models import Bordereau 
 from app.models import LettreNotification, LettreInvitation, Contrat, LettreInformation, LogAction
-from app.models import Candidat, LettreNotification, ProcesVerbal
+from app.models import Candidat, LettreNotification, ProcesVerbal, DocumentEtape
 from app.utils import generer_pdf_bordereau, generer_pdf_contrat
 from app.utils import generer_pdf_pv_attribution
 from io import BytesIO
@@ -412,6 +412,15 @@ def modifier_cotation(id):
 @role_requis('superadmin', 'admin', 'agent')
 def sauvegarder_cotation():
     cotation_id = request.form.get('cotation_id')
+    
+    # 🕵️‍♂️ LOGS : On regarde ce que le formulaire envoie en direct
+    print("\n" + "="*50)
+    print("📥 [DEBUG FORMULAIRE] RECEPTION D'UNE COTATION")
+    print(f" -> immatriculation reçue du HTML : '{request.form.get('immatriculation')}'")
+    print(f" -> objet reçu du HTML : '{request.form.get('objet')}'")
+    print(f" -> plis_retard reçu du HTML : '{request.form.get('plis_retard')}'") # Log optionnel
+    print("="*50)
+
     def get_date(f): 
         val = request.form.get(f)
         return datetime.strptime(val, '%Y-%m-%dT%H:%M') if val else None
@@ -419,42 +428,56 @@ def sauvegarder_cotation():
     if cotation_id:
         cotation = db.session.get(Cotation, int(cotation_id))
         cotation.objet = request.form.get('objet')
-        # 🌟 MODIFICATION ICI : On met à jour le nom de la direction
+        
+        # 🌟 MODIFICATION 1 : Enregistrement de l'immatriculation (Mode Modification)
+        cotation.immatriculation = request.form.get('immatriculation')
+        
         cotation.nom_direction = request.form.get('nom_direction', "DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT").upper()
         cotation.lieu = request.form.get('lieu')
         cotation.president = request.form.get('president')
         cotation.membre1 = request.form.get('membre1')
         cotation.membre2 = request.form.get('membre2')
+        
+        # 🌟 ENPLACEMENT 1 : Enregistrement en mode modification
+        cotation.plis_retard = request.form.get('plis_retard', 'NEANT')
+        
         cotation.date_limite = get_date('date_limite')
         cotation.date_ouverture = get_date('date_ouverture')
         cotation.date_attribution = get_date('date_attribution')
-        # 🌟 AJOUT ICI (Modification)
         cotation.date_pv_ouverture = get_date('date_pv_ouverture')
         cotation.date_pv_attribution = get_date('date_pv_attribution')
         for o in cotation.offres: db.session.delete(o)
     else:
         cotation = Cotation(
-            objet=request.form.get('objet'), lieu=request.form.get('lieu'),
-            # 🌟 MODIFICATION ICI : On enregistre le nom de la direction
+            objet=request.form.get('objet'), 
+            lieu=request.form.get('lieu'),
+            
+            # 🌟 MODIFICATION 2 : Enregistrement de l'immatriculation (Mode Création)
+            immatriculation=request.form.get('immatriculation'),
+            
             nom_direction=request.form.get('nom_direction', "DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT").upper(),
-            president=request.form.get('president'), membre1=request.form.get('membre1'), membre2=request.form.get('membre2'),
-            date_limite=get_date('date_limite'), date_ouverture=get_date('date_ouverture'), date_attribution=get_date('date_attribution'),
-            # 🌟 AJOUT ICI (Création)
+            president=request.form.get('president'), 
+            membre1=request.form.get('membre1'), 
+            membre2=request.form.get('membre2'),
+            
+            # 🌟 ENPLACEMENT 2 : Enregistrement en mode création
+            plis_retard=request.form.get('plis_retard', 'NEANT'),
+            
+            date_limite=get_date('date_limite'), 
+            date_ouverture=get_date('date_ouverture'), 
+            date_attribution=get_date('date_attribution'),
             date_pv_ouverture=get_date('date_pv_ouverture'),
             date_pv_attribution=get_date('date_pv_attribution')
         )
         db.session.add(cotation)
     
-    # 🛠️ CORRECTION ICI : On utilise flush() au lieu de commit()
-    # Cela simule l'enregistrement pour obtenir le cotation.id, 
-    # mais garde la possibilité d'annuler si les montants sont faux !
-    db.session.flush() 
+    db.session.flush()
     
-# 🌟 LOG 1 : Vérification à l'enregistrement
-    print("====== SÉCURITÉ ENREGISTREMENT ======")
-    print(f"Formulaire envoyé 'nom_direction' : {request.form.get('nom_direction')}")
-    print(f"Objet Cotation prêt à être sauvé : {cotation.nom_direction}")
-    print("=====================================")
+    # 🕵️‍♂️ LOGS : Validation de ce qui s'apprête à entrer en BDD
+    print("\n====== SÉCURITÉ ENREGISTREMENT ======")
+    print(f"Objet Cotation immatriculation prête en BDD : {cotation.immatriculation}")
+    print(f"Objet Cotation direction prête en BDD : {cotation.nom_direction}")
+    print("=====================================\n")
 
     for i in range(1, 4):
         nom = request.form.get(f'candidat_{i}')
@@ -462,25 +485,21 @@ def sauvegarder_cotation():
         if nom and mnt:
             try:
                 montant_securise = int(mnt)
-                
-                # 🚨 LA VÉRIFICATION SÉCURITÉ ABSOLUE
                 if montant_securise >= 3000000:
-                    db.session.rollback() # 🔄 Annule TOUT (même la création de la cotation)
+                    db.session.rollback() 
                     flash(f"Alerte Sécurité : Le montant pour {nom} ({montant_securise} FCFA) dépasse le plafond autorisé de 3 Millions !", "danger")
                     return redirect(url_for('main.nouvelle_cotation'))
                 
                 db.session.add(Offre(cotation_id=cotation.id, nom_candidat=nom, montant=montant_securise))
             except ValueError:
-                db.session.rollback() # 🔄 Annule tout en cas d'erreur de frappe (lettres)
+                db.session.rollback() 
                 flash(f"Erreur : Le montant pour {nom} doit être un chiffre valide.", "danger")
                 return redirect(request.url)
                 
     action = "Modification Cotation" if cotation_id else "Création Cotation"
     log_action(action, cotation.objet)
     
-    # 🛠️ TOUT EST VALIDE : On valide définitivement toute la transaction !
     db.session.commit() 
-    
     return redirect(url_for('main.liste_cotations'))
 
 @main.route('/supprimer_cotation/<int:id>', methods=['POST']) # <-- ON AJOUTE methods=['POST']
@@ -516,6 +535,9 @@ def telecharger_pv(id):
         
     offres = sorted(cotation.offres, key=lambda x: x.montant)
     gagnant = offres[0] if offres else None
+    
+    # 🌟 ON RÉCUPÈRE LA DIRECTION DYNAMIQUE ICI
+    direction_dynamique = getattr(cotation, 'nom_direction', "DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT")
     
     def fmt_date(dt): return dt.strftime('%d/%m/%Y à %Hh%M mn') if dt else "N/A"
     
@@ -576,7 +598,8 @@ def telecharger_pv(id):
         row("Date et heure réunion :", date_reunion_str, bold=True)
     
     def commission(pdf_obj):
-        pdf_obj.set_font("Arial", 'BU', 11); pdf_obj.cell(0, 8, "MEMBRES DE LA COMMISSION :", ln=1)
+        # 🌟 AJOUT DU "1." ICI
+        pdf_obj.set_font("Arial", 'BU', 11); pdf_obj.cell(0, 8, "1. MEMBRES DE LA COMMISSION :", ln=1)
         pdf_obj.set_font("Arial", 'B', 10)
         pdf_obj.cell(50, 8, "Qualité", 1, 0, 'C')
         pdf_obj.cell(90, 8, "Noms et Prénoms", 1, 0, 'C')
@@ -591,13 +614,28 @@ def telecharger_pv(id):
             pdf_obj.set_font("Arial", '', 10)
             pdf_obj.cell(50, 10, "", 1, 1) # Retour à la ligne (1)s
 
-    pdf.add_page(); dessiner_entete_officiel(pdf, afficher_direction=True)
+    pdf.add_page()
+    dessiner_entete_officiel(pdf, direction=direction_dynamique)
+    
     pdf.set_y(55); pdf.set_font("Arial", 'BU', 12)
     titre1 = f"PROCES-VERBAL D'OUVERTURE DE LA DEMANDE DE\nCOTATION: {cotation.objet.upper()}"
     pdf.multi_cell(0, 6, clean_text(titre1), align='C'); pdf.ln(5)
     tableau_info(pdf, cotation.objet, fmt_date(cotation.date_ouverture), False)
     pdf.ln(5); commission(pdf); pdf.ln(5)
-    pdf.set_font("Arial", 'BU', 11); pdf.cell(0, 8, clean_text("RESULTATS DE L'EXAMEN DES OFFRES :"), ln=1)
+
+    # --- 🌟 NOUVEAU : LA PHRASE DES PLIS EN RETARD ICI ---
+    valeur_retard = getattr(cotation, 'plis_retard', 'NEANT')
+    if not valeur_retard:
+        valeur_retard = 'NEANT'
+        
+    pdf.set_font("Arial", 'BU', 11)
+    phrase_retard = f"2. PLI RECU EN RETARD ET NON OUVERT : {valeur_retard.upper()}"
+    pdf.cell(0, 8, clean_text(phrase_retard), ln=1)
+    pdf.ln(3) # Petit espace de respiration
+    # -----------------------------------------------------
+
+    # 🌟 AJOUT DU "3." ICI
+    pdf.set_font("Arial", 'BU', 11); pdf.cell(0, 8, clean_text("3. RESULTATS DE L'EXAMEN DES OFFRES :"), ln=1)
     
     pdf.set_font("Arial", 'B', 9); pdf.cell(15, 8, clean_text("N°"), 1, 0, 'C'); pdf.cell(100, 8, "Candidats", 1, 0, 'C'); pdf.cell(75, 8, "Montants", 1, 1, 'C'); pdf.set_font("Arial", '', 10)
     for i, off in enumerate(cotation.offres, 1):
@@ -612,16 +650,26 @@ def telecharger_pv(id):
         texte_date = f"Procès-verbal établi le {fmt_date(cotation.date_pv_ouverture)}."
         pdf.cell(0, 6, clean_text(texte_date), ln=1, align='L')
 
-    pdf.add_page(); dessiner_entete_officiel(pdf, afficher_direction=True)
+    pdf.add_page()
+    dessiner_entete_officiel(pdf, direction=direction_dynamique)
     pdf.set_y(55); pdf.set_font("Arial", 'BU', 12)
     titre2 = f"PROCES-VERBAL D'ATTRIBUTION DE LA DEMANDE DE\nCOTATION: {cotation.objet.upper()}"
     pdf.multi_cell(0, 6, clean_text(titre2), align='C'); pdf.ln(5)
+
+    # --- 🌟 LES DEUX LIGNES MANQUANTES SONT ICI ---
+    # 1. Le tableau d'infos (avec True pour dire qu'on est sur l'attribution)
     tableau_info(pdf, cotation.objet, fmt_date(cotation.date_attribution), True)
-    pdf.ln(5); commission(pdf); pdf.ln(5)
+    pdf.ln(5)
+    
+    # 2. Le tableau des membres de la commission
+    commission(pdf)
+    pdf.ln(5)
+    # ----------------------------------------------
 
     pdf.set_font("Arial", 'BU', 11)
-    pdf.cell(0, 8, clean_text("RÉSULTATS DE L'EXAMEN DES OFFRES"), 0, 1, 'L')
-    
+    # Attention, j'ai remis le "3." pour garder la même logique que la page 1
+    pdf.cell(0, 8, clean_text("2. RÉSULTATS DE L'EXAMEN DES OFFRES :"), 0, 1, 'L')
+
     pdf.set_font("Arial", 'B', 9); pdf.cell(10, 8, clean_text("N°"), 1, 0, 'C'); pdf.cell(90, 8, "Candidats", 1, 0, 'C'); pdf.cell(60, 8, "Montants", 1, 0, 'C'); pdf.cell(30, 8, "RANG", 1, 1, 'C'); pdf.set_font("Arial", '', 10)
     for i, off in enumerate(offres, 1):
         pdf.cell(10, 10, str(i), 1, 0, 'C'); pdf.set_font("Arial", 'B', 10)
@@ -1642,6 +1690,8 @@ def ajouter_pv():
         'date_commission': date_commission_fr,  # <--- On utilise la belle date formatée !
         'entreprise_nom': entreprise_nom
     }
+    # 👇 AJOUTE CETTE LIGNE DE TEST 👇
+    print("--- DEBUG CONTRAT ---", data.get('signataire_bas'))
 
     nouveau_pv = ProcesVerbal(
         numero_drp=data['immatriculation'],
@@ -1945,13 +1995,18 @@ def creer_contrat():
         programme = request.form.get('programme')
         comptable = request.form.get('comptable', 'Payeur Général du Trésor (PGT)')
         vocable = request.form.get('vocable', 'Prestataire')
+        sigle_direction = request.form.get('sigle_direction', 'DAGE') # 👈 NOUVEAU
         numero = request.form.get('numero')
         ref_service = request.form.get('ref_service')
         date_lettre = request.form.get('date_lettre')
         
-        # Récupérés automatiquement via notre nouvelle API cachée dans le formulaire
+        # Récupérés automatiquement via notre API et les champs cachés du formulaire
         rc_final = request.form.get('rc_candidat', '........................')
         compte_final = request.form.get('compte_candidat', '...................................')
+        
+        # 👇 NOUVEAU : Récupération de la direction et de son adresse depuis le HTML 👇
+        direction_name = request.form.get('direction_name', "DIRECTION DE L'ADMINISTRATION GÉNÉRALE ET DE L'ÉQUIPEMENT")
+        adresse_direction = request.form.get('adresse_direction', "sise aux Almadies en face de la TFM - Dakar")
 
         if not candidat_gagnant:
             flash("Erreur : Impossible de retrouver le prestataire.", "danger")
@@ -1960,14 +2015,15 @@ def creer_contrat():
         # 1. ON SAUVEGARDE LE CONTRAT DANS LA BASE DE DONNÉES
         
         # A) On récupère le numéro d'immatriculation du marché grâce au PV
-        immatriculation_marche = numero # Valeur par défaut si rien d'autre
-        pv_id = request.form.get('pv_id')
+        immatriculation_marche = numero # Valeur par défaut
+        
+        pv_id = request.form.get('pv_id') 
         if pv_id:
             pv_lie = db.session.get(ProcesVerbal, int(pv_id))
             if pv_lie and pv_lie.numero_drp:
                 immatriculation_marche = pv_lie.numero_drp
 
-        # B) On crée le contrat avec toutes les infos + l'immatriculation !
+        # B) On crée le contrat SANS essayer d'injecter form_data !
         nouveau_contrat = Contrat(
             candidat_id=candidat_gagnant.id,
             objet_marche=objet_marche,
@@ -1983,20 +2039,19 @@ def creer_contrat():
             numero=numero,
             ref_service=ref_service,
             date_lettre=date_lettre,
-            vocable=vocable, # 👈 ON AJOUTE CETTE LIGNE ICI POUR SAUVEGARDER LE CHOIX !
-            immatriculation=immatriculation_marche # 👈 LA PIÈCE MANQUANTE EST ICI SONONE NA FI TAMITE !
+            vocable=vocable,
+            sigle_direction=sigle_direction, # 👈 NOUVEAU
+            immatriculation=immatriculation_marche
         )
         
         db.session.add(nouveau_contrat)
         log_action("Ajout Contrat", candidat_gagnant.nom_entreprise)
         db.session.commit()
 
-        # 2. ON PRÉPARE LES DONNÉES POUR LE PDF (Optionnel ici si téléchargé via le tableau KOME NONOU RK)
         flash("Contrat généré et sauvegardé avec succès !", "success")
         return redirect(url_for('main.creer_contrat'))
 
     # === DÉBUT PARTIE GET ===
-    # On récupère tous les PV d'attribution
     liste_pvs = ProcesVerbal.query.order_by(ProcesVerbal.id.desc()).all()
     
     contrats_bruts = Contrat.query.order_by(Contrat.id.desc()).all()
@@ -2007,7 +2062,6 @@ def creer_contrat():
         contrats_sauvegardes.append(c)
 
     return render_template('formulaire_contrat.html', pvs=liste_pvs, contrats=contrats_sauvegardes)
-
 
 # === PARTIE 2 : LA NOUVELLE API MAGIQUE POUR LE PV === MOUGUI BAX FII
 @main.route('/api/get_infos_pv')
@@ -2022,7 +2076,7 @@ def get_infos_pv():
         
     candidat = Candidat.query.filter_by(nom_entreprise=pv.entreprise).first()
     
-    # 1. On extrait les données du PV (Réf, Date, N° Ordre)
+    # 1. On extrait les données du PV (Réf, Date, N° Ordre, Direction, Adresse)
     data_pv = pv.form_data if pv.form_data else {}
     immatriculation = pv.numero_drp
     
@@ -2042,7 +2096,7 @@ def get_infos_pv():
         except:
             pass
             
-    # On renvoie TOUT au formulaire HTML !
+    # On renvoie TOUT au formulaire HTML (Y compris la Direction et son Adresse) !
     return jsonify({
         "success": True,
         "candidat_id": candidat.id if candidat else "",
@@ -2052,17 +2106,49 @@ def get_infos_pv():
         "date_lettre": data_pv.get('date_lettre', ''),
         "num_ordre": data_pv.get('num_ordre', ''),
         "rc": rc,
-        "compte": compte
+        "compte": compte,
+        
+        # 👇 LES DEUX LIGNES COMPLÉTÉES ICI 👇
+        "direction_name": data_pv.get('direction_name', "DIRECTION DE L'ADMINISTRATION GÉNÉRALE ET DE L'ÉQUIPEMENT"),
+        "adresse_direction": data_pv.get('adresse_direction', "sise aux Almadies en face de la TFM - Dakar")
     })
-
 
 @main.route('/telecharger_contrat/<int:id>')
 @login_required
 def telecharger_contrat(id):
     from app.utils import generer_pdf_contrat
+    from app.models import LettreInvitation # 👈 On importe la table des lettres d'invitation
+    
     contrat = Contrat.query.get_or_404(id)
     candidat = db.session.get(Candidat, contrat.candidat_id)
 
+    # ==============================================================
+    # 🌟 EXTRACTION DES DONNÉES DEPUIS LE PV STOCKÉ EN BASE
+    # ==============================================================
+    # 1. On définit TOUTES les valeurs par défaut au tout début
+    direction_nom = "DIRECTION DE L'ADMINISTRATION GÉNÉRALE ET DE L'ÉQUIPEMENT"
+    adresse_direction = "sise aux Almadies en face de la TFM - Dakar"
+    signataire_bas = "Le Directeur de l'Administration\nGénérale et de l'Équipement" # 👈 Par défaut ici maintenant !
+    
+    # 2. On cherche le PV qui correspond à ce marché
+    # 2. On cherche le PV qui correspond à ce marché (Le PLUS RÉCENT !)
+    pv = ProcesVerbal.query.filter_by(numero_drp=contrat.immatriculation).order_by(ProcesVerbal.id.desc()).first()
+
+    # 👇 AJOUTE CES 3 LIGNES POUR ESPIONNER 👇
+    print("\n====== DEBUG EXTRÊME ======")
+    print("PV trouvé ?", "OUI" if pv else "NON")
+    print("Contenu du JSON :", pv.form_data if pv else "Vide")
+    print("===========================\n")
+    
+    # 3. Si le PV existe, on extrait les données du formulaire ENSEMBLE !
+    if pv and pv.form_data:
+        direction_nom = pv.form_data.get('direction_name', direction_nom)
+        adresse_direction = pv.form_data.get('adresse_direction', adresse_direction)
+        # 👇 ICI : On va enfin chercher la vraie valeur tapée par l'agent !
+        signataire_bas = pv.form_data.get('signataire_bas', signataire_bas)
+
+
+    # 4. On prépare les données pour le PDF
     data_contrat = {
         'titulaire': candidat.nom_entreprise if candidat else 'Inconnu',
         'ninea': getattr(candidat, 'ninea', 'N/A'),
@@ -2078,17 +2164,23 @@ def telecharger_contrat(id):
         'imputation': contrat.imputation,
         'programme': contrat.programme,
         'comptable': contrat.comptable_assignataire,
-        'vocable': getattr(contrat, 'vocable', 'Prestataire'), # ✅ On va chercher la vraie valeur
+        'vocable': getattr(contrat, 'vocable', 'Prestataire'),
+        'sigle_direction': getattr(contrat, 'sigle_direction', 'DAGE'), 
         'numero': getattr(contrat, 'numero', ''), 
         'ref_service': getattr(contrat, 'ref_service', ''), 
-        'date_lettre': getattr(contrat, 'date_lettre', '') 
+        'date_lettre': getattr(contrat, 'date_lettre', ''),
+        
+        # 👇 Les variables dynamiques prêtes à être envoyées à utils.py
+        'direction_name': direction_nom,
+        'adresse_direction': adresse_direction,
+        'signataire_bas': signataire_bas
     }
     
     chemin_pdf = generer_pdf_contrat(data_contrat)
     nom_safe = candidat.nom_entreprise.replace(' ', '_') if candidat else 'Inconnu'
     nom_fichier = f"Contrat_{nom_safe}.pdf"
+    
     return send_file(chemin_pdf, as_attachment=True, download_name=nom_fichier)
-
 
 @main.route('/contrat/voir_scan/<int:id>')
 @login_required
@@ -2286,7 +2378,6 @@ def supprimer_lettre_information(id):
 # --- ROUTES : GESTION DES SCANS ET UPLOADS ---
 # ==========================================
 
-
 @main.route('/voir_scan/<path:nom_fichier>') # <-- Ajout de "path:" ici
 @login_required
 def voir_scan(nom_fichier):
@@ -2300,111 +2391,239 @@ def voir_scan(nom_fichier):
     # On délègue à la route sécurisée avec le nom propre
     return redirect(url_for('main.secure_download', folder='scans', filename=nom_fichier_propre))
     
+
 @main.route('/uploader_scan', methods=['POST'])
 @login_required
-@role_requis('superadmin', 'admin', 'agent') # 🛡️ SÉCURITÉ : Pas de stagiaire !
+@role_requis('superadmin', 'admin', 'agent')
 def uploader_scan():
-    print("--- DÉBUT DE L'UPLOAD ---")
+    import uuid
+    from werkzeug.utils import secure_filename
+    print("\n" + "="*50)
+    print("🚀 DÉBUT DU TRAÇAGE UPLOAD_SCAN")
     
-    type_doc = request.form.get('type_doc').lower()
+    immat = request.args.get('immat')
+    type_doc = request.form.get('type_doc')
     doc_id = request.form.get('doc_id')
-    page_retour = request.form.get('page_retour', 'main.tableau_de_bord') # Sécurité : fallback par défaut
+    titre_doc = request.form.get('titre_document')
+   
+    # Sécurité : Si type_doc est vide (ou None), on assigne la clé fixe reconnue par le backend
+    if not type_doc or type_doc.strip() == "":
+        type_doc = "doc_libre"
+        print(f"⚠️ CORRECTION AUTO : type_doc défini sur 'doc_libre' pour le document '{titre_doc}'")
+
+    print(f"📍 1. URL Immatriculation : '{immat}'")
+    print(f"📍 2. Formulaire - type_doc : '{type_doc}'")
+    print(f"📍 3. Formulaire - doc_id : '{doc_id}'")
+    print(f"📍 4. Formulaire - titre_document : '{titre_doc}'")
+    print(f"📍 5. Fichiers reçus dans la requête : {list(request.files.keys())}")
     
+    # --- SÉCURITÉ DE BASE ---
+    if not type_doc:
+        print("❌ ERREUR : type_doc est vide.")
+        flash("Veuillez sélectionner un type de document.", "danger")
+        return redirect(request.referrer or url_for('main.tableau_de_bord'))
+        
+    type_doc = type_doc.lower()
+
     if 'scan_file' not in request.files or request.files['scan_file'].filename == '':
+        print("❌ ERREUR : 'scan_file' est absent ou vide.")
         flash("Aucun fichier sélectionné.", "danger")
-        return redirect(url_for(page_retour))
+        return redirect(request.referrer or url_for('main.tableau_de_bord'))
         
     file = request.files['scan_file']
+    print(f"📁 6. Fichier validé : '{file.filename}'")
 
-    # 1ère couche : Vérification du nom
-    if not fichier_est_autorise(file.filename):  # 👈 Utilise le nom d'origine ici !
-        flash("Fichier non autorisé ! L'extension n'est pas acceptée.", "danger")
-        log_action("ALERTE SÉCURITÉ", f"Upload bloqué (Mauvaise extension) : {file.filename} pour doc n°{doc_id}")
-        db.session.commit()
-        return redirect(url_for(page_retour))
-
-    # 2ème couche : Vérification du contenu réel
-    if not contenu_fichier_est_securise(file):
-        flash("ALERTE : Fichier falsifié ou corrompu ! Le contenu ne correspond pas à l'extension.", "danger")
-        # On logue la tentative de spoofing !
-        log_action("ALERTE CRITIQUE", f"Tentative de Spoofing (Fausse extension) bloquée : {file.filename}")
-        db.session.commit()
-        return redirect(url_for(page_retour))
-    
-    # 1. Préparation du nom et du dossier
-    # ✨ NOUVEAU CODE SÉCURISÉ (UUID) ✨
-    # 1. On récupère juste l'extension du fichier original (ex: "pdf", "jpg")
-    nom_propre = secure_filename(file.filename)
-    extension = nom_propre.rsplit('.', 1)[1].lower() if '.' in nom_propre else 'pdf'
-    
-    # 2. On génère un nom totalement aléatoire et impossible à deviner
-    nom_uuid = f"{uuid.uuid4().hex}.{extension}"
-    
-    basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
-    dossier_sauvegarde = os.path.join(basedir, 'stockage_prive', 'scans')
-    os.makedirs(dossier_sauvegarde, exist_ok=True)
-
-    # On importe les modèles ici pour éviter les imports circulaires
+    # --- IMPORTS ET MAPPING ---
     from app.models import (LettreInvitation, Contrat, LettreInformation, 
                             LettreNotification, Bordereau, ProcesVerbal, 
-                            Cotation, Candidat)
-                            
-    # 2. Dictionnaire de correspondance (les if/elif GNOME DAGNO MEUNA GOUDAL CODE SA C'est beaucoup plus propre)
+                            Cotation, Candidat, DocumentEtape, ArchiveDocument, DocumentLibre)
+
     modeles_map = {
         'lettre_invitation': LettreInvitation,
         'contrat': Contrat,
         'lettre_information': LettreInformation,
         'lettre_notification': LettreNotification,
         'bordereau': Bordereau,
-        'pv_attribution': ProcesVerbal,
+        'pv_attribution': ProcesVerbal,  # Pour le DRP (Modèle dédié)
         'cotation': Cotation,
-        'agrement': Candidat
+        'agrement': Candidat,
+        'revue': DocumentEtape,
+        'cahier_charges': DocumentEtape,
+        'offres': DocumentEtape,
+        'pv_ouverture': DocumentEtape,
+        'doc_libre': DocumentLibre,
+
+        # 🌟 SÉCURITÉ POUR LA COTATION DIRECTE
+        "pv d'ouverture": DocumentEtape,
+        "pv d'attribution": DocumentEtape,
+        "bon d'engagement": DocumentEtape,
+        "bordereau de livraison": DocumentEtape,
+        "bordereau de fourniture": DocumentEtape,
+        "facture définitive": DocumentEtape,
+        "certificat administratif": DocumentEtape
     }
 
     if type_doc not in modeles_map:
+        print(f"❌ ERREUR : type_doc '{type_doc}' n'existe pas dans modeles_map !")
         flash("Type de document invalide.", "danger")
-        return redirect(url_for(page_retour))
+        return redirect(request.referrer or url_for('main.tableau_de_bord'))
 
-    # 3. On récupère le document
     Modele = modeles_map[type_doc]
-    doc = Modele.query.get(doc_id)
+    print(f"🔍 7. Modèle identifié : {Modele.__name__}")
+
+    # --- RECHERCHE EN BASE DE DONNÉES ---
+    doc = None
+    if doc_id:
+        print(f"🔍 8. Recherche par doc_id : {doc_id}")
+        doc = Modele.query.get(doc_id)
+    elif immat and Modele == DocumentEtape:
+        
+        # 🌟 ALIGNEMENT STRICT AVEC LES REQUÊTES DU DOSSIER INTELLIGENT
+        etape_mapping = {
+            # --- Pour le DRP ---
+            'revue': 'Revue',
+            'cahier_charges': 'Cahier des charges',
+            'offres': 'Offres',
+            'pv_ouverture': "PV d'ouverture",
+
+            # --- Pour la Cotation Directe ---
+            "pv d'ouverture": "PV d'ouverture",
+            "pv d'attribution": "PV d'attribution",
+            "bon d'engagement": "Bon d'engagement",
+            "bordereau de livraison": "Bordereau de livraison",
+            "bordereau de fourniture": "Bordereau de fourniture",
+            "facture définitive": "Facture définitive",
+            "certificat administratif": "Certificat administratif"
+        }
+        type_formate = etape_mapping.get(type_doc, type_doc.replace('_', ' ').title())
+        
+        print(f"🔍 8. Recherche DocumentEtape pour immat='{immat}' et type_etape='{type_formate}'")
+        doc = Modele.query.filter_by(immatriculation=immat, type_etape=type_formate).first()
+        if not doc:
+            print("✨ 9. Création d'un nouveau DocumentEtape à la volée !")
+            doc = DocumentEtape(immatriculation=immat, type_etape=type_formate)
+            db.session.add(doc)
+            
+    elif immat:
+        if type_doc == 'doc_libre':
+            print(f"🔍 8. Recherche DocumentLibre pour immat='{immat}' et titre='{titre_doc}'")
+            doc = Modele.query.filter_by(immatriculation=immat, titre=titre_doc).first()
+        else:
+            print(f"🔍 8. Recherche classique pour immat='{immat}' sur le modèle {Modele.__name__}")
+            doc = Modele.query.filter_by(immatriculation=immat).first()
+        
+        if not doc:
+            print(f"✨ 9. Création d'un(e) {Modele.__name__} à la volée !")
+            if type_doc == 'doc_libre':
+                doc = Modele(immatriculation=immat, titre=titre_doc)
+            else:
+                doc = Modele(immatriculation=immat)
+            db.session.add(doc)
 
     if not doc:
-        flash("Erreur : Le document cible n'existe pas en base de données.", "danger")
-        return redirect(url_for(page_retour))
+        print(f"❌ ERREUR CRITIQUE : Le document n'a pas été trouvé et n'a pas pu être créé.")
+        print(f"   --> Détails : Modele={Modele.__name__}, immat={immat}, doc_id={doc_id}")
+        flash("Erreur : Impossible de lier ce document au dossier en base de données.", "danger")
+        return redirect(request.referrer or url_for('main.tableau_de_bord'))
 
-    # 4. On sauvegarde physiquement le fichier
+    print("✅ 10. Document trouvé/créé avec succès en base de données !")
+    
+    # --- SAUVEGARDE ET NOMMAGE ---
+    nom_propre = secure_filename(file.filename)
+    extension = nom_propre.rsplit('.', 1)[1].lower() if '.' in nom_propre else 'pdf'
+    nom_uuid = f"{uuid.uuid4().hex}.{extension}"
+    
+    basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+    dossier_sauvegarde = os.path.join(basedir, 'stockage_prive', 'scans')
+    os.makedirs(dossier_sauvegarde, exist_ok=True)
     chemin_complet = os.path.join(dossier_sauvegarde, nom_uuid)
+    
+    print(f"💾 11. Sauvegarde du fichier vers : {chemin_complet}")
     file.save(chemin_complet)
 
-    # 5. On met à jour l'objet en mémoire (SANS FAIRE DE COMMIT ICI)
-    doc.fichier_scanne = nom_uuid
+    # --- NETTOYAGE ANCIEN FICHIER ---
+    ancien_fichier = getattr(doc, 'chemin_fichier', None) or getattr(doc, 'fichier_scanne', None)
+    if ancien_fichier:
+        print(f"🗑️ 12. Remplacement détecté : suppression de {ancien_fichier}")
+        chemin_ancien = os.path.join(dossier_sauvegarde, ancien_fichier)
+        if os.path.exists(chemin_ancien):
+            os.remove(chemin_ancien)
+
+    # --- ATTRIBUTION DU CHEMIN DE SCAN ---
+    if Modele == DocumentEtape:
+        doc.chemin_fichier = nom_uuid
+        doc.nom_fichier = titre_doc or type_doc.replace('_', ' ').title()
+    elif Modele == DocumentLibre:
+        doc.chemin_fichier = nom_uuid
+        doc.nom_fichier = titre_doc 
+    else:
+        doc.fichier_scanne = nom_uuid
+        
+    # --- ARCHIVAGE GLOBAL ---
+    ref_archive = getattr(doc, 'reference', None) or getattr(doc, 'immatriculation', None) or f"{type_doc.upper()}-{immat}"
     
-     
-# =========================================================
-# --- AJOUT AUTOMATIQUE AUX ARCHIVES GLOBALES ---
-# =========================================================
-# Correction : on utilise "or" pour forcer le plan de secours si l'attribut est None ou vide
-    ref_archive = getattr(doc, 'reference', None) or getattr(doc, 'immatriculation', None) or f"{type_doc.upper().replace('_', '')}-{doc_id}"
-
-    type_formate = type_doc.replace('_', ' ').title()
-
+    type_formate_archive = titre_doc.title() if type_doc == 'doc_libre' and titre_doc else type_doc.replace('_', ' ').title()
+    
     nouvelle_archive = ArchiveDocument(
         reference=ref_archive,
-        type_document=type_formate,
-
+        type_document=type_formate_archive,
         nom_fichier=nom_uuid
     )
     db.session.add(nouvelle_archive)
+    print("✅ 13. Ajout à l'archive globale préparé.")
     
-    # 👇 ON PLACE LE RADAR JUSTE AVANT LE DERNIER COMMIT 👇
-    log_action("Upload Scan", f"{type_formate} ({ref_archive})")
-    
-    # 6. UN SEUL COMMIT POUR TOUT VALIDER D'UN COUP ! 🎯
-    db.session.commit() 
+    db.session.commit()
+    print("🎉 14. COMMIT RÉUSSI ! FIN DE L'UPLOAD.")
+    print("="*50 + "\n")
     
     flash("Le document scanné a été ajouté avec succès !", "success")
-    return redirect(url_for(page_retour))
+    
+    if immat:
+        return redirect(url_for('main.dossier_intelligent', immat=immat))
+    return redirect(request.referrer or url_for('main.tableau_de_bord'))
+
+@main.route('/supprimer_doc_scanne/<path:nom_fichier>')
+@login_required
+@role_requis('superadmin', 'admin', 'agent') # On bloque les stagiaires
+def supprimer_doc_scanne(nom_fichier):
+    import os
+    from flask import current_app, flash, redirect, request, url_for
+    from app.models import DocumentEtape, DocumentLibre, ArchiveDocument
+    
+    nom_fichier_propre = os.path.basename(nom_fichier)
+    
+    # 1. On cherche d'abord dans les Documents d'Étapes (DRP / Cotation)
+    doc_etape = DocumentEtape.query.filter_by(chemin_fichier=nom_fichier_propre).first()
+    if doc_etape:
+        db.session.delete(doc_etape)
+        log_action("Suppression Doc Étape", f"{doc_etape.type_etape} ({doc_etape.immatriculation})")
+        
+    # 2. Si ce n'est pas une étape, on cherche dans les Documents Libres
+    doc_libre = DocumentLibre.query.filter_by(chemin_fichier=nom_fichier_propre).first()
+    if doc_libre:
+        db.session.delete(doc_libre)
+        log_action("Suppression Doc Libre", f"{doc_libre.titre} ({doc_libre.immatriculation})")
+
+    # 3. On nettoie aussi l'Archive globale si elle a été créée automatiquement
+    archive = ArchiveDocument.query.filter_by(nom_fichier=nom_fichier_propre).first()
+    if archive:
+        db.session.delete(archive)
+
+    # On valide les suppressions en base de données
+    db.session.commit()
+
+    # 4. Suppression physique du fichier PDF
+    basedir = os.path.abspath(os.path.join(current_app.root_path, '..'))
+    chemin_physique = os.path.join(basedir, 'stockage_prive', 'scans', nom_fichier_propre)
+    
+    if os.path.exists(chemin_physique):
+        os.remove(chemin_physique)
+        
+    flash("Le document a été supprimé avec succès !", "success")
+    
+    # On renvoie l'utilisateur d'où il vient (la page du dossier)
+    return redirect(request.referrer or url_for('main.tableau_de_bord'))
+    
 
 # ==========================================
 # --- ROUTES : ARCHIVES GLOBALES ---
@@ -2493,94 +2712,118 @@ def telecharger_archive(nom_fichier):
 # ==========================================
 # --- ROUTES : SUIVI DES DOSSIERS (TIMELINE) ---
 # ==========================================
-
 @main.route('/suivi_dossiers', methods=['GET'])
 @login_required
 def page_suivi_dossiers():
-    from app.models import LettreInvitation, ProcesVerbal, LettreNotification, LettreInformation, Contrat
+    from app.models import LettreInvitation, ProcesVerbal, LettreNotification, LettreInformation, Contrat, Cotation, DocumentEtape
     
     immatriculations = set()
     
-    # On récolte toutes les immatriculations
+    # Récolte de toutes les immatriculations
     for lettre in LettreInvitation.query.all():
-        if lettre.immatriculation:
-            immatriculations.add(lettre.immatriculation)
-            
+        if lettre.immatriculation: immatriculations.add(lettre.immatriculation)
     for pv in ProcesVerbal.query.all():
-        if pv.numero_drp: 
-            immatriculations.add(pv.numero_drp)
+        if pv.numero_drp: immatriculations.add(pv.numero_drp)
+    for cot in Cotation.query.all():
+        if cot.immatriculation: immatriculations.add(cot.immatriculation)
+    for doc_etape in DocumentEtape.query.all():
+        if doc_etape.immatriculation: immatriculations.add(doc_etape.immatriculation)
 
     dossiers_suivis = []
-# Pour chaque marché, on vérifie l'état d'avancement
+
     for immat in immatriculations:
         doc_invitation = LettreInvitation.query.filter_by(immatriculation=immat).first()
         doc_pv = ProcesVerbal.query.filter_by(numero_drp=immat).first()
         doc_notif = LettreNotification.query.filter_by(immatriculation=immat).first()
         doc_info = LettreInformation.query.filter_by(immatriculation=immat).first()
+        doc_cotation = Cotation.query.filter_by(immatriculation=immat).first()
         
+        docs_etapes_db = DocumentEtape.query.filter_by(immatriculation=immat).all()
+        docs_etapes_types = [doc.type_etape for doc in docs_etapes_db]
+
         objet_du_marche = "Objet non défini"
         reference_du_pv = None 
         
-        if doc_invitation and doc_invitation.objet_marche:
+        if doc_cotation and doc_cotation.objet:
+            objet_du_marche = doc_cotation.objet
+        elif doc_invitation and doc_invitation.objet_marche:
             objet_du_marche = doc_invitation.objet_marche
             
         if doc_pv:
-            if doc_pv.objet:
-                objet_du_marche = doc_pv.objet
-            # On extrait la référence (ref_service) qui est cachée dans le JSON du PV
+            if doc_pv.objet: objet_du_marche = doc_pv.objet
             if doc_pv.form_data:
-                try:
-                    data_pv = doc_pv.form_data
-                    reference_du_pv = data_pv.get('ref_service')
-                except:
-                    pass
+                try: reference_du_pv = doc_pv.form_data.get('ref_service')
+                except: pass
 
-        # 👇 RECHERCHE DU CONTRAT GRÂCE AU NUMÉRO DE RÉFÉRENCE 👇
         doc_contrat = None
-        
-        # 1. On cherche d'abord avec le numéro de référence 
-        if reference_du_pv:
-            doc_contrat = Contrat.query.filter_by(ref_service=reference_du_pv).first()
-            
-        # 2. Si on ne trouve pas (ou s'il est vide), on tente l'immatriculation
-        if not doc_contrat:
-            doc_contrat = Contrat.query.filter_by(immatriculation=immat).first()
-            
-        # 3. Plan de secours ultime : on lie par l'objet du marché
+        if reference_du_pv: doc_contrat = Contrat.query.filter_by(ref_service=reference_du_pv).first()
+        if not doc_contrat: doc_contrat = Contrat.query.filter_by(immatriculation=immat).first()
         if not doc_contrat and objet_du_marche != "Objet non défini":
             doc_contrat = Contrat.query.filter_by(objet_marche=objet_du_marche).first()
-        # 👆 FIN DE LA RECHERCHE 👆
-        # ==========================================
-        # 🕵️‍♂️ MODE DÉTECTIVE ACTIVÉ (C'EST ICI QU'IL FAUT LE METTRE !)
-        # ==========================================
-        print(f"\n--- RECHERCHE POUR LE DOSSIER : {immat} ---")
-        print(f"Ref extraite du PV : {reference_du_pv}")
+            
+        is_cotation = True if doc_cotation else False
+        nb_valides = 0
         
-        # On regarde TOUS les contrats pour voir à quoi ils ressemblent en base
-        tous_les_contrats = Contrat.query.all()
-        for c in tous_les_contrats:
-            print(f"Contrat ID {c.id} en base -> Ref: {getattr(c, 'ref_service', 'N/A')} | Immat: {getattr(c, 'immatriculation', 'N/A')} | Fichier: {c.fichier_scanne}")
-        
-        print(f"Contrat finalement trouvé par Flask : {doc_contrat}")
-        # ==========================================
-        # FIN DU MODE DÉTECTIVE
-        # ==========================================
-        # 👇 C'EST ICI QUE LA MAGIE OPÈRE 👇
+        if is_cotation:
+            # 🌟 COTATION : Uniquement les 8 étapes métiers réelles
+            etapes_requises = [
+                'Offres', "PV d'ouverture", "PV d'attribution", 
+                "Bon d'engagement", "Bordereau de livraison", 
+                "Bordereau de fourniture", "Facture définitive", "Certificat administratif"
+            ]
+            for etape in etapes_requises:
+                if etape in docs_etapes_types: nb_valides += 1
+            pourcentage = int((nb_valides / 8) * 100)
+            
+        else:
+            # DRP : 9 étapes à vérifier
+            if 'Revue' in docs_etapes_types: nb_valides += 1
+            if 'Cahier des charges' in docs_etapes_types: nb_valides += 1
+            if doc_invitation and doc_invitation.fichier_scanne: nb_valides += 1
+            if 'Offres' in docs_etapes_types: nb_valides += 1
+            if "PV d'ouverture" in docs_etapes_types: nb_valides += 1
+            if doc_pv and doc_pv.fichier_scanne: nb_valides += 1 
+            if doc_notif and doc_notif.fichier_scanne: nb_valides += 1
+            if doc_info and doc_info.fichier_scanne: nb_valides += 1
+            if doc_contrat and doc_contrat.fichier_scanne: nb_valides += 1
+            
+            pourcentage = int((nb_valides / 9) * 100)
+
         dossier = {
             'immatriculation': immat,
             'objet_marche': objet_du_marche,
-            'etapes': {
-                'etape_1_invitation': True if (doc_invitation and doc_invitation.fichier_scanne) else False,
-                'etape_2_pv': True if (doc_pv and doc_pv.fichier_scanne) else False,
-                'etape_3_notification': True if (doc_notif and doc_notif.fichier_scanne) else False,
-                'etape_4_information': True if (doc_info and doc_info.fichier_scanne) else False,
-                'etape_5_contrat': True if (doc_contrat and doc_contrat.fichier_scanne) else False
+            'is_cotation': is_cotation,
+            'pourcentage': pourcentage,
+            'etapes_drp': {
+                'revue': 'Revue' in docs_etapes_types,               
+                'cahier': 'Cahier des charges' in docs_etapes_types,  
+                'invit': True if (doc_invitation and doc_invitation.fichier_scanne) else False,
+                'offres': 'Offres' in docs_etapes_types,
+                'pv_ouv': "PV d'ouverture" in docs_etapes_types,
+                'pv_attr': True if (doc_pv and doc_pv.fichier_scanne) else False,
+                'notif': True if (doc_notif and doc_notif.fichier_scanne) else False,
+                'info': True if (doc_info and doc_info.fichier_scanne) else False,
+                'contrat': True if (doc_contrat and doc_contrat.fichier_scanne) else False
+            },
+            'etapes_cotation': {
+                # 🌟 NETTOYÉ : Plus aucune mention de revue ou cahier ici
+                'offres': 'Offres' in docs_etapes_types,
+                'pv_ouv': "PV d'ouverture" in docs_etapes_types,
+                'pv_attr': "PV d'attribution" in docs_etapes_types,
+                'bon': "Bon d'engagement" in docs_etapes_types,
+                'bl': "Bordereau de livraison" in docs_etapes_types,
+                'bf': "Bordereau de fourniture" in docs_etapes_types,
+                'facture': "Facture définitive" in docs_etapes_types,
+                'certif': "Certificat administratif" in docs_etapes_types,
             }
         }
         dossiers_suivis.append(dossier)
 
+    # 🌟 TRI PAR POURCENTAGE DESACTIF -> ACTIF (Plus grand au plus petit)
+    dossiers_suivis.sort(key=lambda x: x['pourcentage'], reverse=True)
+
     return render_template('suivi_dossiers.html', dossiers=dossiers_suivis)
-        
+
 @main.route('/supprimer_archive/<int:id>', methods=['POST'])
 @login_required
 @role_requis('superadmin', 'admin') # 🛡️ SÉCURITÉ : Seuls les chefs peuvent supprimer !
@@ -2850,6 +3093,7 @@ def convertir_montant():
         return jsonify({'lettres': lettres.capitalize() + ' francs CFA'})
     except ValueError:
         return jsonify({'lettres': ''})
+        
 
 import os
 from werkzeug.utils import secure_filename
@@ -2858,41 +3102,57 @@ from flask import request, redirect, url_for, flash
 @main.route('/suivi/dossier/<path:immat>', methods=['GET', 'POST'])
 @login_required
 def dossier_intelligent(immat):
-    from app.models import LettreInvitation, ProcesVerbal, LettreNotification, LettreInformation, Contrat, DocumentLibre
+    from app.models import LettreInvitation, ProcesVerbal, LettreNotification, LettreInformation, Contrat, DocumentLibre, DocumentEtape
+    from app.models import Cotation
+    from pathlib import Path
     
-    # 1. GESTION DE L'UPLOAD DE NOUVEAUX DOCUMENTS LIBRES
+    # 🌟 CORRECTION ICI : On reconnait les C_ (Cotation) ET les T_ (T_DAGE...)
+    # 👉 2. NOUVELLE LOGIQUE D'IDENTIFICATION 
+    # On cherche si cette immatriculation existe dans la table des cotations
+    dossier_cotation = Cotation.query.filter_by(immatriculation=immat).first()
+    
+    if dossier_cotation:
+        is_cotation = True
+    else:
+        is_cotation = False
+
+    # 1. GESTION DE L'UPLOAD DE NOUVEAUX DOCUMENTS
     if request.method == 'POST':
         titre = request.form.get('titre_document')
         fichier = request.files.get('fichier_pdf')
+        type_etape = request.form.get('type_etape') # 👈 RÉCUPÉRATION DU CHAMP DU MENU DÉROULANT
         
-        if not titre or not fichier:
-            flash("Veuillez fournir un titre et un fichier PDF.", "danger")
+        if not fichier:
+            flash("Veuillez fournir un fichier PDF.", "danger")
             return redirect(url_for('main.dossier_intelligent', immat=immat))
             
         if fichier and fichier.filename.endswith('.pdf'):
             filename = secure_filename(fichier.filename)
             
-            # --- MODIFICATION ICI : On cible stockage_prive ---
-            from pathlib import Path
-            
-            # On remonte au dossier parent de l'application (comme dans secure_download)
+            # --- STOCKAGE SÉCURISÉ ---
             root_dir = Path(current_app.root_path).parent.resolve()
             scans_dir = (root_dir / 'stockage_prive' / 'scans').resolve()
-            
-            # On s'assure que le dossier existe, sinon on le crée
             scans_dir.mkdir(parents=True, exist_ok=True)
             
             upload_path = scans_dir / filename
             fichier.save(str(upload_path))
-            # --------------------------------------------------
             
-            nouveau_doc = DocumentLibre(
-                immatriculation=immat,
-                titre=titre,
-                nom_fichier=filename,
-                # On sauvegarde juste le nom propre, plus de chemin "uploads/scans/..."
-                chemin_fichier=filename 
-            )
+            # --- TRI INTELLIGENT : Étape réglementaire OU Document libre ---
+            if type_etape: 
+                nouveau_doc = DocumentEtape(
+                    immatriculation=immat,
+                    type_etape=type_etape,
+                    nom_fichier=filename,
+                    chemin_fichier=filename 
+                )
+            else:
+                nouveau_doc = DocumentLibre(
+                    immatriculation=immat,
+                    titre=titre or "Document sans titre",
+                    nom_fichier=filename,
+                    chemin_fichier=filename 
+                )
+                
             db.session.add(nouveau_doc)
             db.session.commit()
             
@@ -2907,11 +3167,9 @@ def dossier_intelligent(immat):
     doc_notif = LettreNotification.query.filter_by(immatriculation=immat).first()
     doc_info = LettreInformation.query.filter_by(immatriculation=immat).first()
     
-    # Recherche du contrat (selon ma logique de la timeline)
     doc_contrat = Contrat.query.filter_by(immatriculation=immat).first()
     if not doc_contrat and doc_pv and doc_pv.form_data:
         try:
-            # Plus de json.loads, on lit le dictionnaire directement
             data_pv = doc_pv.form_data
             ref_pv = data_pv.get('ref_service')
             if ref_pv:
@@ -2919,7 +3177,6 @@ def dossier_intelligent(immat):
         except:
             pass
             
-    # Déduire l'objet du marché
     objet_du_marche = "Objet non défini"
     if doc_invitation and doc_invitation.objet_marche:
         objet_du_marche = doc_invitation.objet_marche
@@ -2929,10 +3186,39 @@ def dossier_intelligent(immat):
     # 3. RÉCUPÉRATION DES DOCUMENTS LIBRES
     documents_libres = DocumentLibre.query.filter_by(immatriculation=immat).order_by(DocumentLibre.date_ajout.desc()).all()
 
-    # 4. PRÉPARATION DES DONNÉES POUR LE TEMPLATE
+    # 4. PRÉPARATION DES DONNÉES POUR LE TEMPLATE (ÉTAPES)
+    docs_etapes_db = DocumentEtape.query.filter_by(immatriculation=immat).all()
+    docs_etapes_dict = {doc.type_etape: doc for doc in docs_etapes_db}
+    docs_etapes_types = list(docs_etapes_dict.keys())
+
+    # 5. CALCUL DU POURCENTAGE
+    nb_valides = 0
+    if is_cotation:
+        etapes_requises = [
+            'Offres', "PV d'ouverture", "PV d'attribution", "Bon d'engagement", 
+            "Bordereau de livraison", "Bordereau de fourniture", "Facture définitive", "Certificat administratif"
+        ]
+        for etape in etapes_requises:
+            if etape in docs_etapes_types: nb_valides += 1
+        pourcentage = int((nb_valides / 8) * 100)
+    else:
+        if 'Revue' in docs_etapes_types: nb_valides += 1
+        if 'Cahier des charges' in docs_etapes_types: nb_valides += 1
+        if doc_invitation and doc_invitation.fichier_scanne: nb_valides += 1
+        if 'Offres' in docs_etapes_types: nb_valides += 1
+        if "PV d'ouverture" in docs_etapes_types: nb_valides += 1
+        if doc_pv and doc_pv.fichier_scanne: nb_valides += 1 
+        if doc_info and doc_info.fichier_scanne: nb_valides += 1
+        if doc_notif and doc_notif.fichier_scanne: nb_valides += 1
+        if doc_contrat and doc_contrat.fichier_scanne: nb_valides += 1
+        pourcentage = int((nb_valides / 9) * 100)
+
+    # 6. CRÉATION DU DICTIONNAIRE FINAL
     dossier = {
         'immatriculation': immat,
         'objet_marche': objet_du_marche,
+        'is_cotation': is_cotation,
+        'pourcentage': pourcentage,
         'docs_officiels': {
             'invitation': doc_invitation,
             'pv': doc_pv,
@@ -2940,24 +3226,42 @@ def dossier_intelligent(immat):
             'information': doc_info,
             'contrat': doc_contrat
         },
-        'docs_libres': documents_libres
+        'docs_libres': documents_libres,
+        'docs_etapes': docs_etapes_dict, 
+        'etapes_drp': {
+            'revue': 'Revue' in docs_etapes_types,               
+            'cahier': 'Cahier des charges' in docs_etapes_types,  
+            'invit': True if (doc_invitation and doc_invitation.fichier_scanne) else False,
+            'offres': 'Offres' in docs_etapes_types,
+            'pv_ouv': "PV d'ouverture" in docs_etapes_types,
+            'pv_attr': True if (doc_pv and doc_pv.fichier_scanne) else False,
+            'info': True if (doc_info and doc_info.fichier_scanne) else False,
+            'notif': True if (doc_notif and doc_notif.fichier_scanne) else False,
+            'contrat': True if (doc_contrat and doc_contrat.fichier_scanne) else False
+        },
+        'etapes_cotation': {
+            'offres': 'Offres' in docs_etapes_types,
+            'pv_ouv': "PV d'ouverture" in docs_etapes_types,
+            'pv_attr': "PV d'attribution" in docs_etapes_types,
+            'bon': "Bon d'engagement" in docs_etapes_types,
+            'bl': "Bordereau de livraison" in docs_etapes_types,
+            'bf': "Bordereau de fourniture" in docs_etapes_types,
+            'facture': "Facture définitive" in docs_etapes_types,
+            'certif': "Certificat administratif" in docs_etapes_types,
+        }
     }
-
-    # Calcul du pourcentage d'avancement officiel
-    nb_officiels_scannes = sum(1 for doc in dossier['docs_officiels'].values() if doc and doc.fichier_scanne)
-    pourcentage = int((nb_officiels_scannes / 5) * 100)
-    dossier['pourcentage'] = pourcentage
 
     return render_template('dossier_intelligent.html', dossier=dossier)
 
-#-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
+
+
 #-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
 #-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
 
 #-_-_-_-_-_-_-__--REK MOU FIN ET VOICI COMMENT LE COEUR DE MON SYSTÉME FONCTIONNE DU MOINS POUR L'INSTANT 
 #-_-_-_-_-_-_-__--PRECIOUS ALKHAFISSA CAMARA 
-#-_-_-_-_-_-_-__--DE SON VRAI NOMS ABDOU AZIZ CAMARA
-
+#_-_-_-_-_-_-_-_--DE SON VRAI NOMS ABDOU AZIZ CAMARA
+#_-_-_-_-_-_-_-_--Alkhafissa98@gmail.com
 #-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
 #-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 
 #-_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__---_-_-_-_-_-_-__--__-- 

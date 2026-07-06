@@ -136,6 +136,13 @@
             <label class="form-label fw-bold">Objet</label>
             <textarea class="form-control" name="objet" rows="2" required>{{ cotation.objet if cotation else '' }}</textarea>
           </div>
+
+          
+          <div class="mb-3">
+            <label for="immatriculation" class="form-label fw-bold">Référence du dossier (Immatriculation)</label>
+            <input type="text" name="immatriculation" id="immatriculation" class="form-control" placeholder="Ex: N°T_DAGE_202" value="{{ cotation.immatriculation if cotation else '' }}">
+            <div class="form-text">Ce numéro sera enregistré en base de données et servira pour le suivi du dossier, mais ne modifiera pas le corps de votre lettre.</div>
+          </div>
           
           <div class="row">
             <div class="col-md-6 mb-3">
@@ -184,6 +191,14 @@
               <label class="small">Membre 2</label>
               <input type="text" class="form-control" name="membre2" value="{{ cotation.membre2 if cotation else 'Pape Gora DIA' }}" />
             </div>
+          </div>
+
+          <div class="mb-3 mt-4">
+            <label class="form-label fw-bold">Plis reçus en retard et non ouverts</label>
+            <input type="text" class="form-control text-uppercase" name="plis_retard" 
+                   value="{{ cotation.plis_retard if cotation and cotation.plis_retard else 'NÉANT' }}" 
+                   required />
+            <div class="form-text small">Cette phrase apparaîtra dans la section "2. PLI RECU EN RETARD..." du PV d'ouverture. Laissez "NÉANT" si aucun pli n'est en retard.</div>
           </div>
 
           <div class="section-title mt-4">

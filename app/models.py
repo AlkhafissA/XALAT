@@ -74,6 +74,7 @@ class Cotation(db.Model):
     membre2 = db.Column(db.String(100))
     offres = db.relationship('Offre', backref='cotation', lazy=True, cascade="all, delete-orphan")
     fichier_scanne = db.Column(db.String(255), nullable=True) # <-- AJOUTE CECI
+    plis_retard = db.Column(db.String(255), default="NÉANT")
 
 class Offre(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -177,6 +178,8 @@ class Contrat(db.Model):
     immatriculation = db.Column(db.String(100)) # <-- AJOUT POUR L'ARCHIVAGE
     # 👇ON AJOUTE CETTE LIGNE POUR SAUVEGARDER LE VOCABLE ! 👇
     vocable = db.Column(db.String(50), default="Prestataire")
+    # 👇 NOUVELLE COLONNE À AJOUTER 👇
+    sigle_direction = db.Column(db.String(50), default="DAGE")
 
 class LettreInformation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -213,6 +216,19 @@ class DocumentLibre(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     immatriculation = db.Column(db.String(100), nullable=False, index=True) # L'identifiant clé du marché
     titre = db.Column(db.String(150), nullable=False) # Ex: "Avenant Numéro 1"
+    nom_fichier = db.Column(db.String(255), nullable=False)
+    chemin_fichier = db.Column(db.String(255), nullable=False)
+    date_ajout = db.Column(db.DateTime, default=datetime.utcnow)
+class DocumentEtape(db.Model):
+    
+    #Table unique pour stocker tous les nouveaux documents réglementaires scannés 
+    #nécessaires à la clôture (DRP & Cotation).
+    id = db.Column(db.Integer, primary_key=True)
+    immatriculation = db.Column(db.String(100), nullable=False, index=True) 
+    
+    # C'est ici qu'on précisera si c'est un "PV d'ouverture", "Facture définitive", etc.
+    type_etape = db.Column(db.String(100), nullable=False) 
+    
     nom_fichier = db.Column(db.String(255), nullable=False)
     chemin_fichier = db.Column(db.String(255), nullable=False)
     date_ajout = db.Column(db.DateTime, default=datetime.utcnow)

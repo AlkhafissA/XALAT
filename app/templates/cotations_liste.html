@@ -161,7 +161,7 @@
                   href="{{ url_for('main.telecharger_pv', id=cot.id) }}"
                   class="btn btn-action btn-light text-success shadow-sm"
                   title="Télécharger les PV (PDF)"
-                  >📄</a
+                  >📥</a
                 >
 
                 {# 2. Gestion du Scan (Voir ou Uploader) #} {% if cot.fichier_scanne %}
@@ -180,7 +180,7 @@
                   data-bs-target="#modalScan{{ cot.id }}"
                   title="Joindre le PV scanné"
                 >
-                  📤
+                  📎
                 </button>
                 {% endif %} {% endif %} {# 3. Bouton Modifier (Verrouillé si scan présent) #} {% if current_user.role in ['superadmin', 'admin',
                 'agent'] %} {% if not cot.fichier_scanne %}

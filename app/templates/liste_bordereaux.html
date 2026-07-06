@@ -62,10 +62,16 @@
   }
 
   /* BARRE DE RECHERCHE */
+  /* 🟢 À REMPLACER DANS LE BLOC <style> */
   .search-container {
     position: relative;
-    max-width: 300px;
     width: 100%;
+  }
+
+  @media (min-width: 768px) {
+    .search-container {
+      max-width: 300px;
+    }
   }
   .search-input {
     border-radius: 50px;
@@ -89,7 +95,7 @@
 </style>
 {% endblock %} {% block content %}
 <div class="container-fluid px-4 mt-5">
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center mb-4 gap-3">
     <div>
       <h3 class="fw-bold text-dark mb-1">Bordereaux d'Envoi</h3>
       <p class="text-muted small mb-0">Gestion et historique des bordereaux générés.</p>
@@ -164,7 +170,7 @@
                   data-bs-target="#modalScan{{ b.id }}"
                   title="Joindre le bordereau signé"
                 >
-                  📤 Joindre Scan
+                  📎 Joindre Scan
                 </button>
                 {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
                 <form action="{{ url_for('main.supprimer_bordereau', id=b.id) }}" method="POST" class="m-0 p-0" style="display: inline-block">

@@ -139,7 +139,7 @@
                   data-bs-target="#modalScan{{ n.id }}"
                   title="Joindre la lettre signée"
                 >
-                  📤 Scan
+                  📎 Scan
                 </button>
                 {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
                 <form action="{{ url_for('main.supprimer_notification', id=n.id) }}" method="POST" class="m-0 p-0" style="display: inline-block">

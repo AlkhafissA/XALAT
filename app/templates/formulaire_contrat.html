@@ -97,7 +97,7 @@
                   data-bs-target="#modalScan{{ contrat.id }}"
                   title="Joindre le contrat signé"
                 >
-                  📤 Joindre Scan
+                  📎 Joindre Scan
                 </button>
                 {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
                 <form
@@ -143,7 +143,7 @@
           <div class="row g-3 mb-3 bg-light p-3 rounded border border-primary-subtle">
             <div class="col-md-12">
               <label class="form-label fw-bold text-primary">Sélectionner le PV d'Attribution</label>
-              <select id="select_attribution" class="form-select border-primary shadow-sm" required>
+              <select id="select_attribution" name="pv_id" class="form-select border-primary shadow-sm" required>
                 <option value="">-- Cliquez pour choisir le PV --</option>
                 {% for pv in pvs %}
                 <option value="{{ pv.id }}">{{ pv.numero_drp }} - {{ pv.objet[:60] }}... (Gagnant : {{ pv.entreprise }})</option>
@@ -156,6 +156,8 @@
             <input type="hidden" name="objet_marche" id="input_objet_marche" required />
             <input type="hidden" name="rc_candidat" id="input_rc" />
             <input type="hidden" name="compte_candidat" id="input_compte" />
+            <input type="hidden" name="direction_name" id="input_direction_name" />
+            <input type="hidden" name="adresse_direction" id="input_adresse_direction" />
 
             <div class="col-md-6">
               <label class="form-label small fw-bold text-success">Titulaire (Gagnant du marché)</label>
@@ -176,6 +178,11 @@
                 <option value="Entrepreneur">Entrepreneur</option>
               </select>
             </div>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label small fw-bold text-muted">Sigle Direction (Art 1) :</label>
+            <input type="text" name="sigle_direction" class="form-control border-secondary" value="DAGE" required />
           </div>
 
           <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">2. Références et Dates (Auto-rempli)</h6>
@@ -241,7 +248,13 @@
           <div class="row g-3 mb-3">
             <div class="col-md-8">
               <label class="form-label small fw-bold text-muted">Imputation budgétaire</label>
-              <input type="text" name="imputation" class="form-control" placeholder="Ex: Chapitre 12100570110 Art 61 Paragraphe 4 Ligne 6" required />
+              <input
+                type="text"
+                name="imputation"
+                class="form-control"
+                placeholder="Ex: DAGE : Chapitre 12100570110 Art 61 Paragraphe 4 Ligne 6,, Programme : 1579"
+                required
+              />
             </div>
             <div class="col-md-4">
               <label class="form-label small fw-bold text-muted">Programme</label>
@@ -314,6 +327,9 @@
                 document.getElementById("input_numero").value = data.num_ordre || "";
                 document.getElementById("input_ref_service").value = data.ref_service || "";
                 document.getElementById("input_date_lettre").value = data.date_lettre || "";
+                // 👇 AJOUTE CES DEUX LIGNES ICI 👇
+                document.getElementById("input_direction_name").value = data.direction_name || "";
+                document.getElementById("input_adresse_direction").value = data.adresse_direction || "";
 
                 statusAttribution.innerHTML =
                   '<span class="text-success"><i class="bi bi-check-circle"></i> Références, Gagnant et données financières verrouillés !</span>';

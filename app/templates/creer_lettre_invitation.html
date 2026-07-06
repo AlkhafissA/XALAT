@@ -102,7 +102,7 @@
                   class="btn btn-sm btn-outline-primary shadow-sm"
                   title="Télécharger le PDF"
                 >
-                  📄 PDF
+                  📥 PDF
                 </a>
 
                 {% if lettre.fichier_scanne %}
@@ -122,7 +122,7 @@
                   data-bs-target="#modalScan{{ lettre.id }}"
                   title="Joindre le document signé"
                 >
-                  📤 Joindre Scan
+                  📎 Joindre Scan
                 </button>
                 {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
                 <form

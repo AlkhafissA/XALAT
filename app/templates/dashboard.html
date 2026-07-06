@@ -229,6 +229,8 @@
           <tr>
             <td class="ps-4">
               <div class="d-flex align-items-center">
+                <span class="fw-bold text-muted me-3" style="font-size: 1.1rem">{{ loop.revindex }}</span>
+
                 <div class="company-avatar">{{ candidat.nom_entreprise[:2].upper() }}</div>
                 <div>
                   <div class="fw-bold text-dark">{{ candidat.nom_entreprise }}</div>
@@ -282,37 +284,22 @@
                 {% else %} {% if current_user.role in ['superadmin', 'admin', 'agent'] %}
                 <button
                   type="button"
-                  class="btn btn-action btn-light text-warning shadow-sm"
+                  class="btn btn-action btn-light text-primary shadow-sm"
                   data-bs-toggle="modal"
                   data-bs-target="#modalScan{{ candidat.id }}"
                   title="Uploader l'agrément signé"
                 >
-                  📤
+                  📎
                 </button>
-                {% endif %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
-                <a
-                  href="{{ url_for('main.decision', id=candidat.id, type_decision='refuser') }}"
-                  class="btn btn-action btn-light text-danger shadow-sm"
-                  title="Rejeter"
-                  >✕</a
-                >
-                {% endif %}
-
-                <a
-                  href="{{ url_for('main.telecharger_agrement_vierge', id=candidat.id) }}"
-                  class="btn btn-action btn-light text-secondary shadow-sm"
-                  title="Brouillon"
-                  >📄</a
-                >
-
-                {% if "Retenu" in candidat.statut %}
+                {% endif %} {% endif %} {% if "Retenu" in candidat.statut %}
                 <a
                   href="{{ url_for('main.telecharger_agrement_final', id=candidat.id) }}"
                   class="btn btn-action btn-success text-white shadow-sm"
                   title="Télécharger Final"
-                  >📥</a
                 >
-                {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
+                  📥
+                </a>
+                {% endif %} {% if current_user.role in ['superadmin', 'admin'] %} {% endif %} {% if current_user.role in ['superadmin', 'admin'] %}
                 <form action="{{ url_for('main.supprimer', id=candidat.id) }}" method="POST" style="display: inline">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                   <button

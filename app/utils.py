@@ -78,23 +78,45 @@ def num2words_fr(number):
     except:
         return str(number)
 
-def dessiner_entete_officiel(pdf, afficher_direction=False):
+def dessiner_entete_officiel(pdf, direction=None):
     pdf.set_y(10)
     pdf.set_font("Times", 'B', 14)
     pdf.cell(0, 6, txt=clean_text("République du Sénégal"), ln=1, align='C')
     pdf.set_font("Times", 'I', 11)
     pdf.cell(0, 6, txt="Un Peuple - Un But - Une Foi", ln=1, align='C')
     pdf.ln(2)
+    
+    # 🌟 L'ASTUCE POUR ALIGNER LE 'M' ET LE 'D' :
+    # On enferme les textes dans une colonne de 75mm de large.
+    # 75mm correspond exactement à la largeur de "MINISTÈRE DE LA CULTURE, DE"
+    marge_gauche_originale = pdf.l_margin
+    largeur_boite = 75 
+    marge_x = (210 - largeur_boite) / 2  # (Page de 210mm - boîte 75mm) / 2 = 67.5mm
+    
+    # On décale la marge gauche pour que le multi_cell s'y appuie comme un mur
+    pdf.set_left_margin(marge_x)
+    
+    # --- MINISTÈRE ---
     pdf.set_font("Arial", 'B', 11)
-    pdf.multi_cell(0, 5, txt=clean_text("MINISTÈRE DE LA CULTURE, DE\nL'ARTISANAT ET DU TOURISME"), align='C')
-    if afficher_direction:
-        pdf.ln(1)
-        pdf.set_font("Arial", 'B', 10)
-        pdf.multi_cell(0, 5, txt=clean_text("DIRECTION DE L'ADMINISTRATION\nGENERALE ET DE L'EQUIPEMENT"), align='C')
-    pdf.set_xy(80, pdf.get_y()+2)
+    pdf.multi_cell(largeur_boite, 5, txt=clean_text("MINISTÈRE DE LA CULTURE, DE\nL'ARTISANAT ET DU TOURISME"), align='C')
+    
+    pdf.ln(1)
+    pdf.set_font("Arial", 'B', 10)
+    
+    # --- DIRECTION ---
+    if direction:
+        # La direction est forcée dans la même boîte de 75mm, le 'D' va donc s'aligner sous le 'M'
+        pdf.multi_cell(largeur_boite, 5, txt=clean_text(direction).upper(), align='C')
+    else:
+        pdf.multi_cell(largeur_boite, 5, txt=clean_text("DIRECTION DE L'ADMINISTRATION\nGENERALE ET DE L'EQUIPEMENT"), align='C')
+        
+    # ⚠️ TRÈS IMPORTANT : On restaure la marge normale pour ne pas casser le reste du PV !
+    pdf.set_left_margin(marge_gauche_originale)
+    
+    # --- TA LIGNE DE SÉPARATION EXACTE ---
+    pdf.set_xy(80, pdf.get_y() + 2)
     pdf.cell(50, 0, "", "T")
     pdf.ln(5)
-
 def generer_lettre_agrement(candidat, mode='vierge'):
     pdf = FPDF()
     pdf.add_page()
@@ -187,7 +209,7 @@ def generer_lettre_agrement(candidat, mode='vierge'):
     pdf.set_font("Arial", 'B', 30); pdf.set_text_color(0, 100, 0)
     pdf.cell(w_bloc, 12, txt="MCAT", ln=1, align='C')
 
-    # 🌟 NOUVEAU : NOM DE LA DIRECTION (Sous MCAT)
+    # 🌟 NOM DE LA DIRECTION (Sous MCAT) -> Reste inchangé pour l'en-tête
     texte_direction = getattr(candidat, 'nom_direction', "DIRECTION DE L'ADMINISTRATION GENERALE ET DE L'EQUIPEMENT")
     
     pdf.set_x(x_bloc)
@@ -196,10 +218,10 @@ def generer_lettre_agrement(candidat, mode='vierge'):
     pdf.multi_cell(w_bloc, 5, txt=clean_text(texte_direction), align='C')
     pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", 'B', 9)
     
-  # --- BLOC DE DROITE (RÉFÉRENCES ET SIGNATAIRE) ---
+    # --- BLOC DE DROITE (RÉFÉRENCES ET SIGNATAIRE) ---
     x_droite = 130  # Augmente ce chiffre (ex: 125 ou 130) pour pousser encore plus à droite
 
-   # ⬇️ POUR DESCENDRE : On change "- 5" par "+ 2" (ou + 5 si tu veux descendre encore plus)
+    # Pour descendre : On change "- 5" par "+ 2"
     pdf.set_xy(x_droite, y_start_text + 1)
     pdf.set_font("Arial", 'B', 10)
     
@@ -209,7 +231,7 @@ def generer_lettre_agrement(candidat, mode='vierge'):
     pdf.ln(8)
     pdf.set_x(x_droite)
 
-    # --- 🟢 NOUVEAU : Récupération et formatage de la date ---
+    # --- Récupération et formatage de la date ---
     if candidat.date_signature_agrement:
         # Transforme l'objet date en texte "JJ/MM/AAAA"
         val_date_sign = candidat.date_signature_agrement.strftime('%d/%m/%Y')
@@ -220,32 +242,34 @@ def generer_lettre_agrement(candidat, mode='vierge'):
     # 2. "Dakar, le..." aligné à gauche
     pdf.cell(0, 5, txt=f"Dakar, le {val_date_sign}", ln=1, align='L')
     
-    # ⬇️ C'EST ICI : Augmente ce chiffre pour créer plus d'espace sous la date (ex: 22 ou 25 au lieu de 15)
     pdf.ln(22)
     pdf.set_x(x_droite)
     pdf.set_font("Arial", 'B', 16)
     
-    # 3. LE CHANGEMENT EST ICI : On passe "Le Directeur" en align='L' au lieu de 'C'
+    # 3. Le Directeur en align='L'
     pdf.multi_cell(0, 6, txt=val_titre_signataire, align='L')
 
     pdf.set_left_margin(20); pdf.set_right_margin(35); pdf.set_y(95); pdf.set_font("Arial", 'B', 11); pdf.cell(20, 6, txt="Objet :", align='L')
     pdf.set_font("Arial", '', 11); pdf.cell(0, 6, txt=clean_text("Votre demande d'agrément"), ln=1)
     pdf.set_font("Arial", 'B', 11); pdf.cell(25, 6, txt=clean_text("Référence :"), align='L')
     pdf.set_font("Arial", '', 11); pdf.cell(0, 6, txt=f"Votre lettre {val_ref_sr}", ln=1); pdf.ln(6)
-    pdf.cell(0, 6, txt=f"{civilite},", ln=1); pdf.ln(4)
+    pdf.set_font("Arial", 'B', 11); pdf.cell(0, 6, txt=f"{civilite},", ln=1); pdf.ln(4)
 
-    texte_corps = f"""J'accuse réception de votre lettre, citée en référence, par laquelle vous sollicitez un agrément pour les services que vous proposez.
-En retour, je vous informe que votre entreprise est agréée et enregistrée dans la base de données de la Direction de l'Administration Générale et de l'Equipement.
+    # 🌟 ICI ON ADOUCIT LE TEXTE UNIQUEMENT POUR LE CORPS DE LA LETTRE
+    # Transforme "DIRECTION DE L'ADMINISTRATION" en "Direction De L'Administration"
+    direction_formatee = texte_direction.title()
 
-Je vous prie de croire, {civilite}, à l'assurance de ma considération distinguée."""
+    texte_corps = f"""J'accuse réception de votre lettre, citée en référence, par laquelle vous sollicitez un agrément pour les services que vous proposez. En retour, je vous informe que votre entreprise est agréée et enregistrée dans la base de données de la {direction_formatee}.
 
-   # 1. On définit la police Arial à Taille 12 pour le corps du texte
+Je vous prie de croire, **{civilite}**, à l'assurance de ma considération distinguée."""
+
+    # 1. On définit la police Arial à Taille 12 pour le corps du texte
     pdf.set_font("Arial", '', 12) 
 
-    # 2. On passe la hauteur de ligne à 8 pour simuler l'interligne 1.5 et on justifie (align='J')
-    pdf.multi_cell(0, 8, txt=clean_text(texte_corps), align='J')
+    # 4. 🌟 AJOUT DE markdown=True : FPDF2 va interpréter les étoiles et mettre en gras uniquement ce mot !
+    pdf.multi_cell(0, 8, txt=clean_text(texte_corps), align='J', markdown=True)
     
-    # 3. On garde ton grand saut de ligne pour détacher le reste
+    # 3. Grand saut de ligne pour détacher le destinataire en bas
     pdf.ln(25) 
     y_actuel = pdf.get_y(); pdf.set_xy(20, y_actuel); pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 5, txt="A", ln=1, align='L'); pdf.cell(0, 5, txt=f"{titre_destinataire} de", ln=1, align='L')
@@ -1352,7 +1376,9 @@ def generer_pdf_lettre_invitation(data):
     adresse_depot = data.get('adresse_depot', '')
     lieu_ouverture = data.get('lieu_ouverture', '')
     prestataires = data.get('prestataires', [])
-
+    # 🌟 CORRECTION ICI : On remplace l'apostrophe courbée (’) par l'apostrophe droite (')
+    nom_direction = data.get('direction_nom', "la Direction de l'Administration Générale et de l'Equipement").replace("’", "'")
+    adresse_direction = data.get('adresse_depot', "sise aux Almadies en face de la TFM - Dakar").replace("’", "'")
     # =========================================================
     # SECTION 1 : LA LETTRE D'INVITATION
     # =========================================================
@@ -1433,8 +1459,8 @@ def generer_pdf_lettre_invitation(data):
         pont_francais = "la commande relative à l'objet suivant : "
 
     # Insertion dans le paragraphe (J'ai mis la direction en variable pour que ce soit dynamique partout)
-    texte_intro = f"Il est prévu dans le cadre du marché cité en objet de procéder à {pont_francais}**{objet_propre}** pour le compte de la Direction de l'Administration Générale et de l'Equipement."
-
+    # Insertion dans le paragraphe avec la direction dynamique
+    texte_intro = f"Il est prévu dans le cadre du marché cité en objet de procéder à {pont_francais}**{objet_propre}** pour le compte de {nom_direction}."
     pdf.multi_cell(0, 6, txt=texte_intro, align='J', markdown=True)
     pdf.ln(4) # Espace entre les deux paragraphes
     
@@ -1563,8 +1589,9 @@ def generer_pdf_lettre_invitation(data):
         
     pdf.ln(4)
    # Remplacement du write_html par multi_cell pour garder un bel interligne :
-    texte_fin = "Ces prestations sont à effectuer pour le compte de la Direction de l'Administration générale et de l'Equipement (DAGE) sise aux Almadies en face de la TFM - Dakar, dès **la notification du marché.**"
-    
+    # Remplacement du write_html par multi_cell pour garder un bel interligne :
+    texte_fin = f"Ces prestations sont à effectuer pour le compte de {adresse_direction}, dès **la notification du marché.**"
+
     pdf.multi_cell(0, 6, txt=texte_fin, align='J', markdown=True)
     pdf.ln(6)
     
@@ -1682,6 +1709,7 @@ def clean_text(text):
     return text
 
 def generer_pdf_contrat(data):
+    direction_nom = data.get('direction_name', "DIRECTION DE L'ADMINISTRATION GÉNÉRALE ET DE L'ÉQUIPEMENT")
     # =======================================================
     # 1. LA MACHINE À LAVER MAGIQUE POUR LES DONNÉES
     # =======================================================
@@ -2037,10 +2065,25 @@ def generer_pdf_contrat(data):
     # On réduit un peu l'espace ici (de 10 à 6) pour remonter le texte
     pdf.ln(6)
 
-    # Titre du contrat
+    # Titre du contrat (Dynamique)
     pdf.set_font("Arial", "BU", 12)
-    pdf.cell(0, 6, "CONTRAT DE PRESTATION", new_x="LMARGIN", new_y="NEXT", align="C")
     
+    # On récupère le choix du formulaire (en majuscules pour faciliter la comparaison)
+    vocable_choisi = str(data.get('vocable', 'Prestataire')).upper()
+    
+    # On adapte le titre selon le mot choisi
+    if "FOURNISSEUR" in vocable_choisi:
+        titre_contrat = "CONTRAT DE FOURNITURE"
+    elif "CONSULTANT" in vocable_choisi:
+        titre_contrat = "CONTRAT DE CONSULTANCE"
+    elif "ENTREPRENEUR" in vocable_choisi:
+        titre_contrat = "CONTRAT D'ENTREPRISE"
+    else:
+        titre_contrat = "CONTRAT DE PRESTATION"
+        
+    # On dessine le titre adapté
+    pdf.cell(0, 6, titre_contrat, new_x="LMARGIN", new_y="NEXT", align="C")
+
     # On réduit ici aussi (de 8 à 5)
     pdf.ln(5)
     
@@ -2048,7 +2091,7 @@ def generer_pdf_contrat(data):
     pdf.set_font("Arial", "BU", 10)
     pdf.cell(0, 6, ct("Entre les soussignés :"), new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Arial", "", 10)
-    pdf.multi_cell(0, 5, ct("Le Ministère du Tourisme et de l'Artisanat, sis aux Almadies en face de la TFM, Dakar, désigné dans la suite du contrat sous le vocable « partie contractante » d'une part"))
+    pdf.multi_cell(0, 5, ct("Le Ministère de la Culture, de l'Artisanat et du Tourisme, sis aux Almadies en face de la TFM, Dakar, désigné dans la suite du contrat sous le vocable « partie contractante » d'une part"))
     
     pdf.ln(2)
     pdf.set_font("Arial", "BU", 10)
@@ -2106,8 +2149,11 @@ def generer_pdf_contrat(data):
     else:
         pont_francais = "la commande relative à l'objet suivant : "
 
-    # 🎯 Insertion dans le paragraphe de l'Article 1
-    texte_art1 = f"Le présent marché a pour objet {pont_francais}{objet} pour le compte de la DAGE du Ministère du Tourisme et de l'Artisanat pour un montant de {montant_lettres} ({montant_chiffres}) francs CFA toutes taxes comprises durant la gestion {annee}."
+    # On récupère le sigle (DAGE par défaut)
+    sigle = data.get('sigle_direction', 'DAGE')
+    
+    # 🎯 Insertion dans le paragraphe de l'Article 1 avec le Sigle Dynamique
+    texte_art1 = f"Le présent marché a pour objet {pont_francais}{objet} pour le compte de la {sigle} du Ministère de la Culture, de l'Artisanat et du Tourisme pour un montant de {montant_lettres} ({montant_chiffres}) francs CFA toutes taxes comprises durant la gestion {annee}."
 # --- VOICI LA LIGNE QUI MANQUAIT POUR AFFICHER LE TEXTE 👇 ---
     pdf.multi_cell(0, 5, ct(texte_art1))
 
@@ -2119,7 +2165,7 @@ def generer_pdf_contrat(data):
     imputation = data.get('imputation', '')
     programme = data.get('programme', '')
     
-    texte_art2 = f"Le paiement sera effectué selon l'imputation suivante :\n- DAGE : {imputation}, Programme : {programme}"
+    texte_art2 = f"Le paiement sera effectué selon l'imputation suivante :\n- {imputation}, Programme : {programme}"
     pdf.multi_cell(0, 5, ct(texte_art2))
 
     pdf.ln(3)
@@ -2132,7 +2178,21 @@ def generer_pdf_contrat(data):
     pdf.set_font("Arial", "BU", 10)
     pdf.cell(40, 5, ct("Article 4 : Pénalités"), new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Arial", "", 10)
-    pdf.multi_cell(0, 5, ct("En cas de non-exécution des prestations dans les conditions annoncées dans le bordereau descriptif et quantitatif, la partie contractante se réserve le droit de s'approvisionner sur le marché, après mise en demeure infructueuse aux risques et périls du prestataire."))
+    # 1. On récupère le vocable en minuscules
+    vocable_min = str(data.get('vocable', 'prestataire')).lower().strip()
+
+    # 2. 🛡️ SÉCURITÉ GRAMMATICALE : On gère le "du" ou "de l'" selon la première lettre
+    voyelles = ('a', 'e', 'i', 'o', 'u', 'y', 'é', 'è', 'à', 'h')
+    if vocable_min.startswith(voyelles):
+        du_vocable = f"de l'{vocable_min}"
+    else:
+        du_vocable = f"du {vocable_min}"
+
+    # 3. On génère le texte avec le 'f' devant les guillemets (f-string)
+    texte_clause = f"En cas de non-exécution des prestations dans les conditions annoncées dans le bordereau descriptif et quantitatif, la partie contractante se réserve le droit de s'approvisionner sur le marché, après mise en demeure infructueuse aux risques et périls {du_vocable}."
+
+    # 4. On l'affiche dans le PDF
+    pdf.multi_cell(0, 5, ct(texte_clause))
 
     pdf.ln(3)
     pdf.set_font("Arial", "BU", 10)
@@ -2176,10 +2236,27 @@ def generer_pdf_contrat(data):
 
     pdf.ln(8) # Réduit de 10 à 8
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(90, 5, "Le Prestataire", new_x="RIGHT", new_y="TOP", align="L")
-    pdf.cell(0, 5, "Le Directeur de l'Administration", new_x="LMARGIN", new_y="NEXT", align="R")
-    pdf.cell(0, 5, ct("Générale et de l'Équipement"), new_x="LMARGIN", new_y="NEXT", align="R")
 
+    # 1. On récupère le vocable choisi (ex: Prestataire, Fournisseur, Entrepreneur...)
+    vocable_choisi = str(data.get('vocable', 'Prestataire')).strip()
+
+    # 2. 🛡️ SÉCURITÉ GRAMMATICALE : Gestion automatique du "Le" ou "L'"
+    voyelles = ('A', 'E', 'I', 'O', 'U', 'Y', 'É', 'È', 'À', 'a', 'e', 'i', 'o', 'u', 'y', 'é', 'è', 'à', 'h', 'H')
+    if vocable_choisi.startswith(voyelles):
+        label_signature = f"L'{vocable_choisi}"
+    else:
+        label_signature = f"Le {vocable_choisi}"
+
+    # 3. On affiche le bloc avec le ct() pour protéger les accents (ex: Entrepreneur)
+    pdf.cell(90, 5, ct(label_signature), new_x="RIGHT", new_y="TOP", align="L")
+    
+    # 4. Côté Direction (Dynamique)
+    # On récupère la valeur envoyée par la route
+    texte_signataire = data.get('signataire_bas', "Le Directeur de l'Administration\nGénérale et de l'Équipement")
+    
+    # L'utilisation de multi_cell permet de respecter les retours à la ligne (\n) tapés par l'agent !
+    pdf.multi_cell(0, 5, ct(texte_signataire), new_x="LMARGIN", new_y="NEXT", align="R")
+    
     # On génère le fichier
     pdf.output(chemin_pdf)
     
