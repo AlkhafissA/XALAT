@@ -618,8 +618,19 @@ def generer_pdf_lettre_information(buffer, data):
     date_lettre = data.get('date_lettre', '')
     signataire = data.get('signataire', 'Le Directeur')
 
-    # --- 1. DESSIN GRAPHIQUE GAUCHE ---
-    x_flag_top = 43; y_flag_top = 10; w_band_top = 8; h_flag_top = 14 
+   # --- 1. DESSIN GRAPHIQUE GAUCHE ---
+    
+    # 💡 POUR POUSSER À GAUCHE : On réduit la marge de gauche pour ce bloc (ex: 5 au lieu de 10)
+    marge_gauche_logo = 1 
+    pdf.set_left_margin(marge_gauche_logo)
+
+    # 👈 MODIFIÉ : x_flag_top passe de 43 à 38 pour reculer le drapeau à gauche
+    x_flag_top = 34 
+    
+    # 💡 POUR MONTER TOUT LE BLOC : Diminue ce chiffre ! (ex: Mets 5 ou 6 au lieu de 10)
+    y_flag_top = 7 
+    
+    w_band_top = 8; h_flag_top = 14 
     
     # Bande Verte
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_flag_top, y_flag_top, w_band_top, h_flag_top, style='F')
@@ -627,17 +638,17 @@ def generer_pdf_lettre_information(buffer, data):
     # Bande Jaune
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_flag_top + w_band_top, y_flag_top, w_band_top, h_flag_top, style='F')
     
-    # --- L'ÉTOILE (Vraie étoile avec ZapfDingbats) ---
-    # Ajusté à 4.0 ou 5.0 si on veut la monter ou la descendre un poil
+    # --- L'ÉTOILE ---
     decalage_y_etoile = 4.5 
     pdf.set_xy(x_flag_top + w_band_top, y_flag_top + decalage_y_etoile) 
     pdf.set_text_color(0, 140, 60)
-    pdf.set_font("ZapfDingbats", '', 11) # Police magique et taille ajustée
-    pdf.cell(w_band_top, 5, txt=chr(72), align='C') # chr(72) dessine l'étoile
+    pdf.set_font("ZapfDingbats", '', 11)
+    pdf.cell(w_band_top, 5, txt=chr(72), align='C') 
     
     # Bande Rouge
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_flag_top + (w_band_top*2), y_flag_top, w_band_top, h_flag_top, style='F')
     
+    # Le point de départ Y du texte dépend de la hauteur du drapeau (tout suit automatiquement !)
     y_start_text = y_flag_top + h_flag_top + 5 
     pdf.set_y(y_start_text); pdf.set_text_color(0, 0, 0); pdf.set_font("Times", 'B', 14)
     pdf.cell(90, 6, txt=clean_text("République du Sénégal"), new_x="LMARGIN", new_y="NEXT", align='C')
@@ -647,28 +658,42 @@ def generer_pdf_lettre_information(buffer, data):
     pdf.ln(2); pdf.set_font("Arial", 'B', 8); pdf.set_text_color(0, 100, 0)
     pdf.multi_cell(90, 4, txt=clean_text("MINISTÈRE DE LA CULTURE, DE\nL'ARTISANAT ET DU TOURISME"), align='C')
     
-    y_barre = pdf.get_y() + 1; w_barre_total = 44; x_barre_start = 33; w_segment = w_barre_total / 3; h_barre = 1.5
+    y_barre = pdf.get_y() + 1; w_barre_total = 44; h_barre = 1.5; w_segment = w_barre_total / 3
+    
+    # 👈 MODIFIÉ : x_barre_start passe de 33 à 28 (décalé de 5 à gauche)
+    x_barre_start = 24 
+    
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_barre_start, y_barre, w_segment, h_barre, style='F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_barre_start + w_segment, y_barre, w_segment, h_barre, style='F')
     
     # --- Étoile de la petite barre tricolore ---
-    decalage_y_barre = -1.2 # On remonte un peu par rapport au Y de la barre
+    decalage_y_barre = -1.2 
     pdf.set_xy(x_barre_start + w_segment, y_barre + decalage_y_barre)
     pdf.set_font("ZapfDingbats", '', 5.5); pdf.set_text_color(0, 140, 60) 
     pdf.cell(w_segment, 4, txt=chr(72), align='C')
     
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_barre_start + (w_segment*2), y_barre, w_segment, h_barre, style='F')                                                                                                     
     
-    pdf.set_xy(10, y_barre + 3); pdf.set_font("Arial", 'B', 30); pdf.set_text_color(0, 100, 0)
+    # 👈 MODIFIÉ : On remplace le 10 en dur par notre marge_gauche_logo (5)
+    pdf.set_xy(marge_gauche_logo, y_barre + 3); pdf.set_font("Arial", 'B', 30); pdf.set_text_color(0, 100, 0)
     pdf.cell(90, 12, txt="MCAT", new_x="LMARGIN", new_y="NEXT", align='C')
     
-    # --- CORRECTION 1 : Direction sur 2 lignes centrée ---
-    pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", 'B', 9) 
+    # --- Direction DYNAMIQUE ---
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", 'B', 9) 
+    
     direction_affichee = clean_text(direction_nom)
+    
+    mots = direction_affichee.split(" ")
+    if len(mots) > 3:
+        milieu = len(mots) // 2
+        direction_affichee = " ".join(mots[:milieu]) + "\n" + " ".join(mots[milieu:])
+    
     direction_affichee = direction_affichee.replace("Administration g", "Administration\ng").replace("Administration G", "Administration\nG")
     
-    pdf.set_x(15) 
-    pdf.multi_cell(80, 5, txt=direction_affichee, align='C')
+    # 👈 MODIFIÉ : x passe de 18 à 13 (Décalé de 5 pour rester parfaitement aligné sous le "M")
+    pdf.set_x(12) 
+    pdf.multi_cell(70, 5, txt=direction_affichee, align='C')
 
    # --- 2. RÉFÉRENCES, DATE ET SIGNATAIRE (Alignés à droite) ---
     X_DROITE = 140  
@@ -704,19 +729,22 @@ def generer_pdf_lettre_information(buffer, data):
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 6, txt=clean_text(f"{signataire}"), new_x="LMARGIN", new_y="NEXT")
 
-    # --- 3. OBJET & CORPS DE LA LETTRE (ÉQUILIBRÉ) ---
-    marge_gauche_texte = 15 
+    # ==========================================
+    # --- 3. OBJET & CORPS DE LA LETTRE (COMPACTÉ POUR 1 PAGE) ---
+    # ==========================================
+    marge_gauche_texte = 20 
+    marge_droite_texte = 20 
     pdf.set_left_margin(marge_gauche_texte)
-    pdf.set_right_margin(marge_gauche_texte)
+    pdf.set_right_margin(marge_droite_texte)
     
-    # On redonne un tout petit peu d'air en haut
-    hauteur_corps_lettre = max(pdf.get_y(), 90) + 5 
+    # 👈 ON OPTIMISE LE HAUT : On remonte un tout petit peu le départ du texte pour gagner de la place
+    hauteur_corps_lettre = max(pdf.get_y(), 88) + 4 
     pdf.set_xy(marge_gauche_texte, hauteur_corps_lettre) 
 
-    # Hauteur de ligne plus confortable (6 au lieu de 5)
-    h_ligne = 6 
+    # CONFIGURATION DE LA POLICE ET DE L'INTERLIGNE DE 1,5
+    h_ligne = 8                   # 👈 CORRIGÉ À 8 : Hauteur parfaite pour simuler l'interligne 1,5 avec la taille 12
     pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Arial", '', 11) # On repasse en police 11 pour le texte
+    pdf.set_font("Arial", '', 12) # Taille 12 (équivalent Tahoma)
     
     objet_propre = clean_text(data.get('objet_marche', '...'))
     immat_propre = clean_text(data.get('immatriculation', '...'))
@@ -726,51 +754,56 @@ def generer_pdf_lettre_information(buffer, data):
     # ==========================================
     # ✍️ 2. Rédaction
     # ==========================================
-    pdf.set_font("Arial", 'BU', 11)
+    pdf.set_font("Arial", 'BU', 12) 
     pdf.write(h_ligne, txt="Objet")
     
-    pdf.set_font("Arial", 'B', 11)
+    pdf.set_font("Arial", 'B', 12)  
     pdf.write(h_ligne, txt=" : Lettre d'information")
-    pdf.ln(8) # Espace normal
+    pdf.ln(8) # 👈 RÉDUIT : Moins d'espace pour tout compacter
 
-    pdf.set_font("Arial", '', 11) 
+    pdf.set_font("Arial", '', 12)   
     pdf.multi_cell(0, h_ligne, txt="**Messieurs,**", markdown=True)
-    pdf.ln(5) # Espace aéré
+    pdf.ln(5) # 👈 RÉDUIT
 
     texte_p1 = f"Suite à l'évaluation et à l'attribution par la commission des marchés, des offres relatives à la Demande de Renseignements et de Prix restreinte ayant pour objet : « **{objet_propre}** » immatriculée **{immat_propre}** en date du **{date_comm_propre}**, pour le compte de la **{direction_propre}**, je vous informe que votre entreprise n'a pas été retenue comme attributaire de ladite demande de renseignements et de prix."
     pdf.multi_cell(0, h_ligne, txt=texte_p1, align='J', markdown=True)
-    pdf.ln(5) # Espace aéré
+    pdf.ln(4) # 👈 RÉDUIT
 
     texte_p2 = f"A ce titre, je vous prie de bien vouloir passer à la **{direction_propre}** pour récupérer le procès-verbal d'ouverture et d'évaluation des offres."
     pdf.multi_cell(0, h_ligne, txt=texte_p2, align='J', markdown=True)
-    pdf.ln(5) # Espace aéré
+    pdf.ln(4) # 👈 RÉDUIT
 
     texte_p3 = "Je vous prie d'agréer, **Monsieur le Directeur**, l'assurance de ma considération distinguée."
     pdf.multi_cell(0, h_ligne, txt=texte_p3, align='J', markdown=True)
-    pdf.ln(8) # Bon espace avant le tableau
+    
+    # 👈 PETIT ESPACE AVANT LE TABLEAU
+    pdf.ln(6) 
 
-    # --- 4. TABLEAU DES PRESTATAIRES (AÉRÉ MAIS BLOQUÉ SUR 1 PAGE) ---
+    # ==========================================
+    # --- 4. TABLEAU DES PRESTATAIRES (BLOQUÉ SUR 1 PAGE) ---
+    # ==========================================
     pdf.set_font("Arial", 'B', 11)
     pdf.set_text_color(0, 0, 0)
     
-    largeur_col1 = 65 
+    # 📑 LARGEUR AJUSTÉE : 60 + 110 = 170 mm. Avec tes marges de 20 (210-20-20=170), 
+    # le tableau ne cassera plus du tout sur la droite !
+    largeur_col1 = 60 
     largeur_col2 = 110 
     
-    # 💡 NOUVEAU : On récupère le mot envoyé par routes.py, tout en majuscules
     titre_colonne_1 = data.get('type_entreprise', 'PRESTATAIRES').upper()
     
-    # En-tête de tableau un peu plus haut (10 au lieu de 8)
-    pdf.cell(largeur_col1, 10, txt=titre_colonne_1, border=1, align='C') # ✅ CORRIGÉ
-    pdf.cell(largeur_col2, 10, txt="ADRESSES", border=1, align='C', new_x="LMARGIN", new_y="NEXT")
+    # En-tête de tableau légèrement compactée en hauteur (9 au lieu de 10)
+    pdf.cell(largeur_col1, 9, txt=titre_colonne_1, border=1, align='C') 
+    pdf.cell(largeur_col2, 9, txt="ADRESSES", border=1, align='C', new_x="LMARGIN", new_y="NEXT")
 
-    pdf.set_font("Arial", '', 10) # On repasse en police 10 (plus lisible que 9)
+    pdf.set_font("Arial", '', 10) 
 
     prestataires_liste = data.get('perdants', [])
 
     if not prestataires_liste:
         pdf.cell(largeur_col1 + largeur_col2, 7, txt="Aucun prestataire trouvé", border=1, align='C', new_x="LMARGIN", new_y="NEXT")
     else:
-        # 🚨 ON VERROUILLE LE SAUT DE PAGE DÉFINITIVEMENT 🚨
+        # 🚨 ON VERROUILLE LE SAUT DE PAGE ICI
         pdf.set_auto_page_break(auto=False) 
 
         for candidat in prestataires_liste:
@@ -785,13 +818,13 @@ def generer_pdf_lettre_information(buffer, data):
             x_depart = marge_gauche_texte 
             y_depart = pdf.get_y()
             
-            # On remonte la hauteur des lignes internes à 5.5 pour décoller le texte des bordures
+            # 👈 HAUTEUR INTERNE À 5 : Rend les lignes compactes pour économiser de la place
             pdf.set_xy(x_depart, y_depart)
-            pdf.multi_cell(largeur_col1, 5.5, txt=clean_text(nom_entreprise), border=0, align='L')
+            pdf.multi_cell(largeur_col1, 5, txt=clean_text(nom_entreprise), border=0, align='L')
             y_col1 = pdf.get_y()
             
             pdf.set_xy(x_depart + largeur_col1, y_depart)
-            pdf.multi_cell(largeur_col2, 5.5, txt=clean_text(chaine_adresse), border=0, align='L')
+            pdf.multi_cell(largeur_col2, 5, txt=clean_text(chaine_adresse), border=0, align='L')
             y_col2 = pdf.get_y()
             
             # Dessin de la case
@@ -802,10 +835,9 @@ def generer_pdf_lettre_information(buffer, data):
             pdf.line(x_depart + largeur_col1, y_depart, x_depart + largeur_col1, y_max)
             
             pdf.set_xy(x_depart, y_max)
-    
             
-            # --- On réactive l'auto-break normal pour la suite ---
-            pdf.set_auto_page_break(auto=True, margin=30)
+        # 🚨 ON RÉACTIVE l'auto-break pour la suite du document (Signature...)
+        pdf.set_auto_page_break(auto=True, margin=30)
             
     # 5. Sauvegarde en mémoire
     pdf_bytes = pdf.output()
@@ -832,19 +864,29 @@ def generer_pdf_lettre_notification(buffer, data):
     date_lettre = data.get('date_lettre', '')
     signataire = data.get('signataire', 'Le Directeur')
 
-    # --- 1. DESSIN GRAPHIQUE GAUCHE ---
-    x_flag_top = 43; y_flag_top = 10; w_band_top = 8; h_flag_top = 14 
+    # ==========================================
+    # --- 1. DESSIN GRAPHIQUE GAUCHE (RÉGLAGE PARFAIT APPLIQUÉ) ---
+    # ==========================================
+    
+    # 💡 MARGE ET DÉCALAGE (Paramètres parfaits)
+    marge_gauche_logo = 1 
+    pdf.set_left_margin(marge_gauche_logo)
+
+    x_flag_top = 34  # Décalé vers la gauche
+    y_flag_top = 7   # Remonté vers le haut
+    
+    w_band_top = 8; h_flag_top = 14 
     
     # Drapeau
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_flag_top, y_flag_top, w_band_top, h_flag_top, style='F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_flag_top + w_band_top, y_flag_top, w_band_top, h_flag_top, style='F')
     
     # --- L'Étoile du drapeau ---
-    decalage_y_etoile = 4.5 # on peut Modifie cette valeur si besoin (ex: 4.0 pour monter, 5.0 pour descendre)
+    decalage_y_etoile = 4.5 
     pdf.set_xy(x_flag_top + w_band_top, y_flag_top + decalage_y_etoile) 
     pdf.set_text_color(0, 140, 60)
-    pdf.set_font("ZapfDingbats", '', 11) # Police magique
-    pdf.cell(w_band_top, 5, txt=chr(72), align='C') # chr(72) génère l'étoile
+    pdf.set_font("ZapfDingbats", '', 11) 
+    pdf.cell(w_band_top, 5, txt=chr(72), align='C') 
     
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_flag_top + (w_band_top*2), y_flag_top, w_band_top, h_flag_top, style='F')
     
@@ -859,12 +901,15 @@ def generer_pdf_lettre_notification(buffer, data):
     pdf.multi_cell(90, 4, txt=clean_text("MINISTÈRE DE LA CULTURE, DE\nL'ARTISANAT ET DU TOURISME"), align='C')
     
     # Barre tricolore
-    y_barre = pdf.get_y() + 1; w_barre_total = 44; x_barre_start = 33; w_segment = w_barre_total / 3; h_barre = 1.5
+    y_barre = pdf.get_y() + 1; w_barre_total = 44; h_barre = 1.5; w_segment = w_barre_total / 3
+    
+    x_barre_start = 24 # 👈 Alignement parfait avec le drapeau décalé
+    
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_barre_start, y_barre, w_segment, h_barre, style='F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_barre_start + w_segment, y_barre, w_segment, h_barre, style='F')
     
     # --- Étoile de la petite barre ---
-    decalage_y_barre = -1.0 # On remonte légèrement l'étoile par rapport à la barre
+    decalage_y_barre = -1.0 
     pdf.set_xy(x_barre_start + w_segment, y_barre + decalage_y_barre)
     pdf.set_font("ZapfDingbats", '', 5.5)
     pdf.set_text_color(0, 140, 60) 
@@ -873,14 +918,28 @@ def generer_pdf_lettre_notification(buffer, data):
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_barre_start + (w_segment*2), y_barre, w_segment, h_barre, style='F')                                                                                                     
     
     # MCAT Logo texte
-    pdf.set_xy(10, y_barre + 3); pdf.set_font("Arial", 'B', 30); pdf.set_text_color(0, 100, 0)
+    # 👈 On utilise la marge dynamique (1) pour caler parfaitement le MCAT à gauche
+    pdf.set_xy(marge_gauche_logo, y_barre + 3); pdf.set_font("Arial", 'B', 30); pdf.set_text_color(0, 100, 0)
     pdf.cell(90, 12, txt="MCAT", new_x="LMARGIN", new_y="NEXT", align='C')
     
-    # Direction sous le MCAT
-    pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", 'B', 9) 
-    direction_affichee = clean_text(direction_nom).replace("Administration g", "Administration\ng").replace("Administration G", "Administration\nG")
-    pdf.set_x(15) 
-    pdf.multi_cell(80, 5, txt=direction_affichee, align='C')
+    # --- Direction sous le MCAT (DYNAMIQUE) ---
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", 'B', 9) 
+    
+    direction_affichee = clean_text(direction_nom)
+    
+    # ASTUCE DYNAMIQUE : Coupure automatique si le nom est long
+    mots = direction_affichee.split(" ")
+    if len(mots) > 3:
+        milieu = len(mots) // 2
+        direction_affichee = " ".join(mots[:milieu]) + "\n" + " ".join(mots[milieu:])
+    
+    # Corrections spécifiques conservées
+    direction_affichee = direction_affichee.replace("Administration g", "Administration\ng").replace("Administration G", "Administration\nG")
+    
+    # 👈 Position décalée à 12 pour que la direction soit bien centrée sous ton "MCAT"
+    pdf.set_x(12) 
+    pdf.multi_cell(70, 5, txt=direction_affichee, align='C')
 
     # --- 2. RÉFÉRENCES ET DATE ---
     X_DROITE = 135 
@@ -915,16 +974,18 @@ def generer_pdf_lettre_notification(buffer, data):
     pdf.cell(0, 6, txt=clean_text(f"{signataire}"), new_x="LMARGIN", new_y="NEXT")
 
     # --- 3. OBJET ET CORPS DE LA LETTRE ---
-    marge_gauche_texte = 15 
+    marge_gauche_texte = 20 
+    marge_droite_texte = 20
     pdf.set_left_margin(marge_gauche_texte)
-    pdf.set_right_margin(marge_gauche_texte) 
+    pdf.set_right_margin(marge_droite_texte)
     
     hauteur_corps_lettre = 95 
     pdf.set_xy(marge_gauche_texte, hauteur_corps_lettre)
 
-    h_ligne = 7
+    # 👈 CONFIGURATION DE LA POLICE ET DE L'INTERLIGNE DE 1,5
+    h_ligne = 7                   # 👈 MODIFIÉ : Hauteur à 8 pour simuler l'interligne 1,5
     pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Arial", '', 11)
+    pdf.set_font("Arial", '', 12) # 👈 MODIFIÉ : Taille passée à 12 (équivalent Tahoma)
 
     objet_propre = clean_text(data.get('objet_marche', '...'))
     immat_propre = clean_text(data.get('immatriculation', '...'))
@@ -936,26 +997,27 @@ def generer_pdf_lettre_notification(buffer, data):
 
     texte_objet = "**Objet :** Lettre de notification"
     pdf.multi_cell(0, h_ligne, txt=texte_objet, markdown=True)
-    pdf.ln(8)
+    pdf.ln(7) # 👈 MODIFIÉ : Un peu plus d'espace après l'objet
 
     pdf.multi_cell(0, h_ligne, txt=f"**{civilite_propre}**", markdown=True)
-    pdf.ln(8)
+    pdf.ln(5)  # 👈 MODIFIÉ : Adapté au nouvel interligne
 
     texte_p1 = f"Suite à l'évaluation et à l'attribution par la commission des marchés, des offres relatives à la Demande de Renseignements et de Prix restreinte ayant pour objet : « **{objet_propre}** » immatriculée **{immat_propre}** en date du **{date_comm_propre}**, pour le compte de la **{direction_propre}**, je vous informe que votre entreprise a été retenue comme attributaire de ladite demande de renseignements et de prix."
     pdf.multi_cell(0, h_ligne, txt=texte_p1, align='J', markdown=True)
-    pdf.ln(6)
+    pdf.ln(4)  # 👈 MODIFIÉ : Adapté au nouvel interligne
 
     texte_p2 = f"A ce titre, je vous prie de bien vouloir passer à la **{direction_propre}** pour récupérer le procès-verbal d'ouverture et d'évaluation des offres et de signer le contrat."
     pdf.multi_cell(0, h_ligne, txt=texte_p2, align='J', markdown=True)
-    pdf.ln(6) 
+    pdf.ln(5)  # 👈 MODIFIÉ : Adapté au nouvel interligne
 
     texte_p3 = f"Je vous prie d'agréer, **{civilite_cloture}**, l'assurance de ma considération distinguée."
     pdf.multi_cell(0, h_ligne, txt=texte_p3, align='J', markdown=True)
-    
+    pdf.ln(6)
+
     # ==========================================
     # 🎯 BLOC DESTINATAIRE (BLOC INVISIBLE) 🎯
     # ==========================================
-    Y_ACTUEL = 210  # Hauteur de départ en mm
+    Y_ACTUEL = 220  # Hauteur de départ en mm
     X_GAUCHE = 15   # Position fixe depuis le bord gauche
     
     # 👈 C'est ce chiffre (70) qui crée le "mur invisible" ! 
@@ -1027,9 +1089,17 @@ def generer_pdf_pv_attribution(buffer, data):
     signataire = data.get('signataire', 'Le Directeur,')
     
     # ==========================================
-    # --- 1. DESSIN GRAPHIQUE GAUCHE ---
+    # --- 1. DESSIN GRAPHIQUE GAUCHE (RÉGLAGE PARFAIT APPLIQUÉ) ---
     # ==========================================
-    x_flag_top = 43; y_flag_top = 10; w_band_top = 8; h_flag_top = 14 
+    
+    # 💡 MARGE ET DÉCALAGE (Paramètres parfaits)
+    marge_gauche_logo = 1 
+    pdf.set_left_margin(marge_gauche_logo)
+
+    x_flag_top = 34  # Décalé vers la gauche
+    y_flag_top = 10   # Remonté vers le haut
+    
+    w_band_top = 8; h_flag_top = 14 
     
     # Drapeau
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_flag_top, y_flag_top, w_band_top, h_flag_top, style='F')
@@ -1055,7 +1125,10 @@ def generer_pdf_pv_attribution(buffer, data):
     pdf.multi_cell(90, 4, txt=clean_text("MINISTÈRE DE LA CULTURE, DE\nL'ARTISANAT ET DU TOURISME"), align='C')
     
     # Barre tricolore
-    y_barre = pdf.get_y() + 1; w_barre_total = 44; x_barre_start = 33; w_segment = w_barre_total / 3; h_barre = 1.5
+    y_barre = pdf.get_y() + 1; w_barre_total = 44; h_barre = 1.5; w_segment = w_barre_total / 3
+    
+    x_barre_start = 24 # 👈 Alignement parfait avec le drapeau décalé
+    
     pdf.set_fill_color(0, 140, 60); pdf.rect(x_barre_start, y_barre, w_segment, h_barre, style='F')
     pdf.set_fill_color(255, 215, 0); pdf.rect(x_barre_start + w_segment, y_barre, w_segment, h_barre, style='F')
     
@@ -1069,14 +1142,25 @@ def generer_pdf_pv_attribution(buffer, data):
     pdf.set_fill_color(230, 30, 30); pdf.rect(x_barre_start + (w_segment*2), y_barre, w_segment, h_barre, style='F')                                                                                
     
     # MCAT Logo texte
-    pdf.set_xy(10, y_barre + 3); pdf.set_font("Arial", 'B', 30); pdf.set_text_color(0, 100, 0)
+    # 👈 Utilisation de marge_gauche_logo pour un alignement impeccable
+    pdf.set_xy(marge_gauche_logo, y_barre + 3); pdf.set_font("Arial", 'B', 30); pdf.set_text_color(0, 100, 0)
     pdf.cell(90, 12, txt="MCAT", new_x="LMARGIN", new_y="NEXT", align='C')
     
-    # Direction sous le MCAT 
+    # --- Direction sous le MCAT (DYNAMIQUE) ---
     pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", 'B', 9) 
-    direction_affichee = clean_text(direction_nom).replace("Administration g", "Administration\ng").replace("Administration G", "Administration\nG")
-    pdf.set_x(15) 
-    pdf.multi_cell(80, 5, txt=direction_affichee, align='C')
+    direction_affichee = clean_text(direction_nom)
+    
+    # 👈 On réapplique l'astuce de découpage pour garder une belle présentation
+    mots = direction_affichee.split(" ")
+    if len(mots) > 3:
+        milieu = len(mots) // 2
+        direction_affichee = " ".join(mots[:milieu]) + "\n" + " ".join(mots[milieu:])
+        
+    direction_affichee = direction_affichee.replace("Administration g", "Administration\ng").replace("Administration G", "Administration\nG")
+    
+    # 👈 Décalé à 12 et largeur réduite à 70 pour être bien centré sous "MCAT"
+    pdf.set_x(12) 
+    pdf.multi_cell(70, 5, txt=direction_affichee, align='C')
 
     # ==========================================
     # --- 2. RÉFÉRENCES, DATE ET SIGNATAIRE ---
@@ -1151,7 +1235,7 @@ def generer_pdf_pv_attribution(buffer, data):
     direction_propre = clean_text(direction_nom)
 
     # 📏 Réglage des marges symétriques à 15mm comme pour les autres courriers
-    marge = 15
+    marge = 18
     pdf.set_left_margin(marge)
     pdf.set_right_margin(marge)
     pdf.set_x(marge)
