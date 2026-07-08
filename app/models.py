@@ -195,6 +195,7 @@ class ArchiveDocument(db.Model):
     type_document = db.Column(db.String(50), nullable=False) # Ex: 'Bordereau', 'Lettre Invitation', 'Contrat'
     nom_fichier = db.Column(db.String(255), nullable=False) # Le nom du PDF sauvegardé
     date_ajout = db.Column(db.DateTime, default=datetime.utcnow) # Date d'upload
+    statut = db.Column(db.String(20), nullable=False, default='Ajouté') # 'Ajouté' ou 'Modifié'
 
 class LoginAttempt(db.Model):
     id = db.Column(db.Integer, primary_key=True)

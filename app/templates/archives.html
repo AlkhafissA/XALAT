@@ -268,6 +268,9 @@
         </td>
         <td>
           <span class="badge bg-secondary">{{ doc.type_document }}</span>
+          {% if doc.statut == 'Modifié' %}
+          <span class="badge bg-warning text-dark" title="Le fichier d'origine a été remplacé">✏️ Modifié</span>
+          {% endif %}
         </td>
         <td class="small text-muted">{{ doc.date_ajout.strftime('%d/%m/%Y %H:%M') if doc.date_ajout else 'N/A' }}</td>
         <td>

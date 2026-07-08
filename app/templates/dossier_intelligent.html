@@ -193,6 +193,9 @@
                 <button class="btn btn-primary btn-sm rounded-pill shadow-sm px-3" onclick='ouvrirLecteurPDF("{{ file_url }}")'>
                   <i class="fas fa-eye me-1"></i> Lire le document
                 </button>
+                <button class="btn btn-outline-secondary btn-sm rounded-pill shadow-sm px-3" onclick='ouvrirModalUpload("{{ cle_etape }}")'>
+                  <i class="fas fa-pen me-1"></i> Modifier
+                </button>
               </div>
               {% else %} {% if cle_etape in ['lettre_invitation', 'lettre_notification', 'lettre_information', 'pv_attribution', 'contrat'] %}
               <p class="mb-2"><i class="fas fa-exclamation-circle text-warning fa-2x mb-2"></i></p>

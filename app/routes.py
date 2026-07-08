@@ -19,7 +19,7 @@ import uuid
 from functools import wraps
 import filetype  # 🛡️ Pour lire l'ADN des fichiers
 from werkzeug.utils import secure_filename
-from flask import send_file, make_response, abort
+from flask import send_file, make_response, abort, after_this_request
 from flask import send_from_directory, abort
 from datetime import datetime, timedelta
 import io
@@ -1308,11 +1308,20 @@ def liste_notifications():
     notifications = LettreNotification.query.order_by(LettreNotification.id.desc()).all()
     candidats = Candidat.query.order_by(Candidat.nom_entreprise).all()
     
-    # --- NOUVEAU : On prépare la liste des Lettres d'Invitation pour le menu déroulant ---
+    # --- 🎯 NOUVEAU : On récupère l'ensemble des immatriculations déjà notifiées ---
+    # On crée un ensemble (set) de chaînes nettoyées pour que la recherche soit ultra-rapide et efficace
+    immatriculations_notifiees = {n.immatriculation.strip() for n in notifications if n.immatriculation}
+    
+    # --- On prépare la liste des Lettres d'Invitation pour le menu déroulant ---
     invitations_brutes = LettreInvitation.query.order_by(LettreInvitation.id.desc()).all()
     lettres_invitation = []
     
     for inv in invitations_brutes:
+        # 🚨 LE FILTRE ANTI-ENCOMBREMENT 🚨
+        # Si cette immatriculation a déjà une notification, on passe à la suivante !
+        if inv.immatriculation and inv.immatriculation.strip() in immatriculations_notifiees:
+            continue
+            
         if inv.form_data:
             try:
                 # La base de données donne déjà un dictionnaire !
@@ -1330,7 +1339,7 @@ def liste_notifications():
     return render_template('liste_notifications.html', 
                            notifications=notifications, 
                            candidats=candidats, 
-                           lettres_invitation=lettres_invitation) # On envoie la liste au HTML
+                           lettres_invitation=lettres_invitation) # On envoie la liste filtrée au HTML
 
 @main.route('/api/get_infos_invitation')
 @login_required
@@ -1971,7 +1980,6 @@ def supprimer_lettre(id):
 # ==========================================
 # --- ROUTES : CONTRATS ---
 # ==========================================
-
 @main.route('/creer_contrat', methods=['GET', 'POST'])
 @login_required
 def creer_contrat():
@@ -2052,9 +2060,28 @@ def creer_contrat():
         return redirect(url_for('main.creer_contrat'))
 
     # === DÉBUT PARTIE GET ===
-    liste_pvs = ProcesVerbal.query.order_by(ProcesVerbal.id.desc()).all()
     
+    # On récupère tous les contrats existants pour remplir le tableau du bas
     contrats_bruts = Contrat.query.order_by(Contrat.id.desc()).all()
+    
+    # --- 🎯 NOUVEAU : On crée l'ensemble des immatriculations qui ont déjà un contrat ---
+    immatriculations_sous_contrat = {c.immatriculation.strip() for c in contrats_bruts if c.immatriculation}
+    
+    # On récupère tous les PVs bruts
+    pvs_bruts = ProcesVerbal.query.order_by(ProcesVerbal.id.desc()).all()
+    
+    liste_pvs = []
+    
+    for pv in pvs_bruts:
+        # 🚨 LE FILTRE ANTI-ENCOMBREMENT 🚨
+        # Si le numéro DRP de ce PV est déjà dans notre liste de contrats, on l'ignore !
+        if pv.numero_drp and pv.numero_drp.strip() in immatriculations_sous_contrat:
+            continue
+        
+        # Sinon, on l'ajoute à la liste qui sera envoyée au menu déroulant
+        liste_pvs.append(pv)
+    
+    # On prépare l'affichage des contrats sauvegardés dans le tableau
     contrats_sauvegardes = []
     for c in contrats_bruts:
         cand = db.session.get(Candidat, c.candidat_id)
@@ -2180,7 +2207,21 @@ def telecharger_contrat(id):
     nom_safe = candidat.nom_entreprise.replace(' ', '_') if candidat else 'Inconnu'
     nom_fichier = f"Contrat_{nom_safe}.pdf"
     
-    return send_file(chemin_pdf, as_attachment=True, download_name=nom_fichier)
+    reponse = send_file(chemin_pdf, as_attachment=True, download_name=nom_fichier)
+
+    # 🧹 AUTO-NETTOYAGE : le fichier est unique et régénéré à chaque téléchargement
+    # (voir generer_pdf_contrat), donc pas besoin de le garder après l'envoi.
+    # Sûr sous Linux : send_file garde un descripteur ouvert sur le fichier,
+    # la suppression sur le disque n'empêche pas la fin de l'envoi en cours.
+    @after_this_request
+    def nettoyer_contrat_temporaire(response):
+        try:
+            os.remove(chemin_pdf)
+        except Exception as e:
+            current_app.logger.warning(f"Nettoyage contrat temporaire échoué ({chemin_pdf}) : {e}")
+        return response
+
+    return reponse
 
 @main.route('/contrat/voir_scan/<int:id>')
 @login_required
@@ -2433,6 +2474,25 @@ def uploader_scan():
     file = request.files['scan_file']
     print(f"📁 6. Fichier validé : '{file.filename}'")
 
+    # ==========================================================
+    # 🛡️ SÉCURITÉ : VALIDATION DU FICHIER (avant tout traitement)
+    # 1ère couche : extension déclarée. 2ème couche : contenu réel
+    # (magic bytes), pour empêcher un .html/.svg/.exe déguisé en .pdf.
+    # ==========================================================
+    if not fichier_est_autorise(file.filename):
+        print(f"❌ ERREUR SÉCURITÉ : extension refusée pour '{file.filename}'")
+        flash("Type de fichier non autorisé. Seuls les PDF, DOC, DOCX, XLS et XLSX sont acceptés.", "danger")
+        log_action("Alerte Sécurité", f"Extension refusée à l'upload (uploader_scan) : {file.filename}")
+        db.session.commit()
+        return redirect(request.referrer or url_for('main.tableau_de_bord'))
+
+    if not contenu_fichier_est_securise(file.stream):
+        print(f"❌ ERREUR SÉCURITÉ : contenu réel suspect pour '{file.filename}'")
+        flash("Le contenu du fichier ne correspond pas à un format autorisé (PDF/Word/Excel).", "danger")
+        log_action("Alerte Sécurité", f"Contenu de fichier suspect à l'upload (uploader_scan) : {file.filename}")
+        db.session.commit()
+        return redirect(request.referrer or url_for('main.tableau_de_bord'))
+
     # --- IMPORTS ET MAPPING ---
     from app.models import (LettreInvitation, Contrat, LettreInformation, 
                             LettreNotification, Bordereau, ProcesVerbal, 
@@ -2541,8 +2601,9 @@ def uploader_scan():
     print(f"💾 11. Sauvegarde du fichier vers : {chemin_complet}")
     file.save(chemin_complet)
 
-    # --- NETTOYAGE ANCIEN FICHIER ---
+    # --- NETTOYAGE ANCIEN FICHIER + DÉTECTION D'UN REMPLACEMENT ---
     ancien_fichier = getattr(doc, 'chemin_fichier', None) or getattr(doc, 'fichier_scanne', None)
+    est_un_remplacement = bool(ancien_fichier)
     if ancien_fichier:
         print(f"🗑️ 12. Remplacement détecté : suppression de {ancien_fichier}")
         chemin_ancien = os.path.join(dossier_sauvegarde, ancien_fichier)
@@ -2563,26 +2624,58 @@ def uploader_scan():
     ref_archive = getattr(doc, 'reference', None) or getattr(doc, 'immatriculation', None) or f"{type_doc.upper()}-{immat}"
     
     type_formate_archive = titre_doc.title() if type_doc == 'doc_libre' and titre_doc else type_doc.replace('_', ' ').title()
-    
-    nouvelle_archive = ArchiveDocument(
-        reference=ref_archive,
-        type_document=type_formate_archive,
-        nom_fichier=nom_uuid
-    )
-    db.session.add(nouvelle_archive)
-    print("✅ 13. Ajout à l'archive globale préparé.")
-    
+
+    if est_un_remplacement:
+        # 🏷️ On retrouve la ligne d'archive de l'ancien fichier (encore identifiable
+        # juste avant qu'on écrase son nom ci-dessus) et on l'écrase plutôt que
+        # d'empiler une nouvelle ligne pointant vers un fichier qui n'existe plus.
+        archive_existante = ArchiveDocument.query.filter_by(nom_fichier=ancien_fichier).first()
+        if archive_existante:
+            archive_existante.nom_fichier = nom_uuid
+            archive_existante.reference = ref_archive
+            archive_existante.type_document = type_formate_archive
+            archive_existante.statut = 'Modifié'
+            archive_existante.date_ajout = datetime.utcnow()
+            print("✅ 13. Archive existante écrasée (étiquette : Modifié).")
+        else:
+            # Filet de sécurité : si l'ancienne ligne d'archive est introuvable
+            # (donnée orpheline), on garde quand même la trace du remplacement.
+            db.session.add(ArchiveDocument(
+                reference=ref_archive,
+                type_document=type_formate_archive,
+                nom_fichier=nom_uuid,
+                statut='Modifié'
+            ))
+            print("⚠️ 13. Ancienne archive introuvable, nouvelle ligne créée (étiquette : Modifié).")
+    else:
+        db.session.add(ArchiveDocument(
+            reference=ref_archive,
+            type_document=type_formate_archive,
+            nom_fichier=nom_uuid,
+            statut='Ajouté'
+        ))
+        print("✅ 13. Nouvelle archive créée (étiquette : Ajouté).")
+
+    # 📝 JOURNALISATION : visible dans le tableau de bord superadmin (/dashboard)
+    if est_un_remplacement:
+        log_action("Modification document scanné", f"{type_formate_archive} — {ref_archive} (fichier : {nom_uuid})")
+    else:
+        log_action("Ajout document scanné", f"{type_formate_archive} — {ref_archive} (fichier : {nom_uuid})")
+
     db.session.commit()
     print("🎉 14. COMMIT RÉUSSI ! FIN DE L'UPLOAD.")
     print("="*50 + "\n")
     
-    flash("Le document scanné a été ajouté avec succès !", "success")
+    if est_un_remplacement:
+        flash("Le document scanné a été remplacé avec succès !", "success")
+    else:
+        flash("Le document scanné a été ajouté avec succès !", "success")
     
     if immat:
         return redirect(url_for('main.dossier_intelligent', immat=immat))
     return redirect(request.referrer or url_for('main.tableau_de_bord'))
 
-@main.route('/supprimer_doc_scanne/<path:nom_fichier>')
+@main.route('/supprimer_doc_scanne/<path:nom_fichier>', methods=['POST']) # 🛡️ POST au lieu de GET : protection CSRF
 @login_required
 @role_requis('superadmin', 'admin', 'agent') # On bloque les stagiaires
 def supprimer_doc_scanne(nom_fichier):
@@ -3126,7 +3219,7 @@ def dossier_intelligent(immat):
             flash("Veuillez fournir un fichier PDF.", "danger")
             return redirect(url_for('main.dossier_intelligent', immat=immat))
             
-        if fichier and fichier.filename.endswith('.pdf'):
+        if fichier and fichier.filename.endswith('.pdf') and contenu_fichier_est_securise(fichier.stream):
             filename = secure_filename(fichier.filename)
             
             # --- STOCKAGE SÉCURISÉ ---
