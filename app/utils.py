@@ -255,22 +255,27 @@ def generer_lettre_agrement(candidat, mode='vierge'):
     pdf.set_font("Arial", '', 11); pdf.cell(0, 6, txt=f"Votre lettre {val_ref_sr}", ln=1); pdf.ln(6)
     pdf.set_font("Arial", 'B', 11); pdf.cell(0, 6, txt=f"{civilite},", ln=1); pdf.ln(4)
 
-    # 🌟 ICI ON ADOUCIT LE TEXTE UNIQUEMENT POUR LE CORPS DE LA LETTRE
-    # Transforme "DIRECTION DE L'ADMINISTRATION" en "Direction De L'Administration"
+    # 🌟 ICI ON ADOUCIT LE TEXTE UNIQUEMENT POUR LE C# 🌟 ICI ON ADOUCIT LE TEXTE UNIQUEMENT POUR LE CORPS DE LA LETTRE
     direction_formatee = texte_direction.title()
 
     texte_corps = f"""J'accuse réception de votre lettre, citée en référence, par laquelle vous sollicitez un agrément pour les services que vous proposez. En retour, je vous informe que votre entreprise est agréée et enregistrée dans la base de données de la {direction_formatee}.
 
 Je vous prie de croire, **{civilite}**, à l'assurance de ma considération distinguée."""
 
-    # 1. On définit la police Arial à Taille 12 pour le corps du texte
+    # On définit la police Arial à Taille 12
     pdf.set_font("Arial", '', 12) 
 
-    # 4. 🌟 AJOUT DE markdown=True : FPDF2 va interpréter les étoiles et mettre en gras uniquement ce mot !
-    pdf.multi_cell(0, 8, txt=clean_text(texte_corps), align='J', markdown=True)
+    # 🎯 CORRECTION 1 : On force le corps du texte à commencer à 20 mm du bord gauche
+    pdf.set_x(20) 
     
-    # 3. Grand saut de ligne pour détacher le destinataire en bas
+    # 🎯 CORRECTION 2 : On réduit l'interligne de 8 à 6 pour un standard administratif
+    # On met la largeur à 170 (210mm total - 20mm marge gauche - 20mm marge droite)
+    pdf.multi_cell(170, 6, txt=clean_text(texte_corps), align='J', markdown=True)
+    
+    # Grand saut de ligne pour détacher le destinataire en bas
     pdf.ln(25) 
+    
+    # 🎯 ALIGNEMENT PARFAIT : Le destinataire commence aussi à 20 mm
     y_actuel = pdf.get_y(); pdf.set_xy(20, y_actuel); pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 5, txt="A", ln=1, align='L'); pdf.cell(0, 5, txt=f"{titre_destinataire} de", ln=1, align='L')
     pdf.cell(0, 5, txt=nom_entreprise.upper(), ln=1, align='L')
@@ -284,23 +289,24 @@ Je vous prie de croire, **{civilite}**, à l'assurance de ma considération dist
     
     # 1. On écrit le titre "Ampliation"
     pdf.set_font("Arial", 'B', 11)
+    pdf.set_x(20) # 👈 On aligne "Ampliation" sur la même ligne invisible de 20mm
     pdf.cell(0, 5, txt="Ampliation :", ln=1, align='L')
 
     # 2. Le réglage pour "- CPM"
-    pdf.ln(7)      # <--- Petit saut vertical de 2mm pour détacher
-    pdf.set_x(35)  # <--- On décale le curseur à 30mm du bord gauche (au lieu de 10)
+    pdf.ln(2)      # Petit saut vertical
+    pdf.set_x(30)  # 👈 On décale à 30mm pour créer un alinéa (retrait) propre
 
-    # 3. On écrit "- CPM" (qui sera donc décalé)
+    # 3. On écrit "- CPM" 
     pdf.set_font("Arial", '', 11)
     pdf.cell(0, 5, txt="- CPM", ln=1, align='L')
 
-    # ON CHANGE LE -22 EN -30 (ou -35 pour monter encore plus haut)
+    # LE PIED DE PAGE
     pdf.set_y(-25)  
     
-    # Le reste ne change pas, la ligne va suivre automatiquement
+    # 🎯 CORRECTION 3 : La ligne noire commence à 20 et s'arrête à 190 (centrée avec le texte)
     pdf.set_draw_color(0, 0, 0)
-    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-    pdf.ln(1)
+    pdf.line(20, pdf.get_y(), 190, pdf.get_y())
+    pdf.ln(2) # Petit espace entre la ligne et le texte du pied
     
     pdf.set_font("Arial", 'I', 8)
     texte_pied = "Ministère de la Culture, de l'Artisanat et du Tourisme\nRoute des Almadies - BP : 4049 Dakar- Sénégal\nTél. : 33 869 15 51 - Fax : 33 826 07 77 - Email: ministere@tourisme.gouv.sn"
