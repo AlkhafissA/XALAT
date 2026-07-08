@@ -2239,37 +2239,64 @@ def generer_pdf_contrat(data):
     pdf.set_font("Arial", "", 10)
     pdf.multi_cell(0, 5, ct("Les litiges survenus au cours de l'exécution des prestations seront traités à l'amiable ou à défaut par un tribunal compétent en la matière."))
 
-    # Signatures
-    pdf.ln(10) # On Réduit de 15 à 10 pour que ça tienne bien en bas de la page 2
-    pdf.set_font("Arial", "B", 10) 
-    pdf.cell(0, 5, ct("Lu et accepté"), new_x="LMARGIN", new_y="NEXT", align="C") 
+   # =================================================================
+    # 🎯 NOUVELLE STRUCTURE DES SIGNATURES (PROPRE ET CADRÉE)
+    # =================================================================
+    pdf.ln(10) # Espacement vertical initial
+    pdf.set_font("Arial", "B", 10)
+    
+    # 🎯 ÉTAPE 1 : On choisit la position de départ (X) pour le décaler à gauche.
+    # Plus tu diminues ce chiffre (ex: 75, 70...), plus le texte se déplacera vers la gauche.
+    pdf.set_x(75) 
+    
+    # 🎯 ÉTAPE 2 : On remplace le '0' par une largeur fixe de '40'
+    # Le texte sera centré ("C") uniquement à l'intérieur de ces 40 mm.
+    pdf.cell(40, 5, ct("Lu et accepté"), new_x="LMARGIN", new_y="NEXT", align="C")
 
-    pdf.ln(8) # Réduit de 10 à 8
+    pdf.ln(8) # Espace entre le "Lu et accepté" et les signatures
     pdf.set_font("Arial", "B", 10)
 
-    # 1. On récupère le vocable choisi (ex: Prestataire, Fournisseur, Entrepreneur...)
+    # 2. Récupération et traitement automatique du vocable (Prestataire, Entrepreneur...)
     vocable_choisi = str(data.get('vocable', 'Prestataire')).strip()
 
-    # 2. 🛡️ SÉCURITÉ GRAMMATICALE : Gestion automatique du "Le" ou "L'"
+    # 🛡️ SÉCURITÉ GRAMMATICALE : Gestion du "Le" ou "L'"
     voyelles = ('A', 'E', 'I', 'O', 'U', 'Y', 'É', 'È', 'À', 'a', 'e', 'i', 'o', 'u', 'y', 'é', 'è', 'à', 'h', 'H')
     if vocable_choisi.startswith(voyelles):
         label_signature = f"L'{vocable_choisi}"
     else:
         label_signature = f"Le {vocable_choisi}"
 
-    # 3. On affiche le bloc avec le ct() pour protéger les accents (ex: Entrepreneur)
-    pdf.cell(90, 5, ct(label_signature), new_x="RIGHT", new_y="TOP", align="L")
-    
-    # 4. Côté Direction (Dynamique)
-    # On récupère la valeur envoyée par la route
+    # --- 📐 FIXATION DES POSITIONS POUR LE CÔTE À CÔTE ---
+    # On fige la hauteur Y pour que le prestataire et le directeur commencent sur la même ligne
+    y_signatures = pdf.get_y()
+
+    # 3. BLOC DE GAUCHE : Le Prestataire
+    pdf.set_xy(10, y_signatures) # Aligné sur la marge gauche (10mm)
+    pdf.cell(90, 5, ct(label_signature), align="L")
+
+   # 4. BLOC DE DROITE : La Direction (Dynamique)
     texte_signataire = data.get('signataire_bas', "Le Directeur de l'Administration\nGénérale et de l'Équipement")
     
-    # L'utilisation de multi_cell permet de respecter les retours à la ligne (\n) tapés par l'agent !
-    pdf.multi_cell(0, 5, ct(texte_signataire), new_x="LMARGIN", new_y="NEXT", align="R")
+    # 🎯 ASTUCE MAGIQUE : On force proprement le saut de ligne avant "Générale" (avec ou sans accent)
+    if "Générale" in texte_signataire and "\nGénérale" not in texte_signataire:
+        texte_signataire = texte_signataire.replace("Générale", "\nGénérale")
+    elif "Generale" in texte_signataire and "\nGenerale" not in texte_signataire:
+        texte_signataire = texte_signataire.replace("Generale", "\nGenerale")
+    elif "générale" in texte_signataire and "\ngénérale" not in texte_signataire:
+        texte_signataire = texte_signataire.replace("générale", "\ngénérale")
+
+    # 📐 Ajustement des coordonnées pour que la deuxième ligne ait la place de s'étaler
+    position_x_droite = 138   # On commence à 11cm du bord gauche
+    largeur_bloc_droite = 70  # On donne 9cm de large (110 + 90 = 200mm, parfait pour la marge droite)
     
+    # On applique la position
+    pdf.set_xy(position_x_droite, y_signatures) 
+    
+    # L'affichage centré avec le multi_cell va maintenant donner un bloc parfait en 2 lignes équilibrées
+    pdf.multi_cell(largeur_bloc_droite, 5, ct(texte_signataire), align="C")
+
     # On génère le fichier
     pdf.output(chemin_pdf)
-    
     return chemin_pdf
 
 
