@@ -2766,7 +2766,8 @@ def upload_archive():
     nouvelle_archive = ArchiveDocument(
         reference=reference_saisie,
         type_document=type_doc,
-        nom_fichier=filename
+        nom_fichier=filename,
+        statut='Ajouté'  # 🏷️ Sans ça, hérite du server_default 'Ancien' (réservé aux lignes déjà existantes avant migration)
     )
     db.session.add(nouvelle_archive)
     
