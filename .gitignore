@@ -20,3 +20,7 @@ app/static/uploads/scans/*
 app/static/pdfs/
 stockage_prive/
 *.pdf
+
+# Fichiers de logs
+logs/
+*.log
